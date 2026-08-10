@@ -484,6 +484,24 @@ td { padding: 6px 8px; border-bottom: 1px solid #1f222c; vertical-align: middle;
   padding: 5px 7px;
 }
 
+/* ---------- PCGen ---------- */
+.pcgen-card { border-left-color: #4a6fa5; }
+.pcgen-steps { margin: 0 0 10px; padding-left: 22px; font-size: 0.85rem; color: var(--text-dim); }
+.pcgen-steps li { margin-bottom: 3px; }
+.pcgen-msg { font-size: 0.85rem; margin: 8px 0 0; min-height: 1.2em; }
+.pcgen-msg.pcgen-error { color: var(--crimson-light); }
+.pcgen-msg.pcgen-ok { color: var(--green); }
+.pcgen-preview {
+  margin-top: 14px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(201, 162, 39, 0.05);
+}
+.pcgen-preview h3 { margin: 0 0 10px; font-size: 0.9rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.06em; }
+.pcgen-table td.pcgen-new { color: var(--green); font-weight: 700; }
+.pcgen-table td { word-break: break-word; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }

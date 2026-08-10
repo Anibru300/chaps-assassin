@@ -27,6 +27,17 @@ No necesita servidor ni instalación: **haz doble clic en `index.html`** y se ab
 2. En el repositorio: **Settings → Pages → Source: Deploy from a branch**, elige la rama (`main`) y la carpeta raíz (`/root`).
 3. Espera un minuto y abre la URL que te indica GitHub: `https://<tu-usuario>.github.io/<repo>/`.
 
+## Importar desde PCGen
+
+Si usas **PCGen 6.09.08** (instalado en `C:\Users\Carlos\Desktop\D&D\PCGen\PcGen\PcGen.exe`) puedes importar tu personaje a la plataforma:
+
+1. **Crea a CHAPS en PCGen**: al crear el personaje elige el juego **D&D 5e** y carga las fuentes **SRD5** (System Reference Document 5e). Selecciona especie Humano, clase Pícaro (nivel 12), trasfondo Criminal y el arquetipo de Asesino.
+2. **Exporta el XML**: con el personaje abierto, ve al menú **Character → Export → Standard…** y elige la plantilla **`csheet_fantasy_generic_export.xml.ftl`** (está en `outputsheets/d20/fantasy/htmlxml`). Guarda el archivo `.xml` donde quieras.
+3. **Impórtalo aquí**: en la pestaña **Ficha**, baja hasta la tarjeta **PCGen**, pulsa *«Elegir XML de PCGen…»* y selecciona el archivo exportado.
+4. **Revisa la vista previa**: verás una tabla campo a campo (valor actual → valor importado: nombre, jugador, clase, nivel, PX, características, PG, CA, iniciativa, competencias en habilidades, armas y oro). Nada se sobrescribe hasta que pulses **«Confirmar importación»**.
+
+> ⚠ **Aviso**: PCGen usa las reglas de **D&D 5e (SRD 2014)** y esta plataforma sigue las reglas de **2024**. Los datos importados son una base para revisar (p. ej. los rasgos y el Ataque Furtivo siguen la progresión 2024 que ya trae la plataforma).
+
 ## Tecnología
 
 HTML + CSS + JavaScript puro. Sin frameworks, sin build, sin CDNs: funciona offline y con el protocolo `file://`.

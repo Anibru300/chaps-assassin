@@ -427,6 +427,205 @@ function renderProgression() {
   });
 }
 
+/* ============================================================
+   IMPORTACIÓN DESDE PCGEN (XML — csheet_fantasy_generic_export)
+   ============================================================ */
+
+// Nombres de habilidades de PCGen (5e SRD, en inglés) → claves internas.
+const PCGEN_SKILL_MAP = {
+  "acrobatics": "acrobatics", "animal handling": "animalHandling", "arcana": "arcana",
+  "athletics": "athletics", "deception": "deception", "history": "history",
+  "insight": "insight", "intimidation": "intimidation", "investigation": "investigation",
+  "medicine": "medicine", "nature": "nature", "perception": "perception",
+  "performance": "performance", "persuasion": "persuasion", "religion": "religion",
+  "sleight of hand": "sleightOfHand", "stealth": "stealth", "survival": "survival"
+};
+
+// Cambios pendientes de confirmación por el usuario.
+let pcgenPending = null;
+
+/** Texto recortado del primer elemento que coincide, o "" si no existe. */
+function xtext(scope, selector) {
+  const el = scope.querySelector(selector);
+  return el ? el.textContent.trim() : "";
+}
+
+/** Parsea el XML y valida que sea una exportación genérica de PCGen (<character>). */
+function parsePcgenXml(text) {
+  let doc;
+  try {
+    doc = new DOMParser().parseFromString(text, "text/xml");
+  } catch (e) { return null; }
+  if (doc.getElementsByTagName("parsererror").length > 0) return null;
+  if (!doc.documentElement || doc.documentElement.nodeName !== "character") return null;
+  return doc;
+}
+
+/**
+ * Construye la lista de cambios {label, from, to, apply} a partir del XML.
+ * Solo se incluyen campos presentes en el XML y distintos del valor actual:
+ * nunca se sobrescribe nada sin que aparezca en la vista previa.
+ */
+function buildPcgenChanges(doc) {
+  const changes = [];
+  const add = (label, from, to, apply) => {
+    if (to === undefined || to === null || to === "" || String(to) === String(from)) return;
+    changes.push({ label, from: String(from), to: String(to), apply });
+  };
+
+  // --- Datos básicos ---
+  const nm = xtext(doc, "basics > name");
+  add(t("name"), state.name, nm, () => { state.name = nm; });
+  const player = xtext(doc, "basics > playername");
+  add(t("playerName"), state.identity.playerName, player, () => { state.identity.playerName = player; });
+  const align = xtext(doc, "basics > alignment > long") || xtext(doc, "basics > alignment > short");
+  add(t("alignment"), state.identity.alignment, align, () => { state.identity.alignment = align; });
+  const race = xtext(doc, "basics > race");
+  add(t("species"), state.identity.species, race, () => { state.identity.species = race; });
+
+  // --- Clases y nivel ---
+  let levelSum = 0;
+  const classNames = [];
+  doc.querySelectorAll("basics > classes > class").forEach((c) => {
+    const cn = xtext(c, "name");
+    if (cn) classNames.push(cn);
+    levelSum += parseInt(xtext(c, "level"), 10) || 0;
+  });
+  if (!levelSum) levelSum = parseInt(xtext(doc, "basics > classes > levels_total"), 10) || 0;
+  const mainClass = classNames[0] || "";
+  const cleanClass = mainClass.replace(/\(.*\)/, "").trim();
+  add(t("charClass"), state.identity.charClass, cleanClass, () => { state.identity.charClass = cleanClass; });
+  if (levelSum) add(t("level"), state.level, levelSum, () => { state.level = levelSum; });
+
+  // Subclase: "Rogue (Assassin)" en el nombre de clase o un arquetipo declarado.
+  let subclass = "";
+  const mSub = mainClass.match(/\(([^)]+)\)/);
+  if (mSub) subclass = mSub[1].trim();
+  if (!subclass) subclass = xtext(doc, "basics > archetypes > archetype > name");
+  add(t("subclass"), state.identity.subclass, subclass, () => { state.identity.subclass = subclass; });
+
+  // --- Experiencia ---
+  const xp = parseInt(xtext(doc, "basics > experience > current"), 10);
+  if (!isNaN(xp)) add(t("xpCurrent"), state.xp, xp, () => { state.xp = xp; });
+
+  // --- Características ---
+  doc.querySelectorAll("abilities > ability").forEach((ab) => {
+    const short = xtext(ab, "name > short").toLowerCase();
+    const score = parseInt(xtext(ab, "score"), 10);
+    if (ABILITIES.includes(short) && !isNaN(score)) {
+      add(t("ability_" + short), state.abilities[short], score, () => { state.abilities[short] = score; });
+    }
+  });
+
+  // --- PG, CA, iniciativa ---
+  const hp = parseInt(xtext(doc, "hit_points > points"), 10);
+  if (!isNaN(hp)) add(t("hpMax"), state.hpMax, hp, () => { state.hpMax = hp; state.hpCurrent = hp; });
+  const ac = parseInt(xtext(doc, "armor_class > total"), 10);
+  if (!isNaN(ac)) add(t("ac"), state.ac, ac, () => { state.ac = ac; });
+  const init = parseInt(xtext(doc, "initiative > total"), 10);
+  if (!isNaN(init)) add(t("initiative"), state.initiative, init, () => { state.initiative = init; });
+
+  // --- Habilidades: solo marca competencia cuando es inequívoca ---
+  const pbRef = profBonus(levelSum || state.level);
+  doc.querySelectorAll("skills > skill").forEach((sk) => {
+    const key = PCGEN_SKILL_MAP[xtext(sk, "name").toLowerCase()];
+    if (!key) return;
+    const ranks = parseFloat(xtext(sk, "ranks")) || 0;
+    const total = parseFloat(xtext(sk, "skill_mod"));
+    const abmod = parseFloat(xtext(sk, "ability_mod")) || 0;
+    const proficient = ranks > 0 || (!isNaN(total) && (total - abmod) >= pbRef);
+    if (proficient && !state.skills[key].p) {
+      add(`${t("skill_" + key)} (${t("pcgenSkillProf")})`, "—", "✓", () => { state.skills[key].p = true; });
+    }
+  });
+
+  // --- Armas ---
+  const importedWeapons = [];
+  doc.querySelectorAll("weapons > weapon").forEach((w) => {
+    const wname = xtext(w, "common > name > long") || xtext(w, "common > name > short");
+    if (!wname) return;
+    const m = xtext(w, "common > damage").match(/(\d+)\s*d\s*(\d+)\s*([+-]\s*\d+)?/);
+    const dice = m ? +m[1] : 1;
+    const sides = m ? +m[2] : 6;
+    const bonus = m && m[3] ? parseInt(m[3].replace(/\s/g, ""), 10) : dexMod();
+    const props = [xtext(w, "common > type"), xtext(w, "common > special_properties")]
+      .filter(Boolean).join(", ");
+    importedWeapons.push({ name: wname, dice, sides, bonus, props, mastery: "" });
+  });
+  if (importedWeapons.length) {
+    const desc = importedWeapons.map((w) => `${w.name} (${w.dice}d${w.sides}${w.bonus >= 0 ? "+" : ""}${w.bonus})`).join(", ");
+    add(t("weapons"), `${state.weapons.length}`, desc, () => { state.weapons = importedWeapons; });
+  }
+
+  // --- Monedas (PCGen exporta el total en oro) ---
+  const gold = parseFloat(xtext(doc, "misc > gold") || xtext(doc, "basics > gold"));
+  if (!isNaN(gold)) add("GP", state.currency.gp, Math.floor(gold), () => { state.currency.gp = Math.floor(gold); });
+
+  return changes;
+}
+
+/* ---------- Vista previa y confirmación ---------- */
+function showPcgenPreview(changes) {
+  const body = $("#pcgen-preview-body");
+  body.innerHTML = "";
+  changes.forEach((c) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${escapeHtml(c.label)}</td><td>${escapeHtml(c.from)}</td><td class="pcgen-new">${escapeHtml(c.to)}</td>`;
+    body.appendChild(tr);
+  });
+  $("#pcgen-preview").hidden = false;
+}
+
+function hidePcgenPreview() {
+  $("#pcgen-preview").hidden = true;
+  pcgenPending = null;
+}
+
+function handlePcgenFile(file) {
+  const msg = $("#pcgen-msg");
+  const reader = new FileReader();
+  reader.onload = () => {
+    const doc = parsePcgenXml(reader.result);
+    if (!doc) {
+      msg.textContent = t("pcgenError");
+      msg.className = "pcgen-msg pcgen-error";
+      hidePcgenPreview();
+      return;
+    }
+    const changes = buildPcgenChanges(doc);
+    if (!changes.length) {
+      msg.textContent = t("pcgenNone");
+      msg.className = "pcgen-msg";
+      hidePcgenPreview();
+      return;
+    }
+    msg.textContent = "";
+    msg.className = "pcgen-msg";
+    pcgenPending = changes;
+    showPcgenPreview(changes);
+  };
+  reader.readAsText(file);
+}
+
+function initPcgen() {
+  $("#btn-pcgen").addEventListener("click", () => $("#pcgen-file").click());
+  $("#pcgen-file").addEventListener("change", (e) => {
+    if (e.target.files[0]) handlePcgenFile(e.target.files[0]);
+    e.target.value = "";
+  });
+  $("#btn-pcgen-confirm").addEventListener("click", () => {
+    if (!pcgenPending) return;
+    pcgenPending.forEach((c) => c.apply());
+    saveState();
+    hidePcgenPreview();
+    renderAll();
+    const msg = $("#pcgen-msg");
+    msg.textContent = t("pcgenSuccess");
+    msg.className = "pcgen-msg pcgen-ok";
+  });
+  $("#btn-pcgen-cancel").addEventListener("click", hidePcgenPreview);
+}
+
 /* ---------- Exportar / Importar / Restablecer ---------- */
 function exportJson() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -900,6 +1099,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initSheetEvents();
   initSimEvents();
+  initPcgen();
   $("#lang-toggle").addEventListener("click", toggleLang);
   // Estado inicial del simulador: enemigo no ha actuado → ventaja marcada.
   $("#sim-adv").checked = true;

@@ -342,6 +342,21 @@ const I18N = {
     // Progresión
     progressionSection: "Progresión por nivel (Pícaro Asesino, 2024)",
     asiNote: "Elección en mejora", asiNotePh: "p. ej. Dote: Pungidor, o +2 DES",
+    // PCGen
+    pcgenStep1: "Abre tu personaje en PCGen.",
+    pcgenStep2: "Menú Character → Export → Standard…",
+    pcgenStep3: "Elige la plantilla csheet_fantasy_generic_export.xml.ftl (en outputsheets/d20/fantasy/htmlxml).",
+    pcgenStep4: "Guarda el archivo XML en tu equipo.",
+    pcgenStep5: "Pulsa el botón de abajo y selecciona ese archivo.",
+    pcgenNote: "⚠ PCGen usa las reglas de D&D 5e (SRD 2014); esta plataforma sigue las reglas de 2024. La importación es una base para revisar: nada se sobrescribe sin tu confirmación.",
+    pcgenChoose: "📂 Elegir XML de PCGen…",
+    pcgenPreviewTitle: "Vista previa de la importación",
+    pcgenField: "Campo", pcgenCurrent: "Actual", pcgenNew: "Importado",
+    pcgenConfirm: "✓ Confirmar importación", pcgenCancel: "Cancelar",
+    pcgenError: "El archivo no es una exportación XML válida de PCGen (falta el elemento <character>).",
+    pcgenSuccess: "Importación de PCGen completada ✓",
+    pcgenNone: "El XML es válido pero no hay datos nuevos que importar.",
+    pcgenSkillProf: "competencia",
     footer: "Herramienta de fans sin afiliación con Wizards of the Coast. D&D 2024."
   },
   en: {
@@ -425,6 +440,21 @@ const I18N = {
     // Progression
     progressionSection: "Level Progression (Assassin Rogue, 2024)",
     asiNote: "ASI choice", asiNotePh: "e.g. Feat: Piercer, or +2 DEX",
+    // PCGen
+    pcgenStep1: "Open your character in PCGen.",
+    pcgenStep2: "Menu Character → Export → Standard…",
+    pcgenStep3: "Choose the template csheet_fantasy_generic_export.xml.ftl (in outputsheets/d20/fantasy/htmlxml).",
+    pcgenStep4: "Save the XML file to your computer.",
+    pcgenStep5: "Click the button below and select that file.",
+    pcgenNote: "⚠ PCGen uses D&D 5e rules (SRD 2014); this platform follows the 2024 rules. The import is a base to review: nothing is overwritten without your confirmation.",
+    pcgenChoose: "📂 Choose PCGen XML file…",
+    pcgenPreviewTitle: "Import preview",
+    pcgenField: "Field", pcgenCurrent: "Current", pcgenNew: "Imported",
+    pcgenConfirm: "✓ Confirm import", pcgenCancel: "Cancel",
+    pcgenError: "The file is not a valid PCGen XML export (missing <character> element).",
+    pcgenSuccess: "PCGen import complete ✓",
+    pcgenNone: "The XML is valid but there is no new data to import.",
+    pcgenSkillProf: "proficiency",
     footer: "Unofficial fan tool, not affiliated with Wizards of the Coast. D&D 2024."
   }
 };

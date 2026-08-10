@@ -224,6 +224,41 @@
         <button class="btn btn-small" id="btn-add-journal" data-i18n="journalAdd">+ Nueva entrada</button>
       </div>
 
+      <!-- Importar desde PCGen -->
+      <div class="card pcgen-card">
+        <h2>PCGen</h2>
+        <ol class="pcgen-steps">
+          <li data-i18n="pcgenStep1"></li>
+          <li data-i18n="pcgenStep2"></li>
+          <li data-i18n="pcgenStep3"></li>
+          <li data-i18n="pcgenStep4"></li>
+          <li data-i18n="pcgenStep5"></li>
+        </ol>
+        <p class="hint" data-i18n="pcgenNote"></p>
+        <button class="btn" id="btn-pcgen" data-i18n="pcgenChoose">Elegir XML…</button>
+        <input type="file" id="pcgen-file" accept=".xml,text/xml" hidden>
+        <p id="pcgen-msg" class="pcgen-msg"></p>
+        <div id="pcgen-preview" class="pcgen-preview" hidden>
+          <h3 data-i18n="pcgenPreviewTitle">Vista previa</h3>
+          <div class="table-wrap">
+            <table class="pcgen-table">
+              <thead>
+                <tr>
+                  <th data-i18n="pcgenField">Campo</th>
+                  <th data-i18n="pcgenCurrent">Actual</th>
+                  <th data-i18n="pcgenNew">Importado</th>
+                </tr>
+              </thead>
+              <tbody id="pcgen-preview-body"></tbody>
+            </table>
+          </div>
+          <div class="rest-row">
+            <button class="btn btn-crimson" id="btn-pcgen-confirm" data-i18n="pcgenConfirm">Confirmar</button>
+            <button class="btn" id="btn-pcgen-cancel" data-i18n="pcgenCancel">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Persistencia -->
       <div class="card persistence-card">
         <button class="btn" id="btn-export" data-i18n="exportJson">Exportar JSON</button>
