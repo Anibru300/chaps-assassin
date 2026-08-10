@@ -38,15 +38,46 @@
       <!-- Identidad y stats principales -->
       <div class="card">
         <h2 data-i18n="identity">Identidad</h2>
+        <div class="identity-layout">
+          <div class="portrait-frame">
+            <img src="assets/chaps-portrait.jpg" id="portrait-img" data-i18n-alt="portraitAlt" alt="CHAPS">
+          </div>
+          <div class="identity-fields">
+            <div class="grid grid-3">
+              <label class="field"><span data-i18n="name">Nombre</span>
+                <input type="text" id="f-name"></label>
+              <label class="field"><span data-i18n="charClass">Clase</span>
+                <input type="text" id="f-charClass"></label>
+              <label class="field"><span data-i18n="subclass">Subclase</span>
+                <input type="text" id="f-subclass"></label>
+            </div>
+            <div class="grid grid-3">
+              <label class="field"><span data-i18n="species">Especie</span>
+                <input type="text" id="f-species"></label>
+              <label class="field"><span data-i18n="background">Trasfondo</span>
+                <input type="text" id="f-background"></label>
+              <label class="field"><span data-i18n="alignment">Alineamiento</span>
+                <input type="text" id="f-alignment"></label>
+            </div>
+            <div class="grid grid-3">
+              <label class="field"><span data-i18n="playerName">Jugador/a</span>
+                <input type="text" id="f-playerName"></label>
+              <label class="field"><span data-i18n="campaign">Campaña</span>
+                <input type="text" id="f-campaign"></label>
+              <label class="field"><span data-i18n="level">Nivel</span>
+                <input type="number" id="f-level" min="1" max="20"></label>
+            </div>
+          </div>
+        </div>
         <div class="grid grid-4">
-          <label class="field"><span data-i18n="name">Nombre</span>
-            <input type="text" id="f-name"></label>
-          <label class="field"><span data-i18n="level">Nivel</span>
-            <input type="number" id="f-level" min="1" max="20"></label>
           <label class="field"><span data-i18n="profBonus">Bono de competencia</span>
             <input type="text" id="f-prof" readonly class="readonly"></label>
           <label class="field"><span data-i18n="speed">Velocidad</span>
             <input type="number" id="f-speed" min="0" step="5"></label>
+          <label class="field"><span data-i18n="ac">CA</span>
+            <input type="number" id="f-ac" min="0"></label>
+          <label class="field"><span data-i18n="initiative">Iniciativa</span>
+            <input type="number" id="f-initiative"></label>
         </div>
         <div class="grid grid-4">
           <label class="field"><span data-i18n="hpCurrent">PG actuales</span>
@@ -55,12 +86,6 @@
             <input type="number" id="f-hpMax" min="1"></label>
           <label class="field"><span data-i18n="hpTemp">PG temporales</span>
             <input type="number" id="f-hpTemp" min="0"></label>
-          <label class="field"><span data-i18n="ac">CA</span>
-            <input type="number" id="f-ac" min="0"></label>
-        </div>
-        <div class="grid grid-4">
-          <label class="field"><span data-i18n="initiative">Iniciativa</span>
-            <input type="number" id="f-initiative"></label>
           <div class="field">
             <span data-i18n="hitDice">Dados de golpe</span>
             <div class="hitdice-row">
@@ -91,6 +116,32 @@
         <div class="rest-row">
           <button class="btn" id="btn-short-rest" data-i18n="shortRest">Descanso corto</button>
           <button class="btn btn-crimson" id="btn-long-rest" data-i18n="longRest">Descanso largo</button>
+        </div>
+      </div>
+
+      <!-- Experiencia y nivel -->
+      <div class="card">
+        <h2 data-i18n="xpSection">Experiencia y nivel</h2>
+        <div class="grid grid-4">
+          <label class="field"><span data-i18n="xpCurrent">PX actuales</span>
+            <input type="number" id="f-xp" min="0"></label>
+          <label class="field"><span data-i18n="xpLevelByXp">Nivel según PX</span>
+            <input type="text" id="f-xp-level" readonly class="readonly"></label>
+          <label class="field"><span data-i18n="xpToNext">PX para el siguiente nivel</span>
+            <input type="text" id="f-xp-tonext" readonly class="readonly"></label>
+          <div class="field"><span>&nbsp;</span>
+            <button class="btn" id="btn-apply-level" data-i18n="xpApply">Aplicar nivel</button></div>
+        </div>
+        <div class="xp-bar-wrap">
+          <div class="xp-bar"><div id="xp-bar-fill" class="xp-bar-fill"></div></div>
+          <span id="xp-bar-label" class="xp-bar-label"></span>
+        </div>
+        <div class="rest-row xp-add-row">
+          <button class="btn btn-small xp-add" data-amt="100">+100</button>
+          <button class="btn btn-small xp-add" data-amt="500">+500</button>
+          <button class="btn btn-small xp-add" data-amt="1000">+1000</button>
+          <input type="number" id="xp-custom" min="0" step="50" placeholder="2500">
+          <button class="btn btn-small" id="btn-xp-custom" data-i18n="xpAdd">Añadir PX</button>
         </div>
       </div>
 
@@ -133,12 +184,44 @@
         <button class="btn btn-small" id="btn-add-weapon" data-i18n="addWeapon">+ Añadir arma</button>
       </div>
 
+      <!-- Dotes -->
+      <div class="card">
+        <h2 data-i18n="featsSection">Dotes</h2>
+        <div id="feats-list"></div>
+        <button class="btn btn-small" id="btn-add-feat" data-i18n="addFeat">+ Añadir dote</button>
+      </div>
+
+      <!-- Progresión por nivel -->
+      <div class="card">
+        <h2 data-i18n="progressionSection">Progresión por nivel</h2>
+        <div class="table-wrap">
+          <table class="progression-table">
+            <thead>
+              <tr>
+                <th class="prog-check-col"></th>
+                <th data-i18n="levelCol">Nivel</th>
+                <th data-i18n="featureCol">Rasgos</th>
+                <th data-i18n="asiNote">Elección en mejora</th>
+              </tr>
+            </thead>
+            <tbody id="progression-body"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Monedas y notas -->
       <div class="card">
         <h2 data-i18n="currency">Monedas</h2>
         <div class="grid grid-5" id="currency-grid"></div>
         <h2 data-i18n="notes">Inventario y notas</h2>
         <textarea id="f-notes" rows="6" placeholder="..."></textarea>
+      </div>
+
+      <!-- Diario de aventuras -->
+      <div class="card">
+        <h2 data-i18n="journalSection">Diario de aventuras</h2>
+        <div id="journal-list"></div>
+        <button class="btn btn-small" id="btn-add-journal" data-i18n="journalAdd">+ Nueva entrada</button>
       </div>
 
       <!-- Persistencia -->

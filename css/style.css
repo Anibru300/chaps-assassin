@@ -129,6 +129,7 @@ main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 
 /* ---------- Campos ---------- */
 .grid { display: grid; gap: 12px; margin-bottom: 12px; }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 .grid-5 { grid-template-columns: repeat(5, 1fr); }
 
@@ -369,9 +370,127 @@ td { padding: 6px 8px; border-bottom: 1px solid #1f222c; vertical-align: middle;
   border-top: 1px solid var(--border);
 }
 
+/* ---------- Retrato e identidad ---------- */
+.identity-layout { display: flex; gap: 18px; margin-bottom: 14px; }
+.identity-fields { flex: 1; min-width: 0; }
+.portrait-frame {
+  flex-shrink: 0;
+  width: 200px;
+  border: 2px solid var(--crimson-dark);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 0 18px rgba(179, 18, 46, 0.35), inset 0 0 12px rgba(0, 0, 0, 0.6);
+  align-self: flex-start;
+  background: #000;
+}
+.portrait-frame img { display: block; width: 100%; height: auto; }
+
+/* ---------- Experiencia ---------- */
+.xp-bar-wrap { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
+.xp-bar {
+  flex: 1; height: 16px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #6b5313, var(--gold));
+  transition: width 0.35s ease;
+}
+.xp-bar-label { font-weight: 700; color: var(--gold); font-size: 0.85rem; min-width: 110px; text-align: right; }
+.xp-add-row { align-items: center; }
+.xp-add-row input {
+  width: 100px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Dotes ---------- */
+.feat-row {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.feat-row .feat-head { display: flex; gap: 8px; margin-bottom: 6px; }
+.feat-row input[type="text"] {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 4px 2px;
+}
+.feat-row input[type="text"]:focus { outline: none; border-bottom-color: var(--crimson); }
+.feat-row textarea { font-size: 0.85rem; }
+
+/* ---------- Diario ---------- */
+.journal-entry {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--crimson);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.journal-head { display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.journal-head input[type="date"] {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  color-scheme: dark;
+}
+.journal-head input[type="text"] {
+  flex: 1;
+  min-width: 140px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--crimson-light);
+  font-weight: 700;
+  padding: 4px 2px;
+}
+.journal-head input[type="text"]:focus { outline: none; border-bottom-color: var(--crimson); }
+.journal-entry textarea { font-size: 0.85rem; }
+
+/* ---------- Progresión ---------- */
+.progression-table .prog-check-col { width: 34px; }
+.progression-table input[type="checkbox"] { accent-color: var(--crimson); width: 16px; height: 16px; cursor: pointer; }
+.progression-table td.lv-cell { color: var(--crimson-light); font-weight: 700; white-space: nowrap; }
+.progression-table tr.prog-done { background: rgba(63, 157, 99, 0.05); }
+.progression-table tr.prog-current td.lv-cell { text-shadow: 0 0 8px var(--crimson-light); }
+.progression-table input.asi-input {
+  width: 100%;
+  min-width: 140px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 0.82rem;
+  padding: 5px 7px;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .identity-layout { flex-direction: column; align-items: center; }
+  .identity-fields { width: 100%; }
+  .portrait-frame { width: 180px; }
   .grid-5 { grid-template-columns: repeat(3, 1fr); }
   .ability-grid { grid-template-columns: repeat(3, 1fr); }
   .app-header h1 { font-size: 0.95rem; }

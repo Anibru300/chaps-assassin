@@ -31,10 +31,49 @@ const SKILLS = [
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
 
+/* ---------- Tabla de PX por nivel (2024) ---------- */
+const XP_TABLE = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+  85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
+
+/* ---------- Progresión del Pícaro (Asesino) niveles 1-20, reglas 2024 ---------- */
+const LEVEL_PROGRESSION = [
+  { lv: 1,  asi: false, es: "Pericia, Ataque Furtivo (1d6), Jerga de Ladrones, Maestría de Armas", en: "Expertise, Sneak Attack (1d6), Thieves' Cant, Weapon Mastery" },
+  { lv: 2,  asi: false, es: "Acción Astuta", en: "Cunning Action" },
+  { lv: 3,  asi: false, es: "Asesinar, Herramientas de Asesino, Puntería Firme", en: "Assassinate, Assassin's Tools, Steady Aim" },
+  { lv: 4,  asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
+  { lv: 5,  asi: false, es: "Golpe Astuto, Esquiva Asombrosa, Furtivo 3d6", en: "Cunning Strike, Uncanny Dodge, Sneak 3d6" },
+  { lv: 6,  asi: false, es: "Pericia (2 habilidades más)", en: "Expertise (2 more skills)" },
+  { lv: 7,  asi: false, es: "Evasión, Talento Confiable, Furtivo 4d6", en: "Evasion, Reliable Talent, Sneak 4d6" },
+  { lv: 8,  asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
+  { lv: 9,  asi: false, es: "Experto en Infiltración (Mimetismo Magistral, Puntería Itinerante), Furtivo 5d6", en: "Infiltration Expertise (Masterful Mimicry, Roving Aim), Sneak 5d6" },
+  { lv: 10, asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
+  { lv: 11, asi: false, es: "Golpe Astuto Mejorado (2 efectos), Furtivo 6d6", en: "Improved Cunning Strike (2 effects), Sneak 6d6" },
+  { lv: 12, asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
+  { lv: 13, asi: false, es: "Armas Envenenadas (+2d6 veneno, ignora resistencia), Furtivo 7d6", en: "Envenom Weapons (+2d6 poison, ignores resistance), Sneak 7d6" },
+  { lv: 14, asi: false, es: "Golpes Tortuosos (Aturdir, Cegar, Obnubilar)", en: "Devious Strikes (Daze, Blind, Obfuscate)" },
+  { lv: 15, asi: false, es: "Mente Escurridiza (comp. salv. SAB/CAR), Furtivo 8d6", en: "Slippery Mind (prof. WIS/CHA saves), Sneak 8d6" },
+  { lv: 16, asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
+  { lv: 17, asi: false, es: "Golpe Mortal (salv. CON o daño duplicado), Furtivo 9d6", en: "Death Strike (CON save or double damage), Sneak 9d6" },
+  { lv: 18, asi: false, es: "Elusivo (ningún ataque tiene ventaja contra ti)", en: "Elusive (no attack has advantage against you)" },
+  { lv: 19, asi: true,  es: "Mejora de característica / Dote (épica)", en: "Ability Score Improvement / Feat (epic)" },
+  { lv: 20, asi: false, es: "Golpe de Suerte (convierte un fallo en un 20), Furtivo 10d6", en: "Stroke of Luck (turn a miss into a 20), Sneak 10d6" }
+];
+
 /* ---------- Estado por defecto de la ficha ---------- */
+const STATE_VERSION = 2;
 const DEFAULT_STATE = {
+  v: STATE_VERSION,
   name: "CHAPS",
   level: 12,
+  xp: 100000,
+  identity: {
+    charClass: "Pícaro", subclass: "Asesino", species: "Humano",
+    background: "Criminal", alignment: "", playerName: "", campaign: ""
+  },
+  feats: [],               // [{name, desc}]
+  journal: [],             // [{date, title, text}] — más reciente primero
+  progressionOverrides: {},// {nivel: true/false} — toggle manual sobre el auto-check
+  asiNotes: {},            // {nivel: "texto"} — elección en niveles de mejora
   hpCurrent: 89,          // 8 + 11*5 + 12*2 (CON +2) = 89 aprox.
   hpMax: 89,
   hpTemp: 0,
@@ -75,6 +114,9 @@ const DEFAULT_STATE = {
   currency: { pp: 0, gp: 120, ep: 0, sp: 45, cp: 10 },
   notes: ""
 };
+
+// Niveles que conceden Mejora de característica / Dote
+const ASI_LEVELS = LEVEL_PROGRESSION.filter((f) => f.asi).map((f) => f.lv);
 
 /* ---------- Rasgos por nivel (reglas 2024) ---------- */
 const FEATURES = [
@@ -282,6 +324,24 @@ const I18N = {
     skill_sleightOfHand: "Juego de Manos", skill_stealth: "Sigilo", skill_survival: "Supervivencia",
     ability_str: "FUE", ability_dex: "DES", ability_con: "CON",
     ability_int: "INT", ability_wis: "SAB", ability_cha: "CAR",
+    // Retrato e identidad
+    portraitAlt: "Retrato de CHAPS, asesino enmascarado",
+    charClass: "Clase", subclass: "Subclase", species: "Especie", background: "Trasfondo",
+    alignment: "Alineamiento", playerName: "Jugador/a", campaign: "Campaña",
+    // Experiencia
+    xpSection: "Experiencia y nivel", xpCurrent: "PX actuales", xpToNext: "PX para el siguiente nivel",
+    xpLevelByXp: "Nivel según PX", xpApply: "Aplicar nivel según PX", xpAdd: "Añadir PX",
+    xpMax: "¡Nivel máximo!", xpBarLabel: "{xp} / {next} PX",
+    // Dotes
+    featsSection: "Dotes", featDesc: "Descripción", addFeat: "+ Añadir dote",
+    featNamePh: "p. ej. Alerta, Pungidor, Observador…",
+    featDescPh: "p. ej. +5 a iniciativa; no te pueden sorprender…",
+    // Diario
+    journalSection: "Diario de aventuras", journalAdd: "+ Nueva entrada",
+    journalTitlePh: "Título de la sesión…", journalTextPh: "¿Qué pasó en la sesión?",
+    // Progresión
+    progressionSection: "Progresión por nivel (Pícaro Asesino, 2024)",
+    asiNote: "Elección en mejora", asiNotePh: "p. ej. Dote: Pungidor, o +2 DES",
     footer: "Herramienta de fans sin afiliación con Wizards of the Coast. D&D 2024."
   },
   en: {
@@ -347,6 +407,24 @@ const I18N = {
     skill_sleightOfHand: "Sleight of Hand", skill_stealth: "Stealth", skill_survival: "Survival",
     ability_str: "STR", ability_dex: "DEX", ability_con: "CON",
     ability_int: "INT", ability_wis: "WIS", ability_cha: "CHA",
+    // Portrait & identity
+    portraitAlt: "Portrait of CHAPS, masked assassin",
+    charClass: "Class", subclass: "Subclass", species: "Species", background: "Background",
+    alignment: "Alignment", playerName: "Player", campaign: "Campaign",
+    // Experience
+    xpSection: "Experience & Level", xpCurrent: "Current XP", xpToNext: "XP to next level",
+    xpLevelByXp: "Level by XP", xpApply: "Apply level from XP", xpAdd: "Add XP",
+    xpMax: "Max level!", xpBarLabel: "{xp} / {next} XP",
+    // Feats
+    featsSection: "Feats", featDesc: "Description", addFeat: "+ Add feat",
+    featNamePh: "e.g. Alert, Piercer, Observant…",
+    featDescPh: "e.g. +5 to initiative; you can't be surprised…",
+    // Journal
+    journalSection: "Adventure Journal", journalAdd: "+ New entry",
+    journalTitlePh: "Session title…", journalTextPh: "What happened this session?",
+    // Progression
+    progressionSection: "Level Progression (Assassin Rogue, 2024)",
+    asiNote: "ASI choice", asiNotePh: "e.g. Feat: Piercer, or +2 DEX",
     footer: "Unofficial fan tool, not affiliated with Wizards of the Coast. D&D 2024."
   }
 };

@@ -58,6 +58,9 @@ function loadState() {
     merged.abilities = Object.assign(structuredClone(DEFAULT_STATE.abilities), loaded.abilities || {});
     merged.currency  = Object.assign(structuredClone(DEFAULT_STATE.currency),  loaded.currency  || {});
     merged.skills    = Object.assign(structuredClone(DEFAULT_STATE.skills),    loaded.skills    || {});
+    merged.identity  = Object.assign(structuredClone(DEFAULT_STATE.identity),  loaded.identity  || {});
+    // Migración: los guardados antiguos (v1) reciben las nuevas secciones por defecto.
+    merged.v = STATE_VERSION;
     return merged;
   } catch (e) {
     console.warn("Estado corrupto, se usan valores por defecto.", e);
@@ -84,6 +87,8 @@ function applyI18n() {
   document.documentElement.lang = LANG;
   document.title = t("appTitle");
   $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  $$("[data-i18n-alt]").forEach((el) => { el.alt = t(el.dataset.i18nAlt); });
+  $$("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
   $("#lang-toggle").textContent = LANG === "es" ? "EN" : "ES";
 }
 
@@ -110,6 +115,13 @@ function initTabs() {
 /** Vuelca el estado a los campos simples de identidad. */
 function renderIdentity() {
   $("#f-name").value = state.name;
+  $("#f-charClass").value = state.identity.charClass;
+  $("#f-subclass").value = state.identity.subclass;
+  $("#f-species").value = state.identity.species;
+  $("#f-background").value = state.identity.background;
+  $("#f-alignment").value = state.identity.alignment;
+  $("#f-playerName").value = state.identity.playerName;
+  $("#f-campaign").value = state.identity.campaign;
   $("#f-level").value = state.level;
   $("#f-prof").value = fmtMod(profBonus(state.level));
   $("#f-speed").value = state.speed;
@@ -281,6 +293,140 @@ function longRest() {
   renderIdentity();
 }
 
+/* ---------- Experiencia (PX) ---------- */
+
+/** Nivel correspondiente a una cantidad de PX según la tabla 2024. */
+function levelForXp(xp) {
+  let lv = 1;
+  for (let i = 0; i < XP_TABLE.length; i++) {
+    if (xp >= XP_TABLE[i]) lv = i + 1;
+  }
+  return lv;
+}
+
+function renderXp() {
+  $("#f-xp").value = state.xp;
+  const lv = levelForXp(state.xp);
+  $("#f-xp-level").value = lv;
+  const fill = $("#xp-bar-fill");
+  const label = $("#xp-bar-label");
+  if (lv >= 20) {
+    $("#f-xp-tonext").value = t("xpMax");
+    fill.style.width = "100%";
+    label.textContent = state.xp + " PX";
+  } else {
+    const cur = XP_TABLE[lv - 1];
+    const next = XP_TABLE[lv];
+    $("#f-xp-tonext").value = next - state.xp;
+    fill.style.width = Math.min(100, Math.round(((state.xp - cur) / (next - cur)) * 100)) + "%";
+    label.textContent = t("xpBarLabel").replace("{xp}", state.xp).replace("{next}", next);
+  }
+}
+
+function addXp(n) {
+  if (!n) return;
+  state.xp = Math.max(0, state.xp + n);
+  saveState();
+  renderXp();
+}
+
+/* ---------- Dotes ---------- */
+function renderFeats() {
+  const list = $("#feats-list");
+  list.innerHTML = "";
+  state.feats.forEach((f, i) => {
+    const row = document.createElement("div");
+    row.className = "feat-row";
+    row.innerHTML = `
+      <div class="feat-head">
+        <input type="text" value="${escapeHtml(f.name)}" placeholder="${t("featNamePh")}" data-fi="${i}" data-ff="name">
+        <button class="btn btn-small btn-danger" data-fdel="${i}" title="${t("remove")}">✕</button>
+      </div>
+      <textarea rows="2" placeholder="${t("featDescPh")}" data-fi="${i}" data-ff="desc">${escapeHtml(f.desc)}</textarea>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll("[data-ff]").forEach((inp) => {
+    inp.addEventListener("input", () => {
+      state.feats[+inp.dataset.fi][inp.dataset.ff] = inp.value;
+      saveState();
+    });
+  });
+  list.querySelectorAll("[data-fdel]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.feats.splice(+btn.dataset.fdel, 1);
+      saveState();
+      renderFeats();
+    });
+  });
+}
+
+/* ---------- Diario de aventuras ---------- */
+function renderJournal() {
+  const list = $("#journal-list");
+  list.innerHTML = "";
+  state.journal.forEach((en, i) => {
+    const div = document.createElement("div");
+    div.className = "journal-entry";
+    div.innerHTML = `
+      <div class="journal-head">
+        <input type="date" value="${en.date}" data-ji="${i}" data-jf="date">
+        <input type="text" value="${escapeHtml(en.title)}" placeholder="${t("journalTitlePh")}" data-ji="${i}" data-jf="title">
+        <button class="btn btn-small btn-danger" data-jdel="${i}" title="${t("remove")}">✕</button>
+      </div>
+      <textarea rows="3" placeholder="${t("journalTextPh")}" data-ji="${i}" data-jf="text">${escapeHtml(en.text)}</textarea>`;
+    list.appendChild(div);
+  });
+  list.querySelectorAll("[data-jf]").forEach((inp) => {
+    inp.addEventListener("input", () => {
+      state.journal[+inp.dataset.ji][inp.dataset.jf] = inp.value;
+      saveState();
+    });
+  });
+  list.querySelectorAll("[data-jdel]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.journal.splice(+btn.dataset.jdel, 1);
+      saveState();
+      renderJournal();
+    });
+  });
+}
+
+/* ---------- Progresión por nivel ---------- */
+function renderProgression() {
+  const body = $("#progression-body");
+  body.innerHTML = "";
+  LEVEL_PROGRESSION.forEach((f) => {
+    // Auto-marcado por nivel actual, salvo que exista un toggle manual.
+    const auto = state.level >= f.lv;
+    const checked = state.progressionOverrides[f.lv] !== undefined
+      ? state.progressionOverrides[f.lv] : auto;
+    const tr = document.createElement("tr");
+    tr.className = (checked ? "prog-done " : "") + (state.level === f.lv ? "prog-current" : "");
+    const asiCell = f.asi
+      ? `<input type="text" class="asi-input" data-asi="${f.lv}" value="${escapeHtml(state.asiNotes[f.lv] || "")}" placeholder="${t("asiNotePh")}">`
+      : "";
+    tr.innerHTML = `
+      <td><input type="checkbox" data-prog="${f.lv}" ${checked ? "checked" : ""}></td>
+      <td class="lv-cell">${f.lv}</td>
+      <td>${escapeHtml(LANG === "es" ? f.es : f.en)}</td>
+      <td>${asiCell}</td>`;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll("[data-prog]").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      state.progressionOverrides[cb.dataset.prog] = cb.checked;
+      saveState();
+      renderProgression();
+    });
+  });
+  body.querySelectorAll("[data-asi]").forEach((inp) => {
+    inp.addEventListener("input", () => {
+      state.asiNotes[inp.dataset.asi] = inp.value;
+      saveState();
+    });
+  });
+}
+
 /* ---------- Exportar / Importar / Restablecer ---------- */
 function exportJson() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -315,10 +461,16 @@ function initSheetEvents() {
       state[key] = numeric ? (parseInt(e.target.value, 10) || 0) : e.target.value;
       saveState();
       if (key === "level" || key === "hpMax") renderIdentity();
-      if (key === "level") { renderAbilities(); renderSkills(); renderWeapons(); renderSimAll(); renderCombos(); }
+      if (key === "level") { renderAbilities(); renderSkills(); renderWeapons(); renderSimAll(); renderCombos(); renderProgression(); }
     });
   };
   bind("#f-name", "name", false);
+  // Campos de identidad (objeto anidado state.identity)
+  [["#f-charClass", "charClass"], ["#f-subclass", "subclass"], ["#f-species", "species"],
+   ["#f-background", "background"], ["#f-alignment", "alignment"], ["#f-playerName", "playerName"],
+   ["#f-campaign", "campaign"]].forEach(([id, key]) => {
+    $(id).addEventListener("change", (e) => { state.identity[key] = e.target.value; saveState(); });
+  });
   bind("#f-level", "level", true);
   bind("#f-speed", "speed", true);
   bind("#f-hpCurrent", "hpCurrent", true);
@@ -339,6 +491,37 @@ function initSheetEvents() {
 
   $("#btn-short-rest").addEventListener("click", shortRest);
   $("#btn-long-rest").addEventListener("click", longRest);
+
+  // --- Experiencia ---
+  $("#f-xp").addEventListener("change", (e) => {
+    state.xp = Math.max(0, parseInt(e.target.value, 10) || 0);
+    saveState();
+    renderXp();
+  });
+  $$(".xp-add").forEach((btn) => btn.addEventListener("click", () => addXp(+btn.dataset.amt)));
+  $("#btn-xp-custom").addEventListener("click", () => {
+    addXp(parseInt($("#xp-custom").value, 10) || 0);
+    $("#xp-custom").value = "";
+  });
+  $("#btn-apply-level").addEventListener("click", () => {
+    state.level = levelForXp(state.xp);
+    saveState();
+    renderAll();
+  });
+
+  // --- Dotes ---
+  $("#btn-add-feat").addEventListener("click", () => {
+    state.feats.push({ name: "", desc: "" });
+    saveState();
+    renderFeats();
+  });
+
+  // --- Diario ---
+  $("#btn-add-journal").addEventListener("click", () => {
+    state.journal.unshift({ date: new Date().toISOString().slice(0, 10), title: "", text: "" });
+    saveState();
+    renderJournal();
+  });
 
   $("#btn-add-weapon").addEventListener("click", () => {
     state.weapons.push({ name: "—", dice: 1, sides: 6, bonus: abilityMod(state.abilities.dex), props: "", mastery: "" });
@@ -700,6 +883,10 @@ function renderFeatures() {
 function renderAll() {
   applyI18n();
   renderIdentity();
+  renderXp();
+  renderFeats();
+  renderJournal();
+  renderProgression();
   renderAbilities();
   renderSkills();
   renderWeapons();
