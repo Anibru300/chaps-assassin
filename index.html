@@ -184,6 +184,22 @@
         <button class="btn btn-small" id="btn-add-weapon" data-i18n="addWeapon">+ Añadir arma</button>
       </div>
 
+      <!-- Maestría de armas -->
+      <div class="card" id="mastery-card">
+        <h2 data-i18n="masterySection">Maestría de armas</h2>
+        <div class="grid grid-4">
+          <label class="field"><span data-i18n="masteryWeapon">Arma</span> 1
+            <select id="mastery-1"></select></label>
+          <label class="field"><span data-i18n="masteryWeapon">Arma</span> 2
+            <select id="mastery-2"></select></label>
+        </div>
+        <p class="hint" data-i18n="masteryNote"></p>
+        <details class="mastery-glossary">
+          <summary data-i18n="masteryGlossaryTitle"></summary>
+          <ul id="mastery-glossary-list"></ul>
+        </details>
+      </div>
+
       <!-- Dotes -->
       <div class="card">
         <h2 data-i18n="featsSection">Dotes</h2>
@@ -322,10 +338,14 @@
         </div>
         <fieldset class="cs-fieldset">
           <legend><span data-i18n="cunningStrikes">Golpes Astutos (máx. 2)</span> — <span id="save-dc"></span></legend>
-          <label class="cs-option"><input type="checkbox" class="cs-check" value="poison"><span data-i18n="csPoison">Veneno</span></label>
-          <label class="cs-option"><input type="checkbox" class="cs-check" value="trip"><span data-i18n="csTrip">Derribo</span></label>
-          <label class="cs-option"><input type="checkbox" class="cs-check" value="withdraw"><span data-i18n="csWithdraw">Retirada</span></label>
+          <label class="cs-option"><input type="checkbox" class="cs-check" value="poison" data-cost="1"><span data-i18n="csPoison">Veneno</span></label>
+          <label class="cs-option"><input type="checkbox" class="cs-check" value="trip" data-cost="1"><span data-i18n="csTrip">Derribo</span></label>
+          <label class="cs-option"><input type="checkbox" class="cs-check" value="withdraw" data-cost="1"><span data-i18n="csWithdraw">Retirada</span></label>
+          <label class="cs-option cs-devious"><input type="checkbox" class="cs-check" value="daze" data-cost="2" data-lock="14"><span data-i18n="csDaze">Aturdir</span><span class="cs-lock"></span></label>
+          <label class="cs-option cs-devious"><input type="checkbox" class="cs-check" value="knockout" data-cost="6" data-lock="14"><span data-i18n="csKnockOut">Noquear</span><span class="cs-lock"></span></label>
+          <label class="cs-option cs-devious"><input type="checkbox" class="cs-check" value="obscure" data-cost="3" data-lock="14"><span data-i18n="csObscure">Obnubilar</span><span class="cs-lock"></span></label>
         </fieldset>
+        <p class="hint" data-i18n="sneakHint"></p>
         <button class="btn btn-crimson btn-big" id="btn-attack" data-i18n="rollAttack">Tirar ataque</button>
         <div id="attack-result" class="attack-result"></div>
       </div>
@@ -339,11 +359,20 @@
           <button class="btn btn-small ba-btn" data-i18n="caHide">Esconderse</button>
           <button class="btn btn-small" id="btn-steady" data-i18n="steadyAim">Puntería Firme</button>
         </div>
+        <p class="hint" data-i18n="steadyAimRules"></p>
         <h2 data-i18n="reactions">Reacciones</h2>
         <ul class="reaction-list">
           <li data-i18n="uncannyDodge"></li>
           <li data-i18n="evasion"></li>
         </ul>
+      </div>
+
+      <!-- Condiciones (referencia rápida) -->
+      <div class="card">
+        <details class="conditions-ref">
+          <summary data-i18n="conditionsSection"></summary>
+          <ul id="conditions-list" class="conditions-list"></ul>
+        </details>
       </div>
 
       <!-- Registro -->

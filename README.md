@@ -10,9 +10,10 @@ Plataforma web estática de **entrenamiento y gestión de personaje** para **CHA
   - Características con modificadores automáticos, habilidades con competencia/pericia, armas, PG, dados de golpe, salvaciones de muerte, inspiración, monedas y notas.
   - **Dotes**: lista editable (nombre + descripción) para apuntar las dotes elegidas.
   - **Progresión por nivel**: tabla interactiva con los rasgos del Pícaro Asesino de nivel 1 a 20 (reglas 2024), con casillas que se marcan solas según el nivel (y se pueden cambiar a mano) y un campo de texto en los niveles de mejora para anotar la dote o subida de característica elegida.
+  - **Maestría de armas (2024)**: elige las 2 armas dominadas (con su propiedad de maestría visible) y un glosario desplegable de las 8 propiedades (Vex, Nick, Slow, Sap, Topple, Push, Graze, Cleave). Tras un descanso largo la tarjeta se ilumina para recordarte que puedes cambiar la elección.
   - **Diario de aventuras**: entradas con fecha, título y texto; las más recientes primero.
   - Todo se **guarda automáticamente en el navegador** (localStorage) y se puede **exportar/importar en JSON** (incluye todas las secciones).
-- **Simulador** — Simulador de combate turno a turno: iniciativa con ventaja (Asesinar), ataques con ventaja/desventaja, críticos que duplican dados, Ataque Furtivo 6d6 (una vez por turno), Golpes Astutos con CD de salvación, acciones adicionales y registro de daño detallado.
+- **Simulador** — Simulador de combate turno a turno: iniciativa con ventaja (Asesinar), ataques con ventaja/desventaja, críticos que duplican dados, Ataque Furtivo 6d6 (una vez por turno), Golpes Astutos con CD de salvación y coste en dados (incluidos los **Golpes Tortuosos** de nivel 14 — Aturdir, Noquear y Obnubilar — que se desbloquean al subir de nivel), nota automática de **Armas Envenenadas** a nivel 13+, acciones adicionales, recordatorios de reacciones (reglas 2024), referencia rápida de **condiciones** y registro de daño detallado.
 - **Combos** — Guía interactiva de combos paso a paso con calculadora de daño real (tira los dados), más tabla de rasgos por nivel y avance de mejoras futuras (niveles 13, 14 y 17).
 
 Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defecto).

@@ -39,11 +39,11 @@ const XP_TABLE = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
 const LEVEL_PROGRESSION = [
   { lv: 1,  asi: false, es: "Pericia, Ataque Furtivo (1d6), Jerga de Ladrones, Maestría de Armas", en: "Expertise, Sneak Attack (1d6), Thieves' Cant, Weapon Mastery" },
   { lv: 2,  asi: false, es: "Acción Astuta", en: "Cunning Action" },
-  { lv: 3,  asi: false, es: "Asesinar, Herramientas de Asesino, Puntería Firme", en: "Assassinate, Assassin's Tools, Steady Aim" },
+  { lv: 3,  asi: false, es: "Asesinar, Herramientas de Asesino (ganas Disguise Kit + Poisoner's Kit), Puntería Firme", en: "Assassinate, Assassin's Tools (you gain a Disguise Kit + Poisoner's Kit), Steady Aim" },
   { lv: 4,  asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
   { lv: 5,  asi: false, es: "Golpe Astuto, Esquiva Asombrosa, Furtivo 3d6", en: "Cunning Strike, Uncanny Dodge, Sneak 3d6" },
   { lv: 6,  asi: false, es: "Pericia (2 habilidades más)", en: "Expertise (2 more skills)" },
-  { lv: 7,  asi: false, es: "Evasión, Talento Confiable, Furtivo 4d6", en: "Evasion, Reliable Talent, Sneak 4d6" },
+  { lv: 7,  asi: false, es: "Evasión, Talento Confiable (habilidades y herramientas), Furtivo 4d6", en: "Evasion, Reliable Talent (skills and tools), Sneak 4d6" },
   { lv: 8,  asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
   { lv: 9,  asi: false, es: "Experto en Infiltración (Mimetismo Magistral, Puntería Itinerante), Furtivo 5d6", en: "Infiltration Expertise (Masterful Mimicry, Roving Aim), Sneak 5d6" },
   { lv: 10, asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
@@ -51,12 +51,12 @@ const LEVEL_PROGRESSION = [
   { lv: 12, asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
   { lv: 13, asi: false, es: "Armas Envenenadas (+2d6 veneno, ignora resistencia), Furtivo 7d6", en: "Envenom Weapons (+2d6 poison, ignores resistance), Sneak 7d6" },
   { lv: 14, asi: false, es: "Golpes Tortuosos (Aturdir, Cegar, Obnubilar)", en: "Devious Strikes (Daze, Blind, Obfuscate)" },
-  { lv: 15, asi: false, es: "Mente Escurridiza (comp. salv. SAB/CAR), Furtivo 8d6", en: "Slippery Mind (prof. WIS/CHA saves), Sneak 8d6" },
+  { lv: 15, asi: false, es: "Mente Escurridiza: competencia en salvaciones de SAB y CAR, Furtivo 8d6", en: "Slippery Mind: proficiency in WIS and CHA saves, Sneak 8d6" },
   { lv: 16, asi: true,  es: "Mejora de característica / Dote", en: "Ability Score Improvement / Feat" },
   { lv: 17, asi: false, es: "Golpe Mortal (salv. CON o daño duplicado), Furtivo 9d6", en: "Death Strike (CON save or double damage), Sneak 9d6" },
-  { lv: 18, asi: false, es: "Elusivo (ningún ataque tiene ventaja contra ti)", en: "Elusive (no attack has advantage against you)" },
-  { lv: 19, asi: true,  es: "Mejora de característica / Dote (épica)", en: "Ability Score Improvement / Feat (epic)" },
-  { lv: 20, asi: false, es: "Golpe de Suerte (convierte un fallo en un 20), Furtivo 10d6", en: "Stroke of Luck (turn a miss into a 20), Sneak 10d6" }
+  { lv: 18, asi: false, es: "Elusivo (ningún ataque tiene ventaja contra ti salvo que estés Incapacitado)", en: "Elusive (no attack has advantage against you unless you are Incapacitated)" },
+  { lv: 19, boon: true, es: "Dote Épica (Epic Boon), Furtivo 10d6", en: "Epic Boon, Sneak 10d6" },
+  { lv: 20, asi: false, es: "Golpe de Suerte: convierte un D20 Test fallido en un 20 (recarga con descanso corto o largo), Furtivo 10d6", en: "Stroke of Luck: turn a failed D20 Test into a 20 (recharges on a Short or Long Rest), Sneak 10d6" }
 ];
 
 /* ---------- Estado por defecto de la ficha ---------- */
@@ -112,11 +112,86 @@ const DEFAULT_STATE = {
     { name: "Arco corto", dice: 1, sides: 6, bonus: 5, props: "ranged (80/320)",          mastery: "Vex"  }
   ],
   currency: { pp: 0, gp: 120, ep: 0, sp: 45, cp: 10 },
+  masteryChoices: ["dagger", "rapier"], // 2 armas elegidas para Maestría (N1)
   notes: ""
 };
 
-// Niveles que conceden Mejora de característica / Dote
+// Niveles que conceden Mejora de característica / Dote (N19 es Dote Épica, no ASI)
 const ASI_LEVELS = LEVEL_PROGRESSION.filter((f) => f.asi).map((f) => f.lv);
+
+/* ---------- Armas con maestría (tabla 2024 relevante para Pícaro) ---------- */
+const WEAPON_MASTERY = [
+  { id: "dagger",        es: "Daga",             en: "Dagger",         dmg: "1d4", mastery: "nick"   },
+  { id: "rapier",        es: "Estoque",          en: "Rapier",         dmg: "1d8", mastery: "vex"    },
+  { id: "shortsword",    es: "Espada corta",     en: "Shortsword",     dmg: "1d6", mastery: "vex"    },
+  { id: "scimitar",      es: "Cimitarra",        en: "Scimitar",       dmg: "1d6", mastery: "nick"   },
+  { id: "shortbow",      es: "Arco corto",       en: "Shortbow",       dmg: "1d6", mastery: "vex"    },
+  { id: "handCrossbow",  es: "Ballesta de mano", en: "Hand Crossbow",  dmg: "1d6", mastery: "vex"    },
+  { id: "lightCrossbow", es: "Ballesta ligera",  en: "Light Crossbow", dmg: "1d8", mastery: "slow"   },
+  { id: "longbow",       es: "Arco largo",       en: "Longbow",        dmg: "1d8", mastery: "slow"   },
+  { id: "dart",          es: "Dardo",            en: "Dart",           dmg: "1d4", mastery: "vex"    },
+  { id: "sling",         es: "Honda",            en: "Sling",          dmg: "1d4", mastery: "slow"   },
+  { id: "whip",          es: "Látigo",           en: "Whip",           dmg: "1d4", mastery: "slow"   },
+  { id: "club",          es: "Garrote",          en: "Club",           dmg: "1d4", mastery: "slow"   },
+  { id: "lightHammer",   es: "Martillo ligero",  en: "Light Hammer",   dmg: "1d4", mastery: "nick"   },
+  { id: "sickle",        es: "Hoz",              en: "Sickle",         dmg: "1d4", mastery: "nick"   },
+  { id: "handaxe",       es: "Hacha de mano",    en: "Handaxe",        dmg: "1d6", mastery: "vex"    },
+  { id: "javelin",       es: "Jabalina",         en: "Javelin",        dmg: "1d6", mastery: "slow"   },
+  { id: "spear",         es: "Lanza",            en: "Spear",          dmg: "1d6", mastery: "sap"    },
+  { id: "quarterstaff",  es: "Bastón",           en: "Quarterstaff",   dmg: "1d6", mastery: "topple" },
+  { id: "mace",          es: "Maza",             en: "Mace",           dmg: "1d6", mastery: "sap"    },
+  { id: "blowgun",       es: "Cerbatana",        en: "Blowgun",        dmg: "1",   mastery: "vex"    }
+];
+
+/* ---------- Las 8 propiedades de maestría (2024) ---------- */
+const MASTERY_PROPERTIES = [
+  { id: "vex",    name: "Vex",
+    es: "Si impactas y haces daño, tienes ventaja en tu próxima tirada de ataque antes del final de tu próximo turno.",
+    en: "If you hit and deal damage, you have Advantage on your next attack roll before the end of your next turn." },
+  { id: "nick",   name: "Nick",
+    es: "El ataque extra de la propiedad Ligera puedes hacerlo como parte de la acción de Atacar en vez de acción adicional (1/turno).",
+    en: "You can make the extra attack of the Light property as part of the Attack action instead of a Bonus Action (1/turn)." },
+  { id: "slow",   name: "Slow",
+    es: "Al impactar y hacer daño, la velocidad del objetivo se reduce 10 ft hasta el inicio de tu próximo turno (no acumulable).",
+    en: "On a hit that deals damage, the target's Speed is reduced by 10 ft until the start of your next turn (not cumulative)." },
+  { id: "sap",    name: "Sap",
+    es: "Al impactar y hacer daño, el objetivo tiene desventaja en su próxima tirada de ataque antes del inicio de tu próximo turno.",
+    en: "On a hit that deals damage, the target has Disadvantage on its next attack roll before the start of your next turn." },
+  { id: "topple", name: "Topple",
+    es: "Al impactar, el objetivo hace una salvación de CON (CD 8 + mod. de característica + comp.) o queda Derribado.",
+    en: "On a hit, the target makes a CON save (DC 8 + ability mod + prof.) or has the Prone condition." },
+  { id: "push",   name: "Push",
+    es: "Al impactar, empujas 10 ft a un objetivo Grande o menor.",
+    en: "On a hit, you push a Large or smaller target 10 feet away." },
+  { id: "graze",  name: "Graze",
+    es: "Si FALLAS, el objetivo recibe daño igual al modificador de la característica usada.",
+    en: "If you MISS, the target takes damage equal to the ability modifier used." },
+  { id: "cleave", name: "Cleave",
+    es: "Al impactar, segundo ataque contra otra criatura a 5 ft del objetivo y a tu alcance, sin sumar el modificador al daño.",
+    en: "On a hit, a second attack against another creature within 5 ft of the target and your reach, without adding the ability modifier to damage." }
+];
+
+/* ---------- Condiciones que inflige el Asesino (2024) ---------- */
+const CONDITIONS = [
+  { id: "poisoned", nameEs: "Envenenado", nameEn: "Poisoned",
+    es: "Desventaja en tiradas de ataque y pruebas de característica.",
+    en: "Disadvantage on attack rolls and ability checks." },
+  { id: "prone", nameEs: "Derribado", nameEn: "Prone",
+    es: "Sus ataques tienen desventaja; los ataques contra ella tienen ventaja a 5 ft y desventaja desde más lejos; levantarse cuesta la mitad de la velocidad.",
+    en: "Its attacks have Disadvantage; attacks against it have Advantage within 5 ft and Disadvantage from farther away; standing up costs half its Speed." },
+  { id: "blinded", nameEs: "Cegado", nameEn: "Blinded",
+    es: "Falla las pruebas basadas en la vista; sus ataques tienen desventaja; los ataques contra ella tienen ventaja.",
+    en: "Fails sight-based checks; its attacks have Disadvantage; attacks against it have Advantage." },
+  { id: "unconscious", nameEs: "Inconsciente", nameEn: "Unconscious",
+    es: "Incapacitado + Derribado, suelta lo que sostiene; los ataques contra ella tienen ventaja y los impactos a 5 ft son críticos.",
+    en: "Incapacitated + Prone, drops whatever it holds; attacks against it have Advantage and hits within 5 ft are critical hits." },
+  { id: "incapacitated", nameEs: "Incapacitado", nameEn: "Incapacitated",
+    es: "Sin acciones, acciones adicionales ni reacciones; no puede concentrarse.",
+    en: "No actions, Bonus Actions or reactions; can't concentrate." },
+  { id: "invisible", nameEs: "Invisible", nameEn: "Invisible",
+    es: "No puede verse; los ataques contra ella tienen desventaja; sus ataques tienen ventaja.",
+    en: "Can't be seen; attacks against it have Disadvantage; its attacks have Advantage." }
+];
 
 /* ---------- Rasgos por nivel (reglas 2024) ---------- */
 const FEATURES = [
@@ -124,12 +199,12 @@ const FEATURES = [
             en: "Expertise, Sneak Attack (1d6), Thieves' Cant, Weapon Mastery" },
   { lv: 2,  es: "Acción Astuta (Dash, Disengage, Hide como acción adicional)",
             en: "Cunning Action (Dash, Disengage, Hide as a Bonus Action)" },
-  { lv: 3,  es: "Asesinar (ventaja iniciativa y vs. criaturas que no han actuado, +nivel de daño), Herramientas de Asesino, Puntería Firme",
-            en: "Assassinate (advantage on initiative and vs. creatures that haven't acted, +level damage), Assassin's Tools, Steady Aim" },
+  { lv: 3,  es: "Asesinar (ventaja en iniciativa; 1ª ronda: ventaja vs. quien no ha actuado y +nivel de daño del tipo del arma), Herramientas de Asesino (ganas Disguise Kit + Poisoner's Kit), Puntería Firme",
+            en: "Assassinate (advantage on initiative; 1st round: advantage vs. creatures that haven't acted and +level damage of the weapon's type), Assassin's Tools (you gain a Disguise Kit + Poisoner's Kit), Steady Aim" },
   { lv: 5,  es: "Golpe Astuto (Veneno, Derribo, Retirada — 1/turno, -1d6 furtivo), Esquiva Asombrosa",
             en: "Cunning Strike (Poison, Trip, Withdraw — 1/turn, -1d6 sneak), Uncanny Dodge" },
   { lv: 6,  es: "Pericia (2 habilidades más)", en: "Expertise (2 more skills)" },
-  { lv: 7,  es: "Evasión, Talento Confiable", en: "Evasion, Reliable Talent" },
+  { lv: 7,  es: "Evasión, Talento Confiable (habilidades y herramientas)", en: "Evasion, Reliable Talent (skills and tools)" },
   { lv: 9,  es: "Experto en Infiltración: Mimetismo Magistral, Puntería Itinerante (la velocidad no se reduce a 0 con Puntería Firme)",
             en: "Infiltration Expertise: Masterful Mimicry, Roving Aim (speed not reduced to 0 with Steady Aim)" },
   { lv: 11, es: "Golpe Astuto Mejorado (2 efectos a la vez; nuevas opciones)", en: "Improved Cunning Strike (2 effects at once; new options)" },
@@ -148,13 +223,13 @@ const COMBOS = [
     sneak: true, assassinate: true,
     stepsEs: [
       "Tira iniciativa CON VENTAJA (Asesinar).",
-      "Actúa antes que el enemigo: si aún no ha tenido su turno, tu ataque tiene VENTAJA.",
+      "1ª ronda: si el enemigo aún no ha actuado, tu ataque tiene VENTAJA.",
       "Ataca: el impacto activa Ataque Furtivo (6d6).",
       "Si el furtivo impacta, suma +12 de daño (tu nivel de pícaro, por Asesinar)."
     ],
     stepsEn: [
       "Roll initiative WITH ADVANTAGE (Assassinate).",
-      "Act before the enemy: if it hasn't taken a turn yet, your attack has ADVANTAGE.",
+      "1st round: if the enemy hasn't taken a turn yet, your attack has ADVANTAGE.",
       "Attack: a hit triggers Sneak Attack (6d6).",
       "If the sneak attack hits, add +12 damage (your rogue level, from Assassinate)."
     ]
@@ -185,13 +260,13 @@ const COMBOS = [
     type: "roller",
     sneak: true, assassinate: false,
     stepsEs: [
-      "Acción adicional: Puntería Firme → VENTAJA en tu próximo ataque de este turno.",
-      "Puntería Itinerante (nivel 9): tu velocidad NO se reduce a 0, puedes seguir moviéndote.",
+      "Acción adicional: Puntería Firme → VENTAJA en tu próximo ataque de ESTE turno (solo si aún no te has movido).",
+      "Tras usarla, tu velocidad es 0 hasta el final del turno. Puntería Itinerante (nivel 9) elimina solo esa reducción.",
       "Ataca con ventaja: el impacto activa Ataque Furtivo (6d6)."
     ],
     stepsEn: [
-      "Bonus Action: Steady Aim → ADVANTAGE on your next attack this turn.",
-      "Roving Aim (level 9): your speed is NOT reduced to 0 — you can keep moving.",
+      "Bonus Action: Steady Aim → ADVANTAGE on your next attack THIS turn (only if you haven't moved yet).",
+      "After using it, your Speed is 0 until the end of the turn. Roving Aim (level 9) removes only that reduction.",
       "Attack with advantage: a hit triggers Sneak Attack (6d6)."
     ]
   },
@@ -240,13 +315,13 @@ const COMBOS = [
     titleEn: "Future Unlocks",
     type: "info",
     stepsEs: [
-      "Nivel 13 — Armas Envenenadas: +2d6 de daño de veneno que ignora resistencia al veneno (1 min, concentración).",
-      "Nivel 14 — Golpes Tortuosos: nuevas opciones de Golpe Astuto (Aturdir, Cegar, Obnubilar).",
+      "Nivel 13 — Armas Envenenadas: al usar Veneno (Golpe Astuto), si el objetivo falla la salvación recibe +2d6 de daño de veneno que IGNORA la resistencia.",
+      "Nivel 14 — Golpes Tortuosos: nuevas opciones de Golpe Astuto (Aturdir 2d6, Obnubilar 3d6, Noquear 6d6).",
       "Nivel 17 — Golpe Mortal: al impactar con Asesinar, salv. CON (CD 8+comp+DES) o el daño del ataque se DUPLICA."
     ],
     stepsEn: [
-      "Level 13 — Envenom Weapons: +2d6 poison damage ignoring poison resistance (1 min, concentration).",
-      "Level 14 — Devious Strikes: new Cunning Strike options (Daze, Blind, Obfuscate).",
+      "Level 13 — Envenom Weapons: when you use Poison (Cunning Strike), if the target fails the save it takes +2d6 poison damage that IGNORES resistance.",
+      "Level 14 — Devious Strikes: new Cunning Strike options (Daze 2d6, Obscure 3d6, Knock Out 6d6).",
       "Level 17 — Death Strike: on an Assassinate hit, CON save (DC 8+prof+DEX) or the attack's damage is DOUBLED."
     ]
   }
@@ -283,20 +358,26 @@ const I18N = {
     rollInitiative: "Tirar iniciativa",
     enemySetup: "Enemigo", enemyName: "Nombre", enemyHp: "PG", enemyAc: "CA",
     enemyHasActed: "El enemigo YA ha actuado este combate",
-    assassinateHint: "Si NO ha actuado: ventaja en el ataque y +{lv} daño (Asesinar)",
+    assassinateHint: "1ª ronda: si NO ha actuado, ventaja en el ataque y +{lv} daño del tipo del arma (Asesinar)",
     attackPanel: "Ataque", attackBonus: "Bono de ataque",
     advantage: "Ventaja", disadvantage: "Desventaja",
     rollAttack: "Tirar ataque", crit: "¡CRÍTICO!", miss: "Fallo", hit: "Impacto",
     nat1: "¡Pifia (1 natural)!", sneakUsed: "Furtivo ya usado este turno",
     cunningStrikes: "Golpes Astutos (máx. 2)",
-    csPoison: "Veneno (-1d6, salv. CON)", csTrip: "Derribo (-1d6, salv. DES)", csWithdraw: "Retirada (-1d6, mover mitad sin AdO)",
+    csPoison: "Veneno (-1d6, CON o Envenenado 1 min; requiere Poisoner's Kit)",
+    csTrip: "Derribo (-1d6, Grande o menor, DES o Derribado)",
+    csWithdraw: "Retirada (-1d6, mover mitad sin AdO)",
+    csDaze: "Aturdir (-2d6, CON)", csKnockOut: "Noquear (-6d6, CON o Inconsciente)",
+    csObscure: "Obnubilar (-3d6, DES o Cegado)",
     saveDC: "CD de salvación",
     bonusActions: "Acciones adicionales",
     caDash: "Acción Astuta: Dash", caDisengage: "Acción Astuta: Retirarse", caHide: "Acción Astuta: Esconderse",
-    steadyAim: "Puntería Firme (ventaja; Puntería Itinerante: no pierdes movimiento)",
+    steadyAim: "Puntería Firme",
+    steadyAimRules: "Puntería Firme: acción adicional → ventaja en tu próximo ataque de ESTE turno. Solo si aún no te has movido; tras usarla tu velocidad es 0 hasta el final del turno (Puntería Itinerante, N9, elimina solo la reducción de velocidad).",
+    sneakHint: "Ataque Furtivo: 1/turno si tienes ventaja (o un aliado NO incapacitado está a 5 ft del objetivo y tú no tienes desventaja). El daño extra es del tipo del arma.",
     reactions: "Reacciones",
-    uncannyDodge: "Esquiva Asombrosa: reduce a la mitad el daño de un ataque que te impacte",
-    evasion: "Evasión: salv. DES → 0 daño si éxito, mitad si fallo",
+    uncannyDodge: "Esquiva Asombrosa: reacción → el daño de un ataque que te impacte se divide entre 2 (redondeando hacia abajo)",
+    evasion: "Evasión: efecto con salv. DES de medio daño → éxito 0, fallo mitad. No usable si estás Incapacitado",
     damageLog: "Registro de daño", enemyTracker: "Rastreador del enemigo",
     newTurn: "Nuevo turno", newCombat: "Nuevo combate", dead: "¡Enemigo derrotado!",
     applyDamage: "Aplicar daño", heal: "Curar",
@@ -305,8 +386,13 @@ const I18N = {
     selectWeapon: "Elige arma",
     // Términos del registro / desgloses
     lSneak: "Furtivo", lAssassinate: "Asesinar", lDamageWord: "Daño", lVsAc: "vs CA", lEnemyHp: "PG enemigo",
-    lPoisonSave: "Veneno (CD {dc} CON)", lTripSave: "Derribo (CD {dc} DES)",
-    lWithdrawNote: "Retirada: mueves la mitad sin provocar AdO",
+    lPoisonSave: "Veneno (CD {dc} CON): Envenenado 1 min; repite la salvación al final de cada turno (requiere Poisoner's Kit)",
+    lTripSave: "Derribo (CD {dc} DES): si es Grande o menor, queda Derribado",
+    lWithdrawNote: "Retirada: te mueves hasta la mitad de tu velocidad sin provocar AdO",
+    lDazeSave: "Aturdir (CD {dc} CON): en su próximo turno solo puede moverse, hacer una acción O una acción adicional",
+    lKnockOutSave: "Noquear (CD {dc} CON): Inconsciente 1 min o hasta recibir daño; repite la salvación al final de cada turno",
+    lObscureSave: "Obnubilar (CD {dc} DES): Cegado hasta el final de su próximo turno",
+    envenomNote: "Armas Envenenadas: si falla la salvación, +2d6({rolls}) = {n} de daño de veneno que IGNORA la resistencia",
     // Combos
     combosTitle: "Guía de combos",
     combosIntro: "Tarjetas paso a paso con calculadora de daño integrada. Los dados se tiran de verdad.",
@@ -341,7 +427,12 @@ const I18N = {
     journalTitlePh: "Título de la sesión…", journalTextPh: "¿Qué pasó en la sesión?",
     // Progresión
     progressionSection: "Progresión por nivel (Pícaro Asesino, 2024)",
-    asiNote: "Elección en mejora", asiNotePh: "p. ej. Dote: Pungidor, o +2 DES",
+    asiNote: "Elección (dote/mejora)", asiNotePh: "p. ej. Dote: Pungidor, +2 DES, Dote Épica…",
+    // Maestría de armas y condiciones
+    masterySection: "Maestría de armas", masteryWeapon: "Arma",
+    masteryNote: "Elige 2 armas con las que tengas competencia. Puedes cambiar la elección al terminar un descanso largo.",
+    masteryGlossaryTitle: "📖 Glosario de propiedades de maestría",
+    conditionsSection: "📖 Condiciones que inflige el Asesino (referencia rápida)",
     // PCGen
     pcgenStep1: "Abre tu personaje en PCGen.",
     pcgenStep2: "Menú Character → Export → Standard…",
@@ -384,20 +475,26 @@ const I18N = {
     rollInitiative: "Roll initiative",
     enemySetup: "Enemy", enemyName: "Name", enemyHp: "HP", enemyAc: "AC",
     enemyHasActed: "Enemy has ALREADY acted this combat",
-    assassinateHint: "If it has NOT acted: advantage on the attack and +{lv} damage (Assassinate)",
+    assassinateHint: "1st round: if it has NOT acted, advantage on the attack and +{lv} damage of the weapon's type (Assassinate)",
     attackPanel: "Attack", attackBonus: "Attack bonus",
     advantage: "Advantage", disadvantage: "Disadvantage",
     rollAttack: "Roll attack", crit: "CRITICAL!", miss: "Miss", hit: "Hit",
     nat1: "Natural 1 — critical miss!", sneakUsed: "Sneak attack already used this turn",
     cunningStrikes: "Cunning Strikes (max 2)",
-    csPoison: "Poison (-1d6, CON save)", csTrip: "Trip (-1d6, DEX save)", csWithdraw: "Withdraw (-1d6, move half speed, no OAs)",
+    csPoison: "Poison (-1d6, CON save or Poisoned 1 min; requires Poisoner's Kit)",
+    csTrip: "Trip (-1d6, Large or smaller, DEX save or Prone)",
+    csWithdraw: "Withdraw (-1d6, move half speed, no OAs)",
+    csDaze: "Daze (-2d6, CON save)", csKnockOut: "Knock Out (-6d6, CON save or Unconscious)",
+    csObscure: "Obscure (-3d6, DEX save or Blinded)",
     saveDC: "Save DC",
     bonusActions: "Bonus actions",
     caDash: "Cunning Action: Dash", caDisengage: "Cunning Action: Disengage", caHide: "Cunning Action: Hide",
-    steadyAim: "Steady Aim (advantage; Roving Aim: you keep your movement)",
+    steadyAim: "Steady Aim",
+    steadyAimRules: "Steady Aim: Bonus Action → advantage on your next attack THIS turn. Only if you haven't moved yet; after using it your Speed is 0 until the end of the turn (Roving Aim, L9, removes only the Speed reduction).",
+    sneakHint: "Sneak Attack: 1/turn if you have advantage (or an ally that is NOT Incapacitated is within 5 ft of the target and you don't have Disadvantage). The extra damage is the weapon's damage type.",
     reactions: "Reactions",
-    uncannyDodge: "Uncanny Dodge: halve the damage of an attack that hits you",
-    evasion: "Evasion: DEX save → 0 damage on success, half on failure",
+    uncannyDodge: "Uncanny Dodge: reaction → the damage of an attack that hits you is halved (round down)",
+    evasion: "Evasion: effect with a DEX save for half damage → 0 on success, half on failure. Can't be used while Incapacitated",
     damageLog: "Damage log", enemyTracker: "Enemy tracker",
     newTurn: "New turn", newCombat: "New combat", dead: "Enemy defeated!",
     applyDamage: "Apply damage", heal: "Heal",
@@ -405,8 +502,13 @@ const I18N = {
     logBonus: "Bonus action",
     selectWeapon: "Choose weapon",
     lSneak: "Sneak", lAssassinate: "Assassinate", lDamageWord: "Damage", lVsAc: "vs AC", lEnemyHp: "Enemy HP",
-    lPoisonSave: "Poison (DC {dc} CON)", lTripSave: "Trip (DC {dc} DEX)",
-    lWithdrawNote: "Withdraw: move half speed without provoking OAs",
+    lPoisonSave: "Poison (DC {dc} CON): Poisoned 1 min; repeats the save at the end of each turn (requires Poisoner's Kit)",
+    lTripSave: "Trip (DC {dc} DEX): if Large or smaller, it has the Prone condition",
+    lWithdrawNote: "Withdraw: you move up to half your Speed without provoking OAs",
+    lDazeSave: "Daze (DC {dc} CON): on its next turn it can only move, take an action OR a Bonus Action",
+    lKnockOutSave: "Knock Out (DC {dc} CON): Unconscious 1 min or until it takes damage; repeats the save at the end of each turn",
+    lObscureSave: "Obscure (DC {dc} DEX): Blinded until the end of its next turn",
+    envenomNote: "Envenom Weapons: on a failed save, +2d6({rolls}) = {n} poison damage that IGNORES resistance",
     combosTitle: "Combo Guide",
     combosIntro: "Step-by-step cards with a built-in damage calculator. Dice are rolled for real.",
     rollCombo: "Roll combo damage",
@@ -439,7 +541,12 @@ const I18N = {
     journalTitlePh: "Session title…", journalTextPh: "What happened this session?",
     // Progression
     progressionSection: "Level Progression (Assassin Rogue, 2024)",
-    asiNote: "ASI choice", asiNotePh: "e.g. Feat: Piercer, or +2 DEX",
+    asiNote: "Choice (feat/boon)", asiNotePh: "e.g. Feat: Piercer, +2 DEX, Epic Boon…",
+    // Weapon mastery & conditions
+    masterySection: "Weapon Mastery", masteryWeapon: "Weapon",
+    masteryNote: "Choose 2 weapons you have proficiency with. You can change the selection when you finish a Long Rest.",
+    masteryGlossaryTitle: "📖 Mastery properties glossary",
+    conditionsSection: "📖 Conditions the Assassin inflicts (quick reference)",
     // PCGen
     pcgenStep1: "Open your character in PCGen.",
     pcgenStep2: "Menu Character → Export → Standard…",

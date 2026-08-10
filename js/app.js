@@ -291,6 +291,54 @@ function longRest() {
   state.inspiration = true; // 2024: se gana Inspiración Heroica tras un descanso largo
   saveState();
   renderIdentity();
+  // Recordatorio: tras un descanso largo puedes cambiar las armas de Maestría.
+  $("#mastery-card").classList.remove("mastery-remind");
+  void $("#mastery-card").offsetWidth; // reinicia la animación
+  $("#mastery-card").classList.add("mastery-remind");
+}
+
+/* ---------- Maestría de armas ---------- */
+function renderMastery() {
+  [1, 2].forEach((n) => {
+    const sel = $("#mastery-" + n);
+    sel.innerHTML = "";
+    WEAPON_MASTERY.forEach((w) => {
+      const prop = MASTERY_PROPERTIES.find((p) => p.id === w.mastery);
+      const opt = document.createElement("option");
+      opt.value = w.id;
+      opt.textContent = `${LANG === "es" ? w.es : w.en} — ${w.dmg} — ${prop.name}`;
+      sel.appendChild(opt);
+    });
+    if (state.masteryChoices[n - 1]) sel.value = state.masteryChoices[n - 1];
+  });
+  const gl = $("#mastery-glossary-list");
+  gl.innerHTML = "";
+  MASTERY_PROPERTIES.forEach((p) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${p.name}</strong>: ${LANG === "es" ? p.es : p.en}`;
+    gl.appendChild(li);
+  });
+}
+
+function initMasteryEvents() {
+  [1, 2].forEach((n) => {
+    $("#mastery-" + n).addEventListener("change", (e) => {
+      state.masteryChoices[n - 1] = e.target.value;
+      saveState();
+      $("#mastery-card").classList.remove("mastery-remind"); // ya hiciste el cambio
+    });
+  });
+}
+
+/* ---------- Condiciones (referencia rápida) ---------- */
+function renderConditions() {
+  const list = $("#conditions-list");
+  list.innerHTML = "";
+  CONDITIONS.forEach((c) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${LANG === "es" ? c.nameEs : c.nameEn}</strong>: ${LANG === "es" ? c.es : c.en}`;
+    list.appendChild(li);
+  });
 }
 
 /* ---------- Experiencia (PX) ---------- */
@@ -402,7 +450,8 @@ function renderProgression() {
       ? state.progressionOverrides[f.lv] : auto;
     const tr = document.createElement("tr");
     tr.className = (checked ? "prog-done " : "") + (state.level === f.lv ? "prog-current" : "");
-    const asiCell = f.asi
+    // Campo de nota en niveles de Mejora/Dote (asi) y en la Dote Épica (boon, N19)
+    const asiCell = (f.asi || f.boon)
       ? `<input type="text" class="asi-input" data-asi="${f.lv}" value="${escapeHtml(state.asiNotes[f.lv] || "")}" placeholder="${t("asiNotePh")}">`
       : "";
     tr.innerHTML = `
@@ -868,13 +917,17 @@ function rollAttack() {
   let sneakApplied = false;
   let strikesApplied = [];
   if (!sim.sneakUsed) {
-    const strikes = $$(".cs-check:checked").map((c) => c.value).slice(0, 2);
+    // Los dados se quitan ANTES de rolar el daño; cada opción cuesta lo suyo.
+    const strikes = $$(".cs-check:checked")
+      .map((c) => ({ id: c.value, cost: +c.dataset.cost || 1 }))
+      .slice(0, 2);
+    const costTotal = strikes.reduce((a, s) => a + s.cost, 0);
     const baseSneak = sneakDiceCount(state.level);
-    const sneakCount = Math.max(0, baseSneak - strikes.length);
+    const sneakCount = Math.max(0, baseSneak - costTotal);
     if (sneakCount > 0) {
       const sDiceCount = crit ? sneakCount * 2 : sneakCount;
       const sRolls = rollDice(sDiceCount, 6);
-      const label = strikes.length ? `${sDiceCount}d6 (base ${baseSneak}d6 − ${strikes.length})` : `${sDiceCount}d6`;
+      const label = costTotal ? `${sDiceCount}d6 (base ${baseSneak}d6 − ${costTotal})` : `${sDiceCount}d6`;
       parts.push(`${t("lSneak")} ${label}(${sRolls.join(",")})`);
       dmgTotal += sum(sRolls);
     }
@@ -903,11 +956,19 @@ function rollAttack() {
   if (strikesApplied.length) {
     const dc = saveDC();
     const notes = strikesApplied.map((s) => {
-      if (s === "poison") return t("lPoisonSave").replace("{dc}", dc);
-      if (s === "trip") return t("lTripSave").replace("{dc}", dc);
+      if (s.id === "poison") return t("lPoisonSave").replace("{dc}", dc);
+      if (s.id === "trip") return t("lTripSave").replace("{dc}", dc);
+      if (s.id === "daze") return t("lDazeSave").replace("{dc}", dc);
+      if (s.id === "knockout") return t("lKnockOutSave").replace("{dc}", dc);
+      if (s.id === "obscure") return t("lObscureSave").replace("{dc}", dc);
       return t("lWithdrawNote");
     });
     logHtml += `<br>⚔ ${notes.join(" · ")}`;
+    // Armas Envenenadas (N13): +2d6 veneno que ignora resistencia si falla la salvación.
+    if (strikesApplied.some((s) => s.id === "poison") && state.level >= 13) {
+      const eRolls = rollDice(2, 6);
+      logHtml += `<br>🧪 ${t("envenomNote").replace("{rolls}", eRolls.join(",")).replace("{n}", sum(eRolls))}`;
+    }
   }
   if (!sneakApplied && sim.sneakUsed) {
     logHtml += `<br><em>${t("sneakUsed")}</em>`;
@@ -930,11 +991,13 @@ function initSimEvents() {
     $("#sim-adv").checked = !e.target.checked;
   });
 
-  // Máximo 2 Golpes Astutos (Golpe Astuto Mejorado, nivel 11).
+  // Máximo 2 Golpes Astutos (Golpe Astuto Mejorado, nivel 11)
+  // y el coste total no puede superar los dados de furtivo.
   $$(".cs-check").forEach((cb) => {
     cb.addEventListener("change", () => {
       const checked = $$(".cs-check:checked");
-      if (checked.length > 2) cb.checked = false;
+      const cost = checked.reduce((a, c) => a + (+c.dataset.cost || 1), 0);
+      if (checked.length > 2 || cost > sneakDiceCount(state.level)) cb.checked = false;
     });
   });
 
@@ -971,6 +1034,23 @@ function renderSimAll() {
   renderSimWeapons();
   renderAssassinateHint();
   renderEnemyBar();
+  renderStrikeLocks();
+}
+
+/** Bloquea las opciones de Golpes Tortuosos (N14) si el nivel es insuficiente. */
+function renderStrikeLocks() {
+  $$(".cs-check").forEach((cb) => {
+    const req = cb.dataset.lock ? +cb.dataset.lock : 0;
+    const lockSpan = cb.parentElement.querySelector(".cs-lock");
+    if (req && state.level < req) {
+      cb.disabled = true;
+      cb.checked = false;
+      if (lockSpan) lockSpan.textContent = " 🔒 N" + req;
+    } else {
+      cb.disabled = false;
+      if (lockSpan) lockSpan.textContent = "";
+    }
+  });
 }
 
 /* ============================================================
@@ -1086,6 +1166,8 @@ function renderAll() {
   renderFeats();
   renderJournal();
   renderProgression();
+  renderMastery();
+  renderConditions();
   renderAbilities();
   renderSkills();
   renderWeapons();
@@ -1100,6 +1182,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSheetEvents();
   initSimEvents();
   initPcgen();
+  initMasteryEvents();
   $("#lang-toggle").addEventListener("click", toggleLang);
   // Estado inicial del simulador: enemigo no ha actuado → ventaja marcada.
   $("#sim-adv").checked = true;
