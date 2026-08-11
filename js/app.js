@@ -29,6 +29,12 @@ function sneakDiceCount(level) { return Math.ceil(level / 2); }
 /** Formatea un modificador con signo: +5 / -1 */
 function fmtMod(n) { return (n >= 0 ? "+" : "") + n; }
 
+/** Formatea un número con comas de miles: 100,000 */
+function fmtNum(n) { return Number(n).toLocaleString("en-US"); }
+
+/** Extrae solo los dígitos de un texto y los convierte en número. */
+function parseNum(s) { return parseInt(String(s).replace(/\D/g, ""), 10) || 0; }
+
 /** Tira un dado de N caras (1..N inclusive). */
 function rollDie(sides) { return Math.floor(Math.random() * sides) + 1; }
 
@@ -353,7 +359,7 @@ function levelForXp(xp) {
 }
 
 function renderXp() {
-  $("#f-xp").value = state.xp;
+  $("#f-xp").value = fmtNum(state.xp);
   const lv = levelForXp(state.xp);
   $("#f-xp-level").value = lv;
   const fill = $("#xp-bar-fill");
@@ -361,13 +367,13 @@ function renderXp() {
   if (lv >= 20) {
     $("#f-xp-tonext").value = t("xpMax");
     fill.style.width = "100%";
-    label.textContent = state.xp + " PX";
+    label.textContent = fmtNum(state.xp) + " PX";
   } else {
     const cur = XP_TABLE[lv - 1];
     const next = XP_TABLE[lv];
-    $("#f-xp-tonext").value = next - state.xp;
+    $("#f-xp-tonext").value = fmtNum(next - state.xp);
     fill.style.width = Math.min(100, Math.round(((state.xp - cur) / (next - cur)) * 100)) + "%";
-    label.textContent = t("xpBarLabel").replace("{xp}", state.xp).replace("{next}", next);
+    label.textContent = t("xpBarLabel").replace("{xp}", fmtNum(state.xp)).replace("{next}", fmtNum(next));
   }
 }
 
@@ -742,13 +748,13 @@ function initSheetEvents() {
 
   // --- Experiencia ---
   $("#f-xp").addEventListener("change", (e) => {
-    state.xp = Math.max(0, parseInt(e.target.value, 10) || 0);
+    state.xp = parseNum(e.target.value);
     saveState();
     renderXp();
   });
   $$(".xp-add").forEach((btn) => btn.addEventListener("click", () => addXp(+btn.dataset.amt)));
   $("#btn-xp-custom").addEventListener("click", () => {
-    addXp(parseInt($("#xp-custom").value, 10) || 0);
+    addXp(parseNum($("#xp-custom").value));
     $("#xp-custom").value = "";
   });
   $("#btn-apply-level").addEventListener("click", () => {
