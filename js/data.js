@@ -31,6 +31,13 @@ const SKILLS = [
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
 
+// Herramientas con competencia (2024): cada una usa una característica.
+const TOOLS = [
+  { key: "thievesTools", ability: "dex" },
+  { key: "disguiseKit",  ability: "cha" },
+  { key: "poisonersKit", ability: "int" }
+];
+
 /* ---------- Tabla de PX por nivel (2024) ---------- */
 const XP_TABLE = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
   85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
@@ -86,6 +93,12 @@ const DEFAULT_STATE = {
   inspiration: false,
   abilities: { str: 10, dex: 20, con: 14, int: 12, wis: 14, cha: 12 },
   // p = competencia, e = pericia (expertise, dobla el bono)
+  // Herramientas: ladrón (trasfondo Criminal), disfraz y envenenador (N3 Asesino)
+  tools: {
+    thievesTools: { p: true, e: false },
+    disguiseKit:  { p: true, e: false },
+    poisonersKit: { p: true, e: false }
+  },
   skills: {
     acrobatics:     { p: true,  e: false },
     animalHandling: { p: false, e: false },
@@ -324,6 +337,8 @@ const I18N = {
     shortRest: "Descanso corto (1 hora)", longRest: "Descanso largo (recupera todo)",
     abilities: "Atributos (Características)", score: "Valor", modifier: "Extra (Mod.)",
     skills: "Habilidades (lo que sabes hacer)", skill: "Habilidad", prof: "La sé (Comp.)", expertise: "Experto (Pericia)",
+    toolsSection: "Herramientas (Tools)",
+    tool_thievesTools: "Herramientas de Ladrón", tool_disguiseKit: "Kit de Disfraz", tool_poisonersKit: "Kit de Envenenador",
     weapons: "Armas y ataques", weapon: "Arma", damage: "Daño (dados)", properties: "Propiedades", mastery: "Maestría (truco)",
     addWeapon: "+ Añadir arma", remove: "Quitar",
     currency: "Dinero (Monedas)", notes: "Inventario y notas",
@@ -442,6 +457,8 @@ const I18N = {
     shortRest: "Short rest", longRest: "Long rest",
     abilities: "Ability Scores", score: "Score", modifier: "Mod.",
     skills: "Skills", skill: "Skill", prof: "Prof.", expertise: "Expertise",
+    toolsSection: "Tools",
+    tool_thievesTools: "Thieves' Tools", tool_disguiseKit: "Disguise Kit", tool_poisonersKit: "Poisoner's Kit",
     weapons: "Weapons & Attacks", weapon: "Weapon", damage: "Damage", properties: "Properties", mastery: "Mastery",
     addWeapon: "+ Add weapon", remove: "Remove",
     currency: "Currency", notes: "Inventory & notes",

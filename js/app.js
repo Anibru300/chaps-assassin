@@ -64,6 +64,7 @@ function loadState() {
     merged.abilities = Object.assign(structuredClone(DEFAULT_STATE.abilities), loaded.abilities || {});
     merged.currency  = Object.assign(structuredClone(DEFAULT_STATE.currency),  loaded.currency  || {});
     merged.skills    = Object.assign(structuredClone(DEFAULT_STATE.skills),    loaded.skills    || {});
+    merged.tools     = Object.assign(structuredClone(DEFAULT_STATE.tools),     loaded.tools     || {});
     merged.identity  = Object.assign(structuredClone(DEFAULT_STATE.identity),  loaded.identity  || {});
     // Migración: los guardados antiguos (v1) reciben las nuevas secciones por defecto.
     merged.v = STATE_VERSION;
@@ -183,6 +184,7 @@ function renderAbilities() {
       saveState();
       renderAbilities();
       renderSkills();      // los mods de habilidades dependen de las características
+      renderTools();
       renderSimWeaponBonus();
     });
   });
@@ -344,6 +346,34 @@ function renderConditions() {
     const li = document.createElement("li");
     li.innerHTML = `<strong>${LANG === "es" ? c.nameEs : c.nameEn}</strong>: ${LANG === "es" ? c.es : c.en}`;
     list.appendChild(li);
+  });
+}
+
+/** Lista de herramientas con toggles de competencia/pericia (igual que habilidades). */
+function renderTools() {
+  const list = $("#tools-list");
+  list.innerHTML = "";
+  const pb = profBonus(state.level);
+  TOOLS.forEach((tl) => {
+    const s = state.tools[tl.key] || { p: false, e: false };
+    const mod = abilityMod(state.abilities[tl.ability]) + (s.e ? pb * 2 : s.p ? pb : 0);
+    const row = document.createElement("div");
+    row.className = "skill-row";
+    row.innerHTML = `
+      <span>${t("tool_" + tl.key)} <span class="skill-ab">(${t("ability_" + tl.ability)})</span></span>
+      <input type="checkbox" data-tool="${tl.key}" data-kind="p" ${s.p ? "checked" : ""}>
+      <input type="checkbox" data-tool="${tl.key}" data-kind="e" ${s.e ? "checked" : ""}>
+      <span class="skill-mod">${fmtMod(mod)}</span>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const tl = state.tools[cb.dataset.tool];
+      tl[cb.dataset.kind] = cb.checked;
+      if (cb.dataset.kind === "e" && cb.checked) tl.p = true; // pericia implica competencia
+      saveState();
+      renderTools();
+    });
   });
 }
 
@@ -715,7 +745,7 @@ function initSheetEvents() {
       state[key] = numeric ? (parseInt(e.target.value, 10) || 0) : e.target.value;
       saveState();
       if (key === "level" || key === "hpMax") renderIdentity();
-      if (key === "level") { renderAbilities(); renderSkills(); renderWeapons(); renderSimAll(); renderCombos(); renderProgression(); }
+      if (key === "level") { renderAbilities(); renderSkills(); renderTools(); renderWeapons(); renderSimAll(); renderCombos(); renderProgression(); }
     });
   };
   bind("#f-name", "name", false);
@@ -1180,6 +1210,7 @@ function renderAll() {
   renderConditions();
   renderAbilities();
   renderSkills();
+  renderTools();
   renderWeapons();
   renderCurrency();
   renderSimAll();
