@@ -364,7 +364,7 @@ function renderCurrency() {
   ["pp", "gp", "ep", "sp", "cp"].forEach((coin) => {
     const label = document.createElement("label");
     label.className = "field";
-    label.innerHTML = `<span>${coin.toUpperCase()}</span>
+    label.innerHTML = `<span>${t("coin_" + coin)}</span>
       <input type="number" min="0" value="${state.currency[coin]}" data-coin="${coin}">`;
     grid.appendChild(label);
   });
@@ -937,6 +937,18 @@ function initSheetEvents() {
   });
 
   $("#btn-add-catalog").addEventListener("click", addWeaponFromCatalog);
+
+  // --- Monedas: poner / quitar ---
+  const adjustCoin = (sign) => {
+    const coin = $("#coin-select").value;
+    const amt = Math.max(0, parseInt($("#coin-amt").value, 10) || 0);
+    if (!amt) return;
+    state.currency[coin] = Math.max(0, state.currency[coin] + sign * amt);
+    saveState();
+    renderCurrency();
+  };
+  $("#btn-coin-add").addEventListener("click", () => adjustCoin(1));
+  $("#btn-coin-remove").addEventListener("click", () => adjustCoin(-1));
 
   $("#btn-add-weapon").addEventListener("click", () => {
     state.weapons.push({ name: "—", dice: 1, sides: 6, bonus: abilityMod(state.abilities.dex), props: "", mastery: "" });
