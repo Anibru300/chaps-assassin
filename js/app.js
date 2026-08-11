@@ -69,6 +69,18 @@ function loadState() {
     // Migraciones:
     // v1/v2 -> v3: Thieves' Tools pasa a la lista de Habilidades con Pericia (ficha de papel).
     if ((loaded.v || 1) < 3) merged.tools.thievesTools = { p: true, e: true };
+    // v3 -> v4: vincular dotes/armas añadidas del catálogo por id (para traducción automática).
+    if ((loaded.v || 1) < 4) {
+      const norm = (s) => String(s || "").trim().toLowerCase();
+      merged.feats.forEach((f) => {
+        const cat = FEAT_CATALOG.find((c) => norm(c.es) === norm(f.name) || norm(c.en) === norm(f.name));
+        if (cat) f.featId = cat.id;
+      });
+      merged.weapons.forEach((w) => {
+        const cat = WEAPON_MASTERY.find((c) => norm(c.es) === norm(w.name) || norm(c.en) === norm(w.name));
+        if (cat) w.weaponId = cat.id;
+      });
+    }
     merged.v = STATE_VERSION;
     return merged;
   } catch (e) {
@@ -192,6 +204,24 @@ function renderAbilities() {
   });
 }
 
+/** Vista traducida de un arma: si viene del catálogo y no se editó a mano, sigue el idioma. */
+function weaponView(w) {
+  const cat = w.weaponId ? WEAPON_MASTERY.find((c) => c.id === w.weaponId) : null;
+  if (!cat || w.custom) return { name: w.name, props: w.props, mastery: w.mastery };
+  return {
+    name: LANG === "es" ? cat.es : cat.en,
+    props: LANG === "es" ? cat.propsEs : cat.propsEn,
+    mastery: MASTERY_PROPERTIES.find((p) => p.id === cat.mastery).name
+  };
+}
+
+/** Vista traducida de una dote (misma idea que weaponView). */
+function featView(f) {
+  const cat = f.featId ? FEAT_CATALOG.find((c) => c.id === f.featId) : null;
+  if (!cat || f.custom) return { name: f.name, desc: f.desc };
+  return { name: LANG === "es" ? cat.es : cat.en, desc: LANG === "es" ? cat.descEs : cat.descEn };
+}
+
 /** Lista de habilidades con toggles de competencia/pericia. */
 function renderSkills() {
   const list = $("#skills-list");
@@ -242,13 +272,14 @@ function renderWeapons() {
   body.innerHTML = "";
   const atkBonus = profBonus(state.level) + abilityMod(state.abilities.dex);
   state.weapons.forEach((w, i) => {
+    const v = weaponView(w);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><input type="text" value="${escapeHtml(w.name)}" data-i="${i}" data-f="name"></td>
+      <td><input type="text" value="${escapeHtml(v.name)}" data-i="${i}" data-f="name"></td>
       <td><input type="text" value="${w.dice}d${w.sides}${w.bonus >= 0 ? "+" : ""}${w.bonus}" data-i="${i}" data-f="dmg" title="dados+característica, p. ej. 1d8+5" style="min-width:80px"></td>
       <td>${fmtMod(atkBonus)}</td>
-      <td><input type="text" value="${escapeHtml(w.props)}" data-i="${i}" data-f="props"></td>
-      <td><input type="text" value="${escapeHtml(w.mastery)}" data-i="${i}" data-f="mastery" style="min-width:70px"></td>
+      <td><input type="text" value="${escapeHtml(v.props)}" data-i="${i}" data-f="props"></td>
+      <td><input type="text" value="${escapeHtml(v.mastery)}" data-i="${i}" data-f="mastery" style="min-width:70px"></td>
       <td><button class="btn btn-small btn-danger" data-del="${i}">✕</button></td>`;
     body.appendChild(tr);
   });
@@ -267,6 +298,7 @@ function renderWeapons() {
         renderWeapons();
       } else {
         w[inp.dataset.f] = inp.value;
+        w.custom = true; // edición manual: deja de seguir la traducción del catálogo
         saveState();
       }
       renderSimWeapons();
@@ -316,7 +348,8 @@ function addWeaponFromCatalog() {
     dice, sides,
     bonus: abilityMod(state.abilities.dex),
     props: LANG === "es" ? w.propsEs : w.propsEn,
-    mastery: prop.name
+    mastery: prop.name,
+    weaponId: w.id // vínculo al catálogo: nombre/props/maestría se traducen solos
   });
   saveState();
   renderWeapons();
@@ -485,19 +518,21 @@ function renderFeats() {
   const list = $("#feats-list");
   list.innerHTML = "";
   state.feats.forEach((f, i) => {
+    const v = featView(f);
     const row = document.createElement("div");
     row.className = "feat-row";
     row.innerHTML = `
       <div class="feat-head">
-        <input type="text" value="${escapeHtml(f.name)}" placeholder="${t("featNamePh")}" data-fi="${i}" data-ff="name">
+        <input type="text" value="${escapeHtml(v.name)}" placeholder="${t("featNamePh")}" data-fi="${i}" data-ff="name">
         <button class="btn btn-small btn-danger" data-fdel="${i}" title="${t("remove")}">✕</button>
       </div>
-      <textarea rows="2" placeholder="${t("featDescPh")}" data-fi="${i}" data-ff="desc">${escapeHtml(f.desc)}</textarea>`;
+      <textarea rows="2" placeholder="${t("featDescPh")}" data-fi="${i}" data-ff="desc">${escapeHtml(v.desc)}</textarea>`;
     list.appendChild(row);
   });
   list.querySelectorAll("[data-ff]").forEach((inp) => {
     inp.addEventListener("input", () => {
       state.feats[+inp.dataset.fi][inp.dataset.ff] = inp.value;
+      state.feats[+inp.dataset.fi].custom = true; // edición manual: deja de seguir el catálogo
       saveState();
     });
   });
@@ -530,7 +565,8 @@ function addFeatFromCatalog() {
   if (!f) return;
   state.feats.push({
     name: LANG === "es" ? f.es : f.en,
-    desc: LANG === "es" ? f.descEs : f.descEn
+    desc: LANG === "es" ? f.descEs : f.descEn,
+    featId: f.id // vínculo al catálogo: se traduce solo
   });
   saveState();
   renderFeats();
@@ -947,7 +983,7 @@ function renderSimWeapons() {
   state.weapons.forEach((w, i) => {
     const opt = document.createElement("option");
     opt.value = i;
-    opt.textContent = `${w.name} (${w.dice}d${w.sides}+${w.bonus})`;
+    opt.textContent = `${weaponView(w).name} (${w.dice}d${w.sides}+${w.bonus})`;
     sel.appendChild(opt);
   });
   if (prev !== "" && +prev < state.weapons.length) sel.value = prev;
@@ -1213,7 +1249,7 @@ function renderCombos() {
 
     if (combo.type === "roller") {
       const options = state.weapons
-        .map((w, i) => `<option value="${i}">${escapeHtml(w.name)} (${w.dice}d${w.sides}+${w.bonus})</option>`)
+        .map((w, i) => `<option value="${i}">${escapeHtml(weaponView(w).name)} (${w.dice}d${w.sides}+${w.bonus})</option>`)
         .join("");
       const sneakUsedDice = sneak - (combo.cunningStrikes || 0);
       html += `

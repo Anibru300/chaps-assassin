@@ -68,7 +68,7 @@ const LEVEL_PROGRESSION = [
 ];
 
 /* ---------- Estado por defecto de la ficha ---------- */
-const STATE_VERSION = 3; // v3: Thieves' Tools con Pericia por defecto
+const STATE_VERSION = 4; // v4: dotes/armas del catálogo referenciadas por id (traducción automática)
 const DEFAULT_STATE = {
   v: STATE_VERSION,
   name: "CHAPS",
