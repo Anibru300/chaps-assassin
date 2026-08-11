@@ -510,6 +510,32 @@ function renderFeats() {
   });
 }
 
+/** Rellena el catálogo de dotes (idioma actual). */
+function renderFeatCatalog() {
+  const sel = $("#feat-catalog");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  FEAT_CATALOG.forEach((f) => {
+    const opt = document.createElement("option");
+    opt.value = f.id;
+    opt.textContent = LANG === "es" ? f.es : f.en;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+/** Añade la dote elegida del catálogo con su descripción automática. */
+function addFeatFromCatalog() {
+  const f = FEAT_CATALOG.find((x) => x.id === $("#feat-catalog").value);
+  if (!f) return;
+  state.feats.push({
+    name: LANG === "es" ? f.es : f.en,
+    desc: LANG === "es" ? f.descEs : f.descEn
+  });
+  saveState();
+  renderFeats();
+}
+
 /* ---------- Diario de aventuras ---------- */
 function renderJournal() {
   const list = $("#journal-list");
@@ -860,6 +886,7 @@ function initSheetEvents() {
   });
 
   // --- Dotes ---
+  $("#btn-add-feat-catalog").addEventListener("click", addFeatFromCatalog);
   $("#btn-add-feat").addEventListener("click", () => {
     state.feats.push({ name: "", desc: "" });
     saveState();
@@ -1272,6 +1299,7 @@ function renderAll() {
   renderIdentity();
   renderXp();
   renderFeats();
+  renderFeatCatalog();
   renderJournal();
   renderProgression();
   renderMastery();
