@@ -66,7 +66,9 @@ function loadState() {
     merged.skills    = Object.assign(structuredClone(DEFAULT_STATE.skills),    loaded.skills    || {});
     merged.tools     = Object.assign(structuredClone(DEFAULT_STATE.tools),     loaded.tools     || {});
     merged.identity  = Object.assign(structuredClone(DEFAULT_STATE.identity),  loaded.identity  || {});
-    // Migración: los guardados antiguos (v1) reciben las nuevas secciones por defecto.
+    // Migraciones:
+    // v1/v2 -> v3: Thieves' Tools pasa a la lista de Habilidades con Pericia (ficha de papel).
+    if ((loaded.v || 1) < 3) merged.tools.thievesTools = { p: true, e: true };
     merged.v = STATE_VERSION;
     return merged;
   } catch (e) {
@@ -208,11 +210,26 @@ function renderSkills() {
       <span class="skill-mod">${fmtMod(mod)}</span>`;
     list.appendChild(row);
   });
+  // Thieves' Tools: una fila más al final, como en la ficha oficial (debajo de Survival).
+  const tt = TOOLS.find((x) => x.skillRow);
+  if (tt) {
+    const s = state.tools[tt.key] || { p: false, e: false };
+    const mod = abilityMod(state.abilities[tt.ability]) + (s.e ? pb * 2 : s.p ? pb : 0);
+    const row = document.createElement("div");
+    row.className = "skill-row";
+    row.innerHTML = `
+      <span>${t("tool_" + tt.key)} <span class="skill-ab">(${t("ability_" + tt.ability)})</span></span>
+      <input type="checkbox" data-tool="${tt.key}" data-kind="p" ${s.p ? "checked" : ""}>
+      <input type="checkbox" data-tool="${tt.key}" data-kind="e" ${s.e ? "checked" : ""}>
+      <span class="skill-mod">${fmtMod(mod)}</span>`;
+    list.appendChild(row);
+  }
   list.querySelectorAll("input[type=checkbox]").forEach((cb) => {
     cb.addEventListener("change", () => {
-      const sk = state.skills[cb.dataset.skill];
-      sk[cb.dataset.kind] = cb.checked;
-      if (cb.dataset.kind === "e" && cb.checked) sk.p = true; // pericia implica competencia
+      const store = cb.dataset.tool ? state.tools : state.skills;
+      const key = cb.dataset.tool || cb.dataset.skill;
+      store[key][cb.dataset.kind] = cb.checked;
+      if (cb.dataset.kind === "e" && cb.checked) store[key].p = true; // pericia implica competencia
       saveState();
       renderSkills();
     });
@@ -354,7 +371,7 @@ function renderTools() {
   const list = $("#tools-list");
   list.innerHTML = "";
   const pb = profBonus(state.level);
-  TOOLS.forEach((tl) => {
+  TOOLS.filter((tl) => !tl.skillRow).forEach((tl) => {
     const s = state.tools[tl.key] || { p: false, e: false };
     const mod = abilityMod(state.abilities[tl.ability]) + (s.e ? pb * 2 : s.p ? pb : 0);
     const row = document.createElement("div");

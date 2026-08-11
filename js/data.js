@@ -32,8 +32,9 @@ const SKILLS = [
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
 
 // Herramientas con competencia (2024): cada una usa una característica.
+// skillRow: se muestra como una fila más de Habilidades (como la ficha oficial).
 const TOOLS = [
-  { key: "thievesTools", ability: "dex" },
+  { key: "thievesTools", ability: "dex", skillRow: true },
   { key: "disguiseKit",  ability: "cha" },
   { key: "poisonersKit", ability: "int" }
 ];
@@ -67,7 +68,7 @@ const LEVEL_PROGRESSION = [
 ];
 
 /* ---------- Estado por defecto de la ficha ---------- */
-const STATE_VERSION = 2;
+const STATE_VERSION = 3; // v3: Thieves' Tools con Pericia por defecto
 const DEFAULT_STATE = {
   v: STATE_VERSION,
   name: "CHAPS",
@@ -95,7 +96,7 @@ const DEFAULT_STATE = {
   // p = competencia, e = pericia (expertise, dobla el bono)
   // Herramientas: ladrón (trasfondo Criminal), disfraz y envenenador (N3 Asesino)
   tools: {
-    thievesTools: { p: true, e: false },
+    thievesTools: { p: true, e: true },  // ficha de papel: ambas burbujas marcadas
     disguiseKit:  { p: true, e: false },
     poisonersKit: { p: true, e: false }
   },
