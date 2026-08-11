@@ -11,7 +11,8 @@
    attacks: melee (alcance ft) o range ("normal/largo"); dmg "XdY+Z"
    coward: huye/retirada si PG < 25%                                    */
 const ENEMIES = [
-  { key: "goblin", es: "Goblin", en: "Goblin", cr: "1/4",
+  // cat: humanoid | warrior | caster | paladin | creature | dragon — role: melee | caster
+  { key: "goblin", cat: "humanoid", role: "melee", es: "Goblin", en: "Goblin", cr: "1/4",
     hp: 7, ac: 15, speed: 30, init: 2, percep: -1,
     mods: { str: -1, dex: 2, con: 0, int: 0, wis: -1, cha: -1 },
     attacks: [
@@ -19,7 +20,7 @@ const ENEMIES = [
       { es: "Arco corto", en: "Shortbow", bonus: 4, dmg: "1d6+2", melee: 0, range: "80/320" }
     ],
     coward: true },
-  { key: "bandit", es: "Bandido", en: "Bandit", cr: "1/8",
+  { key: "bandit", cat: "humanoid", role: "melee", es: "Bandido", en: "Bandit", cr: "1/8",
     hp: 11, ac: 12, speed: 30, init: 1, percep: 0,
     mods: { str: 1, dex: 1, con: 1, int: 0, wis: 0, cha: 0 },
     attacks: [
@@ -27,52 +28,137 @@ const ENEMIES = [
       { es: "Ballesta ligera", en: "Light Crossbow", bonus: 3, dmg: "1d8+1", melee: 0, range: "80/320" }
     ],
     coward: true },
-  { key: "orc", es: "Orco", en: "Orc", cr: "1/2",
+  { key: "orc", cat: "humanoid", role: "melee", es: "Orco", en: "Orc", cr: "1/2",
     hp: 15, ac: 13, speed: 30, init: 1, percep: 0,
     mods: { str: 3, dex: 1, con: 3, int: -2, wis: 0, cha: 0 },
     attacks: [
       { es: "Hacha grande", en: "Greataxe", bonus: 5, dmg: "1d12+3", melee: 5, range: null },
       { es: "Jabalina", en: "Javelin", bonus: 5, dmg: "1d6+3", melee: 5, range: "30/120" }
     ] },
-  { key: "guard", es: "Guardia", en: "Guard", cr: "1/8",
+  { key: "guard", cat: "humanoid", role: "melee", es: "Guardia", en: "Guard", cr: "1/8",
     hp: 11, ac: 16, speed: 30, init: 1, percep: 1,
     mods: { str: 1, dex: 1, con: 1, int: 0, wis: 1, cha: 0 },
     attacks: [
       { es: "Lanza", en: "Spear", bonus: 3, dmg: "1d6+1", melee: 5, range: "20/60" }
     ] },
-  { key: "wolf", es: "Lobo", en: "Wolf", cr: "1/4",
+  { key: "wolf", cat: "creature", role: "melee", es: "Lobo", en: "Wolf", cr: "1/4",
     hp: 11, ac: 13, speed: 40, init: 2, percep: 3,
     mods: { str: 1, dex: 2, con: 1, int: -4, wis: 1, cha: -2 },
     attacks: [
       { es: "Mordisco", en: "Bite", bonus: 4, dmg: "2d4+2", melee: 5, range: null }
     ] },
-  { key: "direwolf", es: "Lobo terrible", en: "Dire Wolf", cr: "1",
+  { key: "direwolf", cat: "creature", role: "melee", es: "Lobo terrible", en: "Dire Wolf", cr: "1",
     hp: 37, ac: 14, speed: 50, init: 2, percep: 3,
     mods: { str: 3, dex: 2, con: 2, int: -4, wis: 1, cha: -2 },
     attacks: [
       { es: "Mordisco", en: "Bite", bonus: 5, dmg: "2d6+3", melee: 5, range: null }
     ] },
-  { key: "veteran", es: "Veterano", en: "Veteran", cr: "3",
+  { key: "veteran", cat: "warrior", role: "melee", es: "Veterano", en: "Veteran", cr: "3",
     hp: 58, ac: 17, speed: 30, init: 1, percep: 1,
     mods: { str: 3, dex: 1, con: 2, int: 0, wis: 1, cha: 0 },
     attacks: [
       { es: "Espada larga", en: "Longsword", bonus: 5, dmg: "1d10+3", melee: 5, range: null },
       { es: "Ballesta pesada", en: "Heavy Crossbow", bonus: 3, dmg: "1d10+1", melee: 0, range: "100/400" }
     ] },
-  { key: "assassin", es: "Asesino", en: "Assassin", cr: "8",
+  { key: "assassin", cat: "warrior", role: "melee", es: "Asesino", en: "Assassin", cr: "8",
     hp: 78, ac: 15, speed: 30, init: 3, percep: 2,
     mods: { str: 1, dex: 3, con: 1, int: 1, wis: 2, cha: 0 },
     attacks: [
       { es: "Espada corta", en: "Shortsword", bonus: 7, dmg: "1d6+4", melee: 5, range: null },
       { es: "Ballesta ligera", en: "Light Crossbow", bonus: 7, dmg: "1d8+4", melee: 0, range: "80/320" }
     ] },
-  { key: "ogre", es: "Ogro", en: "Ogre", cr: "2",
+  { key: "ogre", cat: "creature", role: "melee", es: "Ogro", en: "Ogre", cr: "2",
     hp: 59, ac: 11, speed: 40, init: -1, percep: -2,
     mods: { str: 4, dex: -1, con: 4, int: -3, wis: -2, cha: -2 },
     attacks: [
       { es: "Garrote grande", en: "Greatclub", bonus: 6, dmg: "2d8+4", melee: 5, range: null },
       { es: "Jabalina", en: "Javelin", bonus: 6, dmg: "2d6+4", melee: 5, range: "30/120" }
-    ] }
+    ] },
+  { key: "hobgoblin", cat: "humanoid", role: "melee", es: "Hobgoblin", en: "Hobgoblin", cr: "1/2",
+    hp: 11, ac: 18, speed: 30, init: 1, percep: 0,
+    mods: { str: 1, dex: 1, con: 1, int: 0, wis: 0, cha: -1 },
+    attacks: [
+      { es: "Espada larga", en: "Longsword", bonus: 3, dmg: "1d8+1", melee: 5, range: null },
+      { es: "Arco largo", en: "Longbow", bonus: 3, dmg: "1d8+1", melee: 0, range: "150/600" }
+    ] },
+  { key: "knight", cat: "warrior", role: "melee", es: "Caballero", en: "Knight", cr: "3",
+    hp: 52, ac: 18, speed: 30, init: 0, percep: 0,
+    mods: { str: 3, dex: 0, con: 2, int: 0, wis: 0, cha: 2 },
+    attacks: [
+      { es: "Espadón", en: "Greatsword", bonus: 5, dmg: "2d6+3", melee: 5, range: null },
+      { es: "Ballesta pesada", en: "Heavy Crossbow", bonus: 2, dmg: "1d10", melee: 0, range: "100/400" }
+    ] },
+  { key: "berserker", cat: "warrior", role: "melee", es: "Berserker", en: "Berserker", cr: "2",
+    hp: 67, ac: 13, speed: 30, init: 1, percep: 0,
+    mods: { str: 3, dex: 1, con: 3, int: -1, wis: 0, cha: -1 },
+    attacks: [
+      { es: "Hacha grande", en: "Greataxe", bonus: 5, dmg: "1d12+3", melee: 5, range: null }
+    ] },
+  { key: "paladin", cat: "paladin", role: "melee", es: "Paladín", en: "Paladin", cr: "5",
+    hp: 68, ac: 18, speed: 30, init: 0, percep: 1,
+    mods: { str: 4, dex: 0, con: 3, int: 0, wis: 1, cha: 3 },
+    smite: "2d8", // Castigo Divino: +2d8 radiante en el primer impacto de cada turno
+    attacks: [
+      { es: "Espada larga", en: "Longsword", bonus: 6, dmg: "1d10+4", melee: 5, range: null }
+    ] },
+  { key: "wizard", cat: "caster", role: "caster", es: "Mago", en: "Wizard", cr: "4",
+    hp: 40, ac: 15, speed: 30, init: 2, percep: 2, // CA incluye Mage Armor
+    mods: { str: -1, dex: 2, con: 1, int: 4, wis: 2, cha: 0 },
+    attacks: [
+      { es: "Bastón", en: "Quarterstaff", bonus: 1, dmg: "1d6-1", melee: 5, range: null }
+    ],
+    spells: [
+      { es: "Inmovilizar Persona", en: "Hold Person", save: "wis", dc: 13, dmg: null, para: true, range: 60, uses: 1 },
+      { es: "Manos Ardientes", en: "Burning Hands", save: "dex", dc: 13, dmg: "3d6", half: true, range: 15, uses: 2 },
+      { es: "Descarga de Fuego", en: "Fire Bolt", atk: 5, dmg: "2d10", range: 120, uses: 99 }
+    ] },
+  { key: "sorcerer", cat: "caster", role: "caster", es: "Hechicero", en: "Sorcerer", cr: "5",
+    hp: 44, ac: 13, speed: 30, init: 2, percep: 0,
+    mods: { str: 0, dex: 2, con: 2, int: 0, wis: 0, cha: 4 },
+    attacks: [
+      { es: "Daga", en: "Dagger", bonus: 4, dmg: "1d4+2", melee: 5, range: "20/60" }
+    ],
+    spells: [
+      { es: "Bola de Fuego", en: "Fireball", save: "dex", dc: 14, dmg: "8d6", half: true, range: 150, uses: 2 },
+      { es: "Descarga de Fuego", en: "Fire Bolt", atk: 6, dmg: "2d10", range: 120, uses: 99 }
+    ] },
+  { key: "warlock", cat: "caster", role: "caster", es: "Brujo", en: "Warlock", cr: "4",
+    hp: 50, ac: 13, speed: 30, init: 2, percep: 0,
+    mods: { str: 0, dex: 2, con: 2, int: 1, wis: 0, cha: 4 },
+    attacks: [
+      { es: "Daga", en: "Dagger", bonus: 4, dmg: "1d4+2", melee: 5, range: "20/60" }
+    ],
+    spells: [
+      { es: "Explosión Sobrenatural", en: "Eldritch Blast", atk: 6, dmg: "2d10", range: 120, uses: 99 }
+    ] },
+  { key: "cleric", cat: "caster", role: "caster", es: "Clérigo", en: "Cleric", cr: "4",
+    hp: 58, ac: 16, speed: 25, init: 0, percep: 3,
+    mods: { str: 2, dex: 0, con: 2, int: 0, wis: 4, cha: 1 },
+    attacks: [
+      { es: "Maza", en: "Mace", bonus: 4, dmg: "1d6+2", melee: 5, range: null }
+    ],
+    spells: [
+      { es: "Proyectil Guiado", en: "Guiding Bolt", atk: 6, dmg: "4d6", range: 120, uses: 3 },
+      { es: "Llama Sagrada", en: "Sacred Flame", save: "dex", dc: 14, dmg: "2d8", half: false, range: 60, uses: 99 }
+    ] },
+  { key: "druid", cat: "caster", role: "caster", es: "Druida", en: "Druid", cr: "3",
+    hp: 45, ac: 14, speed: 30, init: 1, percep: 3,
+    mods: { str: 0, dex: 1, con: 2, int: 1, wis: 3, cha: 0 },
+    attacks: [
+      { es: "Bastón", en: "Quarterstaff", bonus: 2, dmg: "1d6", melee: 5, range: null }
+    ],
+    spells: [
+      { es: "Onda Atronadora", en: "Thunderwave", save: "con", dc: 13, dmg: "2d8", half: true, range: 15, uses: 2 },
+      { es: "Llamarada", en: "Produce Flame", atk: 5, dmg: "2d8", range: 60, uses: 99 }
+    ] },
+  { key: "wyrmling", cat: "dragon", role: "melee", es: "Dragoncelo blanco", en: "White Dragon Wyrmling", cr: "2",
+    hp: 42, ac: 17, speed: 30, init: 1, percep: 2,
+    mods: { str: 3, dex: 1, con: 3, int: -2, wis: 0, cha: -1 },
+    attacks: [
+      { es: "Mordisco", en: "Bite", bonus: 6, dmg: "1d10+4", melee: 5, range: null }
+    ],
+    breath: { es: "Aliento Gélido", en: "Cold Breath", save: "dex", dc: 13, dmg: "4d6", half: true, recharge: 5 } // recarga con 5-6 en d6
+    }
 ];
 
 /* ---------- Textos del motor de combate (ES/EN) ---------- */
@@ -116,6 +202,14 @@ const CT = {
     attackTitle: "Tirada de ataque", chooseTarget: "Objetivo", strikesTitle: "Golpes Astutos",
     rollBtn: "¡Tirar!", cancelBtn: "Cancelar",
     firstRound: "1ª ronda", assasNote: "Asesinar: +{lv} daño (aún no actuaba)",
+    // Fase 3: hechizos, salvaciones del jugador, catálogo
+    castLog: "lanza", saveYou: "tu salvación", evasionOk: "¡Evasión! 0 daño", evasionHalf: "Evasión: mitad de daño",
+    paraYou: "estás Paralizado: pierdes el turno", paraEnd: "superas la Parálisis",
+    smiteLog: "Castigo Divino", breathRecharge: "recupera su aliento", breathNo: "su aliento no se recarga",
+    oaPrompt: "¿Ataque de oportunidad con tu arma de melé?", oaYou: "¡Tu ataque de oportunidad!",
+    catAll: "Todas", catSearchPh: "Buscar enemigo…",
+    customTitle: "Enemigo personalizado", customAdd: "+ Crear y añadir",
+    cfName: "Nombre", cfHp: "PG", cfAc: "CA", cfBonus: "Bono ataque", cfDmg: "Daño (p. ej. 2d6+3)", cfSpeed: "Velocidad", cfInit: "Iniciativa",
     envenom2d6: "Armas Envenenadas: +2d6 veneno (ignora resistencia)",
     proneAdv: "Derribado a 5 ft: ventaja", blindAdv: "Cegado: ventaja", uncCrit: "Inconsciente a 5 ft: crítico automático",
     noStrikesLevel: "requiere nivel 5+"
@@ -158,6 +252,13 @@ const CT = {
     attackTitle: "Attack roll", chooseTarget: "Target", strikesTitle: "Cunning Strikes",
     rollBtn: "Roll!", cancelBtn: "Cancel",
     firstRound: "1st round", assasNote: "Assassinate: +{lv} damage (it hadn't acted)",
+    castLog: "casts", saveYou: "your save", evasionOk: "Evasion! 0 damage", evasionHalf: "Evasion: half damage",
+    paraYou: "you are Paralyzed: you lose the turn", paraEnd: "you shake off the Paralysis",
+    smiteLog: "Divine Smite", breathRecharge: "recharges its breath", breathNo: "its breath doesn't recharge",
+    oaPrompt: "Opportunity Attack with your melee weapon?", oaYou: "Your Opportunity Attack!",
+    catAll: "All", catSearchPh: "Search enemy…",
+    customTitle: "Custom enemy", customAdd: "+ Create & add",
+    cfName: "Name", cfHp: "HP", cfAc: "AC", cfBonus: "Attack bonus", cfDmg: "Damage (e.g. 2d6+3)", cfSpeed: "Speed", cfInit: "Initiative",
     envenom2d6: "Envenom Weapons: +2d6 poison (ignores resistance)",
     proneAdv: "Prone within 5 ft: Advantage", blindAdv: "Blinded: Advantage", uncCrit: "Unconscious within 5 ft: automatic critical",
     noStrikesLevel: "requires level 5+"

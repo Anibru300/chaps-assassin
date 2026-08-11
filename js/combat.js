@@ -53,8 +53,24 @@ function newCombatPlayer() {
     hp: state.hpCurrent, move: state.speed,
     action: true, ba: true, react: true,
     sneak: false, hidden: false, diseng: false, steady: false, withdraw: 0,
+    conds: [],        // [{id, save, dc}] condiciones del jugador (Fase 3)
     pos: { x: 1, y: 3 } // posición en el tablero (Fase 2)
   };
+}
+
+function hasPCond(id) { return combat.p && combat.p.conds.some((c) => c.id === id); }
+function getPCond(id) { return combat.p.conds.find((c) => c.id === id); }
+function removePCond(id) { combat.p.conds = combat.p.conds.filter((c) => c.id !== id); }
+
+/** Salvación del jugador (competencia en DES/INT; SAB/CAR desde N15). */
+function playerSave(ability, dc) {
+  const prof = ability === "dex" || ability === "int" ||
+    (state.level >= 15 && (ability === "wis" || ability === "cha"));
+  const mod = abilityMod(state.abilities[ability]) + (prof ? profBonus(state.level) : 0);
+  const r = rollDie(20);
+  const ok = r + mod >= dc;
+  cLog(`🎲 ${ct("saveYou")} ${ability.toUpperCase()}: ${r} ${fmtMod(mod)} = ${r + mod} vs CD ${dc} → <strong>${ok ? ct("savePass") : ct("saveFail")}</strong>`, ok ? "log-info" : "log-miss");
+  return ok;
 }
 
 function spawnEnemy(key) {
@@ -62,6 +78,9 @@ function spawnEnemy(key) {
   if (!tpl) return null;
   const e = structuredClone(tpl);
   e.maxHp = tpl.hp;
+  e.smiteUsed = false;                        // paladín: 1 castigo por turno
+  if (e.breath) e.breath.ready = true;        // dragón: aliento listo
+  if (e.spells) e.spells.forEach((s) => { s.usesLeft = s.uses; });
   e.pos = { x: 0, y: 0 }; // se coloca al iniciar el combate
   e.conds = [];       // [{id, expire}] expire: nº de SUS turnos restantes (condiciones con duración)
   e.acted = false;    // para Asesinar (1ª ronda)
@@ -187,6 +206,14 @@ function beginTurn() {
     p.action = true; p.ba = true; p.react = true;
     p.move = state.speed; p.sneak = false; p.diseng = false; p.steady = false; p.withdraw = 0;
     cLog(`— ${ct("round")} ${combat.round} · ${ct("turnStart")} <strong>${state.name}</strong> —`, "log-info");
+    // Paralizado: pierde el turno y repite la salvación al final
+    const para = getPCond("paralyzed");
+    if (para) {
+      cLog(`😵 ${ct("paraYou")}`, "log-miss");
+      if (playerSave(para.save, para.dc)) { removePCond("paralyzed"); cLog(`✨ ${ct("paraEnd")}`, "log-hit"); }
+      nextTurn();
+      return;
+    }
   } else {
     const e = combat.enemies[cur.idx];
     cLog(`— ${ct("round")} ${combat.round} · ${ct("turnStart")} <strong>${eName(e)}</strong> —`, "log-info");
@@ -433,9 +460,18 @@ function enemyAttackRoll(e, atk, isOA) {
     if (p.hidden) { p.hidden = false; }
     return 0;
   }
-  const crit = chosen === 20;
+  // crítico: natural 20, o jugador Paralizado/Inconsciente a 5 ft
+  const crit = chosen === 20 || (hasPCond("paralyzed") && distOf(e) <= 5);
   let res = rollDiceExpr(atk.dmg, crit);
   let dmg = res.total;
+  // Castigo Divino (paladín): primer impacto del turno
+  if (e.smite && !e.smiteUsed) {
+    e.smiteUsed = true;
+    const sm = rollDiceExpr(e.smite, crit);
+    dmg += sm.total;
+    res.rolls = res.rolls.concat(sm.rolls);
+    cLog(`✨ ${ct("smiteLog")}: ${e.smite}(${sm.rolls.join(",")})`, "log-miss");
+  }
   // Esquiva Asombrosa
   if (p.react && !isOA) {
     const ask = combat.confirm || ((q) => (typeof window !== "undefined" ? window.confirm(q) : false));
@@ -498,9 +534,111 @@ function enemyEndTurn(e) {
 }
 
 /** IA básica: acercarse y atacar; cobardes huyen con PG bajos. */
+/** Ataque de oportunidad DEL jugador cuando un enemigo sale de su melé. */
+function tryPlayerOA(e, wasClose) {
+  const p = combat.p;
+  if (!p.react || !wasClose || distOf(e) <= 5 || e.hp <= 0) return;
+  const w = state.weapons.find((wp) => {
+    const c = wp.weaponId ? WEAPON_MASTERY.find((x) => x.id === wp.weaponId) : null;
+    return (c ? c.melee : 5) > 0;
+  });
+  if (!w) return;
+  const ask = combat.confirm || (() => false);
+  if (!ask(ct("oaPrompt"))) return;
+  p.react = false;
+  cLog(`⚔ ${ct("oaYou")}`, "log-info");
+  const cat = w.weaponId ? WEAPON_MASTERY.find((x) => x.id === w.weaponId) : null;
+  const fin = cat ? cat.fin : true;
+  const adv = p.hidden; // oculto → ventaja
+  const rolls = adv ? [rollDie(20), rollDie(20)] : [rollDie(20)];
+  const chosen = adv ? Math.max(...rolls) : rolls[0];
+  const atkBonus = profBonus(state.level) + dexMod();
+  const total = chosen + atkBonus;
+  const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
+  if (chosen !== 1 && (chosen === 20 || total >= e.ac)) {
+    const crit = chosen === 20;
+    let dmg = rollDiceExpr(`${w.dice}d${w.sides}+${w.bonus}`, crit).total;
+    // furtivo en AdO: permitido si hay ventaja (reacción, 1/turno ya controlado por p.sneak)
+    if (fin && adv && !p.sneak) {
+      const sn = sneakDiceCount(state.level);
+      dmg += sum(rollDice(crit ? sn * 2 : sn, 6));
+      p.sneak = true;
+    }
+    e.hp = Math.max(0, e.hp - dmg);
+    cLog(`⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <strong>${dmg} ${ct("dmgWord")}</strong> [${eName(e)}: ${e.hp}/${e.maxHp}]`, crit ? "log-crit" : "log-hit");
+    if (e.hp <= 0) cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead");
+    checkCombatEnd();
+  } else {
+    cLog(`⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <em>${ct("missWord")}</em>`, "log-miss");
+  }
+}
+
+/** El enemigo lanza un hechizo sobre el jugador. */
+function enemyCast(e, sp) {
+  sp.usesLeft--;
+  const sName = LANG === "es" ? sp.es : sp.en;
+  cLog(`🔮 ${eName(e)} ${ct("castLog")} <strong>${sName}</strong>`, "log-info");
+  if (sp.para) { // Inmovilizar Persona y similares
+    if (!playerSave(sp.save, sp.dc)) {
+      combat.p.conds.push({ id: "paralyzed", save: sp.save, dc: sp.dc });
+      cLog(`😵 ${ct("paraYou")}`, "log-miss");
+    }
+    return;
+  }
+  if (sp.atk != null) { // ataque de conjuro
+    enemyAttackRoll(e, { es: sp.es, en: sp.en, bonus: sp.atk, dmg: sp.dmg, melee: 0, range: String(sp.range) }, false);
+    return;
+  }
+  // salvación del jugador
+  const ok = playerSave(sp.save, sp.dc);
+  let res = rollDiceExpr(sp.dmg, false);
+  let dmg = res.total;
+  if (ok) {
+    if (!sp.half) { cLog(`✨ ${sName}: ${ct("savePass")} → 0 ${ct("dmgWord")}`, "log-info"); return; }
+    dmg = Math.floor(dmg / 2);
+  }
+  // Evasión (N7): salvaciones de DES de medio daño → éxito 0 / fallo mitad
+  if (sp.save === "dex" && sp.half && state.level >= 7) {
+    if (ok) { cLog(`🌀 ${ct("evasionOk")}`, "log-hit"); dmg = 0; }
+    else { cLog(`🌀 ${ct("evasionHalf")}`, "log-info"); dmg = Math.floor(res.total / 2); }
+  }
+  if (dmg > 0) {
+    combat.p.hp = Math.max(0, combat.p.hp - dmg);
+    cLog(`🔥 ${sName}: ${sp.dmg}(${res.rolls.join(",")}) = <strong>${dmg} ${ct("dmgWord")}</strong> [${state.name}: ${combat.p.hp} PG]`, "log-miss");
+  }
+  checkCombatEnd();
+}
+
+/** Aliento de dragón: salvación de DES, se recarga con 5-6 al inicio de su turno. */
+function dragonBreath(e) {
+  const b = e.breath;
+  b.ready = false;
+  const bName = LANG === "es" ? b.es : b.en;
+  cLog(`🐉 ${eName(e)}: <strong>${bName}</strong>!`, "log-info");
+  const ok = playerSave(b.save, b.dc);
+  let res = rollDiceExpr(b.dmg, false);
+  let dmg = ok ? Math.floor(res.total / 2) : res.total;
+  if (b.save === "dex" && b.half && state.level >= 7) {
+    if (ok) { cLog(`🌀 ${ct("evasionOk")}`, "log-hit"); dmg = 0; }
+    else dmg = Math.floor(res.total / 2);
+  }
+  if (dmg > 0) {
+    combat.p.hp = Math.max(0, combat.p.hp - dmg);
+    cLog(`❄ ${bName}: ${b.dmg}(${res.rolls.join(",")}) = <strong>${dmg} ${ct("dmgWord")}</strong> [${state.name}: ${combat.p.hp} PG]`, "log-miss");
+  }
+  checkCombatEnd();
+}
+
 function enemyTakeTurn(e) {
   if (e.hp <= 0) { enemyEndTurn(e); return; }
   cLog(`🤖 ${eName(e)} ${ct("aiThink")}`, "log-info");
+  e.smiteUsed = false;
+  // Dragón: recarga de aliento (5-6 en d6)
+  if (e.breath && !e.breath.ready) {
+    const r = rollDie(6);
+    if (r >= e.breath.recharge) { e.breath.ready = true; cLog(`🐉 ${eName(e)} ${ct("breathRecharge")} (d6: ${r})`, "log-info"); }
+    else cLog(`🐉 ${eName(e)} ${ct("breathNo")} (d6: ${r})`, "log-info");
+  }
 
   if (hasCond(e, "unconscious")) {
     cLog(`😵 ${eName(e)}: ${ct("uncSkip")}`, "log-info");
@@ -517,10 +655,38 @@ function enemyTakeTurn(e) {
     move = Math.floor(move / 2);
   }
 
-  // Cobardía: PG < 25% → se aleja del jugador
+  // Cobardía: PG < 25% → se aleja del jugador (provoca tu AdO si estaba en melé)
   if (e.coward && e.hp < e.maxHp / 4) {
+    const wasClose = distOf(e) <= 5;
     aiMoveSteps(e, move, true);
     cLog(`🏃 ${eName(e)} ${ct("aiFlee")}`, "log-info");
+    tryPlayerOA(e, wasClose);
+    enemyEndTurn(e);
+    return;
+  }
+
+  // Casters: mantener distancia y lanzar hechizos
+  if (e.role === "caster" && e.spells && e.spells.length) {
+    if (distOf(e) <= 5) { // jugador en melé → se aleja (provoca tu AdO)
+      const wasClose = true;
+      const moved = aiMoveSteps(e, move, true);
+      if (moved) cLog(`👣 ${eName(e)} ${ct("aiMove")} ${moved} ft`, "log-info");
+      tryPlayerOA(e, wasClose);
+      if (!combat.on) return;
+      if (dazed) { cLog(`😵 ${ct("dazedNote")}`, "log-info"); enemyEndTurn(e); return; }
+    }
+    const avail = e.spells.filter((s) => s.usesLeft > 0 && distOf(e) <= s.range);
+    const sp = avail.find((s) => s.para && !hasPCond("paralyzed")) ||      // control primero
+               avail.find((s) => s.save && s.range <= 15 && distOf(e) <= s.range) || // área si estás cerca
+               avail.find((s) => s.atk != null) ||                          // ataque a distancia
+               avail.find((s) => s.save);
+    if (sp) { enemyCast(e, sp); enemyEndTurn(e); return; }
+    // sin hechizos disponibles: cae a la lógica de melé
+  }
+
+  // Dragón: aliento si está listo y estás a 15 ft
+  if (e.breath && e.breath.ready && distOf(e) <= 15) {
+    dragonBreath(e);
     enemyEndTurn(e);
     return;
   }
@@ -574,13 +740,18 @@ function renderCombatLog() {
 function renderSetup() {
   const sel = ctEl("c-catalog");
   if (!sel) return;
+  const catFilter = (ctEl("c-cat-filter") || {}).value || "all";
+  const q = ((ctEl("c-search") || {}).value || "").trim().toLowerCase();
   sel.innerHTML = "";
-  ENEMIES.forEach((e) => {
-    const opt = document.createElement("option");
-    opt.value = e.key;
-    opt.textContent = `${eName(e)} (CR ${e.cr} · ${e.hp} PG · CA ${e.ac})`;
-    sel.appendChild(opt);
-  });
+  ENEMIES
+    .filter((e) => catFilter === "all" || e.cat === catFilter)
+    .filter((e) => !q || e.es.toLowerCase().includes(q) || e.en.toLowerCase().includes(q))
+    .forEach((e) => {
+      const opt = document.createElement("option");
+      opt.value = e.key;
+      opt.textContent = `${eName(e)} (CR ${e.cr} · ${e.hp} PG · CA ${e.ac})`;
+      sel.appendChild(opt);
+    });
   const list = ctEl("c-queue");
   list.innerHTML = "";
   combat.enemies.forEach((e, i) => {
@@ -681,7 +852,8 @@ function renderCombat() {
     `<span class="turn-pip ${ok ? "on" : "off"}">${lbl}${val ? ": " + val : ""} ${val === null ? (ok ? "✓" : "✗") : ""}</span>`).join("");
   ctEl("c-pconds").innerHTML = (p.hidden ? `<span class="cond-badge">🫥 Hidden</span>` : "") +
     (p.diseng ? `<span class="cond-badge">Disengage</span>` : "") +
-    (p.steady ? `<span class="cond-badge">🎯 Steady</span>` : "");
+    (p.steady ? `<span class="cond-badge">🎯 Steady</span>` : "") +
+    p.conds.map((c) => `<span class="cond-badge">😵 ${c.id}</span>`).join("");
 
   // Enemigos
   const eList = ctEl("c-enemies");
@@ -769,6 +941,28 @@ function initCombat() {
   ctEl("c-btn-add").addEventListener("click", () => {
     const e = spawnEnemy(ctEl("c-catalog").value);
     if (e) { combat.enemies.push(e); renderSetup(); }
+  });
+  ctEl("c-cat-filter").addEventListener("change", renderSetup);
+  ctEl("c-search").addEventListener("input", renderSetup);
+  // Enemigo personalizado
+  ctEl("c-btn-custom").addEventListener("click", () => {
+    const v = (id) => ctEl(id).value.trim();
+    const name = v("#cf-name");
+    if (!name) return;
+    const custom = {
+      key: "custom" + Date.now(), cat: "custom", role: "melee",
+      es: name, en: name, cr: "—",
+      hp: Math.max(1, parseInt(v("#cf-hp"), 10) || 10),
+      ac: parseInt(v("#cf-ac"), 10) || 12,
+      speed: parseInt(v("#cf-speed"), 10) || 30,
+      init: parseInt(v("#cf-init"), 10) || 0, percep: 0,
+      mods: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+      attacks: [{ es: "Ataque", en: "Attack", bonus: parseInt(v("#cf-bonus"), 10) || 3, dmg: v("#cf-dmg") || "1d6+1", melee: 5, range: null }]
+    };
+    ENEMIES.push(custom);
+    combat.enemies.push(spawnEnemy(custom.key));
+    ["#cf-name", "#cf-hp", "#cf-ac", "#cf-bonus", "#cf-dmg", "#cf-speed", "#cf-init"].forEach((id) => { ctEl(id).value = ""; });
+    renderSetup();
   });
   ctEl("c-btn-start").addEventListener("click", () => {
     if (!combat.enemies.length) { alert(ct("needEnemies")); return; }

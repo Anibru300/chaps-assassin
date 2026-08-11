@@ -468,10 +468,34 @@
       <div class="card" id="c-setup">
         <h2 data-i18n="ctSetup">Nuevo combate</h2>
         <div class="rest-row">
+          <select id="c-cat-filter" class="weapon-catalog">
+            <option value="all" data-i18n="ctCatAll">Todas</option>
+            <option value="humanoid">Humanoides</option>
+            <option value="warrior">Guerreros</option>
+            <option value="caster">Casters</option>
+            <option value="paladin">Paladines</option>
+            <option value="creature">Criaturas</option>
+            <option value="dragon">Dragones</option>
+            <option value="custom">Custom</option>
+          </select>
+          <input type="text" id="c-search" class="weapon-catalog" data-i18n-ph="ctSearchPh" placeholder="Buscar enemigo…">
           <select id="c-catalog" class="weapon-catalog"></select>
           <button class="btn btn-small" id="c-btn-add" data-i18n="ctAddEnemy">+ Añadir enemigo</button>
           <button class="btn btn-crimson" id="c-btn-start" data-i18n="ctStart">⚔ Iniciar combate</button>
         </div>
+        <details class="mastery-glossary">
+          <summary data-i18n="ctCustomTitle">Enemigo personalizado</summary>
+          <div class="grid grid-4 custom-form">
+            <label class="field"><span data-i18n="cfName">Nombre</span><input type="text" id="cf-name"></label>
+            <label class="field"><span data-i18n="cfHp">PG</span><input type="number" id="cf-hp"></label>
+            <label class="field"><span data-i18n="cfAc">CA</span><input type="number" id="cf-ac"></label>
+            <label class="field"><span data-i18n="cfBonus">Bono</span><input type="number" id="cf-bonus"></label>
+            <label class="field"><span data-i18n="cfDmg">Daño</span><input type="text" id="cf-dmg" placeholder="2d6+3"></label>
+            <label class="field"><span data-i18n="cfSpeed">Velocidad</span><input type="number" id="cf-speed"></label>
+            <label class="field"><span data-i18n="cfInit">Iniciativa</span><input type="number" id="cf-init"></label>
+          </div>
+          <button class="btn btn-small" id="c-btn-custom" data-i18n="ctCustomAdd">+ Crear y añadir</button>
+        </details>
         <div id="c-queue"></div>
       </div>
 
