@@ -125,7 +125,7 @@ const DEFAULT_STATE = {
     { name: "Estoque",    dice: 1, sides: 8, bonus: 5, props: "finesse",                  mastery: "Vex"  },
     { name: "Arco corto", dice: 1, sides: 6, bonus: 5, props: "ranged (80/320)",          mastery: "Vex"  }
   ],
-  currency: { pp: 0, gp: 120, ep: 0, sp: 45, cp: 10 },
+  currency: { pp: 0, gp: 120, st: 0, ep: 0, sp: 45, cp: 10 }, // st = acero (Dragonlance)
   masteryChoices: ["dagger", "rapier"], // 2 armas elegidas para Maestría (N1)
   notes: ""
 };
@@ -455,8 +455,8 @@ const I18N = {
     weapons: "Armas y ataques", weapon: "Arma", damage: "Daño (dados)", properties: "Propiedades", mastery: "Maestría (truco)",
     addWeapon: "+ Añadir arma (manual)", addFromCatalog: "Añadir del catálogo", remove: "Quitar",
     currency: "Dinero (Monedas)", notes: "Inventario y notas",
-    coin_pp: "PP — Platino", coin_gp: "GP — Oro", coin_ep: "EP — Electrum", coin_sp: "SP — Plata", coin_cp: "CP — Cobre",
-    coinsNote: "Equivalencia: 1 PP = 10 GP · 1 GP = 2 EP = 10 SP = 100 CP · 1 EP = 5 SP = 50 CP · 1 SP = 10 CP",
+    coin_pp: "PP — Platino", coin_gp: "GP — Oro", coin_st: "ST — Acero (Krynn)", coin_ep: "EP — Electrum", coin_sp: "SP — Plata", coin_cp: "CP — Cobre",
+    coinsNote: "Equivalencia: 1 PP = 10 GP · 1 GP = 2 EP = 10 SP = 100 CP · 1 EP = 5 SP = 50 CP · 1 SP = 10 CP · 1 ST = 1 GP (acero, Dragonlance)",
     coinAmount: "Cantidad", coinAdd: "Poner (+)", coinRemove: "Quitar (−)",
     coinWeightNote: "Peso: 50 monedas = 1 lb (cada moneda pesa 0,02 lb, da igual el metal).",
     coinWeightTotal: "Llevas {coins} monedas = {lb} lb de peso",
@@ -583,8 +583,8 @@ const I18N = {
     weapons: "Weapons & Attacks", weapon: "Weapon", damage: "Damage", properties: "Properties", mastery: "Mastery",
     addWeapon: "+ Add weapon (manual)", addFromCatalog: "Add from catalog", remove: "Remove",
     currency: "Currency", notes: "Inventory & notes",
-    coin_pp: "PP — Platinum", coin_gp: "GP — Gold", coin_ep: "EP — Electrum", coin_sp: "SP — Silver", coin_cp: "CP — Copper",
-    coinsNote: "Exchange rate: 1 PP = 10 GP · 1 GP = 2 EP = 10 SP = 100 CP · 1 EP = 5 SP = 50 CP · 1 SP = 10 CP",
+    coin_pp: "PP — Platinum", coin_gp: "GP — Gold", coin_st: "ST — Steel (Krynn)", coin_ep: "EP — Electrum", coin_sp: "SP — Silver", coin_cp: "CP — Copper",
+    coinsNote: "Exchange rate: 1 PP = 10 GP · 1 GP = 2 EP = 10 SP = 100 CP · 1 EP = 5 SP = 50 CP · 1 SP = 10 CP · 1 ST = 1 GP (steel, Dragonlance)",
     coinAmount: "Amount", coinAdd: "Add (+)", coinRemove: "Remove (−)",
     coinWeightNote: "Weight: 50 coins = 1 lb (each coin weighs 0.02 lb, regardless of metal).",
     coinWeightTotal: "You carry {coins} coins = {lb} lb of weight",

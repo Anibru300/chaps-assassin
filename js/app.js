@@ -361,7 +361,7 @@ function addWeaponFromCatalog() {
 function renderCurrency() {
   const grid = $("#currency-grid");
   grid.innerHTML = "";
-  ["pp", "gp", "ep", "sp", "cp"].forEach((coin) => {
+  ["pp", "gp", "st", "ep", "sp", "cp"].forEach((coin) => {
     const label = document.createElement("label");
     label.className = "field";
     label.innerHTML = `<span>${t("coin_" + coin)}</span>
@@ -386,7 +386,7 @@ function renderCurrency() {
 
 /* ---------- Conversor de monedas ---------- */
 // Valor de cada moneda en cobre (CP): 1 PP = 10 GP, 1 GP = 2 EP = 10 SP = 100 CP.
-const COIN_VALUES = { pp: 1000, gp: 100, ep: 50, sp: 10, cp: 1 };
+const COIN_VALUES = { pp: 1000, gp: 100, st: 100, ep: 50, sp: 10, cp: 1 }; // st = acero (Dragonlance, = 1 GP)
 let coinConversion = null; // {from, to, spent, gained, leftover} pendiente de aplicar
 
 function convertCoins() {
