@@ -161,9 +161,9 @@ const DEFAULT_STATE = {
     survival:       { p: false, e: false }
   },
   weapons: [
-    { name: "Daga",       dice: 1, sides: 4, bonus: 5, props: "finesse, light, thrown", mastery: "Nick" },
-    { name: "Estoque",    dice: 1, sides: 8, bonus: 5, props: "finesse",                  mastery: "Vex"  },
-    { name: "Arco corto", dice: 1, sides: 6, bonus: 5, props: "ranged (80/320)",          mastery: "Vex"  }
+    { name: "Daga",       dice: 1, sides: 4, bonus: 5, props: "finesse, light, thrown", mastery: "Nick", weaponId: "dagger"  },
+    { name: "Estoque",    dice: 1, sides: 8, bonus: 5, props: "finesse",                  mastery: "Vex",  weaponId: "rapier"  },
+    { name: "Arco corto", dice: 1, sides: 6, bonus: 5, props: "ranged (80/320)",          mastery: "Vex",  weaponId: "shortbow" }
   ],
   currency: { pp: 0, gp: 120, st: 0, ep: 0, sp: 45, cp: 10 }, // st = acero (Dragonlance)
   masteryChoices: ["dagger", "rapier"], // 2 armas elegidas para Maestría (N1)
@@ -487,6 +487,8 @@ const I18N = {
     ctEndTurn: "Finalizar turno", ctApplyHp: "Guardar PG en la ficha", ctEndCombat: "Terminar combate",
     ctAttack: "Atacar", ctAttackTitle: "Tirada de ataque", ctTarget: "Objetivo",
     ctAlly: "Aliado a 5 ft del objetivo", ctStrikes: "Golpes Astutos", ctRoll: "¡Tirar!",
+    ctBoard: "Campo de batalla", ctMove: "Mover",
+    ctBoardHint: "Pulsa Mover: las casillas doradas son alcanzables (1 casilla = 5 ft). Clic para ir. Salir de melé provoca ataques de oportunidad.",
     // Ficha
     identity: "Identidad", name: "Nombre", level: "Nivel", profBonus: "Bono extra (Competencia)",
     hpCurrent: "Vida actual (PG)", hpMax: "Vida máxima (PG)", hpTemp: "Vida extra (PG temp.)",
@@ -621,6 +623,8 @@ const I18N = {
     ctEndTurn: "End turn", ctApplyHp: "Save HP to sheet", ctEndCombat: "End combat",
     ctAttack: "Attack", ctAttackTitle: "Attack roll", ctTarget: "Target",
     ctAlly: "Ally within 5 ft of the target", ctStrikes: "Cunning Strikes", ctRoll: "Roll!",
+    ctBoard: "Battlefield", ctMove: "Move",
+    ctBoardHint: "Press Move: golden squares are reachable (1 square = 5 ft). Click to go. Leaving melee provokes Opportunity Attacks.",
     identity: "Identity", name: "Name", level: "Level", profBonus: "Proficiency bonus",
     hpCurrent: "Current HP", hpMax: "Max HP", hpTemp: "Temp HP",
     ac: "AC", initiative: "Initiative", speed: "Speed",

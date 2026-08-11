@@ -15,7 +15,7 @@ combat.confirm=()=>true; // siempre usa Esquiva
 const pd=parseDice("1d12+3");A(pd.dice===1&&pd.sides===12&&pd.bonus===3,"parseDice");
 const f=parseDice("1");A(f.dice===1&&f.sides===1,"parseDice plano");
 
-const e=spawnEnemy("orc");A(e.hp===15&&e.dist===30&&e.conds.length===0,"spawn orco");
+const e=spawnEnemy("orc");A(e.hp===15&&e.conds.length===0,"spawn orco");
 
 addCond(e,"prone");A(condModsVs(e,30).dis===true,"Derribado lejos = desventaja");
 A(condModsVs(e,5).adv===true,"Derribado a 5 ft = ventaja");
@@ -28,13 +28,27 @@ combat.enemies=[spawnEnemy("ogre")];
 startCombat();
 A(combat.on&&combat.order.length===2,"combate inicia, orden 2");
 A(combat.order.every((o,i,arr)=>i===0||arr[i-1].init>=o.init),"orden descendente");
+// tablero: colocación y distancias
+A(combat.p.pos.x===1,"jugador a la izquierda");
+A(combat.enemies[0].pos.x===BOARD.w-3,"enemigo a la derecha");
+A(distOf(combat.enemies[0])===40,"distancia inicial 40 ft");
+A(reachableCells(combat.p.pos,6).length>0,"celdas alcanzables BFS");
+A(!reachableCells(combat.p.pos,1).some(c=>c.x===combat.enemies[0].pos.x&&c.y===combat.enemies[0].pos.y),"BFS no atraviesa enemigos");
+
 let guard=0;
 const w=state.weapons[0];
 while(combat.on&&guard++<200){
   if(isPlayerTurn()){
     const tgt=combat.enemies.find(x=>x.hp>0);
     if(tgt){
-      if(tgt.dist>5) playerMove(tgt,5-tgt.dist);
+      // acercarse hasta melé usando el tablero
+      let g2=0;
+      while(distOf(tgt)>5&&g2++<10){
+        const cells=reachableCells(combat.p.pos,Math.floor((combat.p.move+combat.p.withdraw)/5));
+        if(!cells.length)break;
+        cells.sort((a,b)=>distBetween(a,tgt.pos)-distBetween(b,tgt.pos));
+        if(!playerMoveTo(cells[0].x,cells[0].y))break;
+      }
       playerAttack(w,tgt,{strikes:["trip"],ally:true});
     }
     if(combat.on) nextTurn();

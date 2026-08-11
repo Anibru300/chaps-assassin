@@ -52,7 +52,8 @@ function newCombatPlayer() {
   return {
     hp: state.hpCurrent, move: state.speed,
     action: true, ba: true, react: true,
-    sneak: false, hidden: false, diseng: false, steady: false, withdraw: 0
+    sneak: false, hidden: false, diseng: false, steady: false, withdraw: 0,
+    pos: { x: 1, y: 3 } // posición en el tablero (Fase 2)
   };
 }
 
@@ -61,11 +62,49 @@ function spawnEnemy(key) {
   if (!tpl) return null;
   const e = structuredClone(tpl);
   e.maxHp = tpl.hp;
-  e.dist = 30;        // distancia al jugador (ft); Fase 2: tablero 2D
+  e.pos = { x: 0, y: 0 }; // se coloca al iniciar el combate
   e.conds = [];       // [{id, expire}] expire: nº de SUS turnos restantes (condiciones con duración)
   e.acted = false;    // para Asesinar (1ª ronda)
   e.react = true;
   return e;
+}
+
+/* ---------- Tablero (Fase 2): rejilla 12×8, casilla = 5 ft ---------- */
+const BOARD = { w: 12, h: 8 };
+
+/** Distancia en ft entre dos celdas (Chebyshev × 5, diagonales = 5 ft). */
+function distBetween(a, b) { return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) * 5; }
+
+/** Distancia actual jugador-enemigo en ft. */
+function distOf(e) { return distBetween(combat.p.pos, e.pos); }
+
+/** ¿Celda ocupada por el jugador o un enemigo vivo? */
+function cellOccupied(x, y) {
+  if (combat.p && combat.p.pos.x === x && combat.p.pos.y === y) return true;
+  return combat.enemies.some((e) => e.hp > 0 && e.pos.x === x && e.pos.y === y);
+}
+
+/** Celdas alcanzables en N pasos (5 ft c/u) sin atravesar enemigos (BFS 8 direcciones). */
+function reachableCells(from, steps) {
+  const seen = new Set([from.x + "," + from.y]);
+  const out = [];
+  let frontier = [from];
+  for (let s = 0; s < steps; s++) {
+    const next = [];
+    frontier.forEach((c) => {
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+        if (!dx && !dy) continue;
+        const nx = c.x + dx, ny = c.y + dy, k = nx + "," + ny;
+        if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h || seen.has(k)) continue;
+        if (cellOccupied(nx, ny)) continue;
+        seen.add(k);
+        out.push({ x: nx, y: ny });
+        next.push({ x: nx, y: ny });
+      }
+    });
+    frontier = next;
+  }
+  return out;
 }
 
 function eName(e) { return LANG === "es" ? e.es : e.en; }
@@ -117,7 +156,12 @@ function startCombat() {
   combat.turn = 0;
   combat.p = newCombatPlayer();
   combat.log = [];
-  combat.enemies.forEach((e) => { e.acted = false; e.conds = []; e.hp = e.maxHp; e.dist = 30; e.react = true; });
+  combat.enemies.forEach((e) => { e.acted = false; e.conds = []; e.hp = e.maxHp; e.react = true; });
+  // Colocación inicial: jugador a la izquierda, enemigos a la derecha (~30-35 ft)
+  combat.p.pos = { x: 1, y: Math.floor(BOARD.h / 2) };
+  combat.enemies.forEach((e, i) => {
+    e.pos = { x: BOARD.w - 3, y: Math.min(BOARD.h - 1, 1 + i * 2) };
+  });
 
   const r1 = rollDie(20), r2 = rollDie(20);
   const pInit = Math.max(r1, r2) + state.initiative; // Asesinar: ventaja
@@ -190,18 +234,19 @@ function playerAttack(w, e, opts) {
   const melee = cat ? cat.melee : 5;
   const range = cat ? cat.range : null;
   const fin = cat ? cat.fin : true; // armas manuales: se asume Sutil
+  const dist = distOf(e);
   let mode = null;
-  if (melee && e.dist <= melee) mode = "melee";
+  if (melee && dist <= melee) mode = "melee";
   else if (range) {
     const [rn, rl] = range.split("/").map(Number);
-    if (e.dist <= rl) mode = "ranged";
+    if (dist <= rl) mode = "ranged";
   }
-  if (!mode) { cLog(`⛔ ${eName(e)} ${ct("noRange")} (${e.dist} ft)`, "log-miss"); return false; }
+  if (!mode) { cLog(`⛔ ${eName(e)} ${ct("noRange")} (${dist} ft)`, "log-miss"); return false; }
 
   // --- Ventaja / desventaja ---
   const reasons = [];
   let adv = false, dis = false;
-  const cm = condModsVs(e, e.dist);
+  const cm = condModsVs(e, dist);
   if (cm.adv) { adv = true; if (hasCond(e, "prone")) reasons.push(ct("proneAdv")); else if (hasCond(e, "blinded")) reasons.push(ct("blindAdv")); }
   if (cm.dis) { dis = true; }
   if (p.steady) { adv = true; reasons.push(ct("steadyOn")); }
@@ -209,9 +254,9 @@ function playerAttack(w, e, opts) {
   if (combat.round === 1 && !e.acted) { adv = true; reasons.push("🗡 " + ct("firstRound")); }
   if (mode === "ranged") {
     const [rn] = range.split("/").map(Number);
-    if (e.dist > rn) { dis = true; reasons.push(ct("longRangeDis")); }
-    const meleeFoe = combat.enemies.find((x) => x.hp > 0 && x !== e && x.dist <= 5);
-    if (e.dist <= 5 || meleeFoe) { dis = true; reasons.push(ct("rangedInMelee")); }
+    if (dist > rn) { dis = true; reasons.push(ct("longRangeDis")); }
+    const meleeFoe = combat.enemies.find((x) => x.hp > 0 && distOf(x) <= 5);
+    if (meleeFoe) { dis = true; reasons.push(ct("rangedInMelee")); }
   }
   const flat = adv && dis;
 
@@ -308,38 +353,39 @@ function playerAttack(w, e, opts) {
 
 /* ================= MOVIMIENTO DEL JUGADOR ================= */
 /**
- * Mueve al jugador respecto a un enemigo (ft positivo = alejarse).
+ * Mueve al jugador a una celda del tablero.
  * Gestiona presupuesto de movimiento, Retirada y ataques de oportunidad.
  */
-function playerMove(e, delta) {
+function playerMoveTo(x, y) {
   const p = combat.p;
   if (!combat.on || !isPlayerTurn()) return false;
+  if (x < 0 || y < 0 || x >= BOARD.w || y >= BOARD.h || cellOccupied(x, y)) return false;
   const budget = p.move + p.withdraw;
-  const want = Math.abs(delta);
-  if (want > budget) { cLog("⛔ " + ct("noMove"), "log-miss"); return false; }
+  const from = { x: p.pos.x, y: p.pos.y };
+  const ft = distBetween(from, { x, y });
+  if (ft === 0) return false;
+  if (ft > budget) { cLog("⛔ " + ct("noMove"), "log-miss"); return false; }
 
-  // Enemigos en melé ANTES del movimiento
-  const inMeleeBefore = combat.enemies.filter((x) => x.hp > 0 && x.dist <= 5);
-  e.dist = Math.max(0, e.dist + delta);
-
-  // ¿Salí del alcance de alguien? → AdO salvo Retirarse/Retirada
-  const freeMove = p.diseng || p.withdraw >= want;
-  inMeleeBefore.forEach((x) => {
-    if (x.dist > 5 && !freeMove && x.react && !hasCond(x, "unconscious")) {
+  // AdO: salir del alcance de melé de un enemigo sin Retirarse/Retirada
+  const freeMove = p.diseng || p.withdraw >= ft;
+  combat.enemies.forEach((x) => {
+    if (x.hp <= 0 || !x.react || hasCond(x, "unconscious")) return;
+    const reach = Math.max(...x.attacks.filter((a) => a.melee).map((a) => a.melee), 0);
+    if (!reach) return;
+    if (distBetween(from, x.pos) <= reach && distBetween({ x, y }, x.pos) > reach && !freeMove) {
       const atk = x.attacks.find((a) => a.melee);
-      if (atk) {
-        x.react = false;
-        cLog(`⚠ ${ct("oaLog")} ${eName(x)}!`, "log-miss");
-        enemyAttackRoll(x, atk, true);
-      }
+      x.react = false;
+      cLog(`⚠ ${ct("oaLog")} ${eName(x)}!`, "log-miss");
+      enemyAttackRoll(x, atk, true);
     }
   });
 
   // consume primero el movimiento de Retirada (libre de AdO)
-  const useWithdraw = Math.min(p.withdraw, want);
+  const useWithdraw = Math.min(p.withdraw, ft);
   p.withdraw -= useWithdraw;
-  p.move -= (want - useWithdraw);
-  cLog(`👣 ${state.name} ${ct("aiMove")} ${want} ft → ${eName(e)}: ${e.dist} ft`, "log-info");
+  p.move -= (ft - useWithdraw);
+  p.pos = { x, y };
+  cLog(`👣 ${state.name} ${ct("aiMove")} ${ft} ft`, "log-info");
   if (typeof renderCombat === "function") renderCombat();
   return true;
 }
@@ -406,6 +452,35 @@ function enemyAttackRoll(e, atk, isOA) {
   return dmg;
 }
 
+/**
+ * Movimiento de la IA: avanza paso a paso (5 ft) hacia el jugador
+ * (o se aleja si flee=true). Devuelve los ft recorridos.
+ */
+function aiMoveSteps(e, ft, flee) {
+  let steps = Math.floor(ft / 5);
+  let moved = 0;
+  while (steps-- > 0) {
+    let best = null, bestScore = null;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      const nx = e.pos.x + dx, ny = e.pos.y + dy;
+      if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h) continue;
+      if (cellOccupied(nx, ny)) continue;
+      const d = distBetween({ x: nx, y: ny }, combat.p.pos);
+      // melé: parar junto al jugador; a distancia: no entrar en melé si tiene opción
+      let score = flee ? -d : d;
+      if (!flee && d <= 5) score = -1; // llegó a melé: suficiente
+      if (bestScore === null || score < bestScore) { bestScore = score; best = { x: nx, y: ny }; }
+    }
+    if (!best) break;
+    if (!flee && distBetween(best, combat.p.pos) >= distOf(e) && distOf(e) <= 5) break; // ya está en melé
+    e.pos = best;
+    moved += 5;
+    if (!flee && distOf(e) <= 5) break;
+  }
+  return moved;
+}
+
 /** Fin de turno del enemigo: salvaciones repetidas y expiración de condiciones. */
 function enemyEndTurn(e) {
   if (hasCond(e, "poisoned") && e.hp > 0) {
@@ -442,32 +517,33 @@ function enemyTakeTurn(e) {
     move = Math.floor(move / 2);
   }
 
-  // Cobardía: PG < 25% → retirada y huir
+  // Cobardía: PG < 25% → se aleja del jugador
   if (e.coward && e.hp < e.maxHp / 4) {
-    e.dist += move;
-    cLog(`🏃 ${eName(e)} ${ct("aiFlee")} → ${e.dist} ft`, "log-info");
+    aiMoveSteps(e, move, true);
+    cLog(`🏃 ${eName(e)} ${ct("aiFlee")}`, "log-info");
     enemyEndTurn(e);
     return;
   }
 
   // Elegir ataque disponible
-  const inRange = (a) => (a.melee && e.dist <= a.melee) ||
-    (a.range && e.dist <= +a.range.split("/")[1]);
-  let atk = e.attacks.find((a) => a.melee && e.dist <= a.melee) ||
-            e.attacks.find((a) => a.range && e.dist <= +a.range.split("/")[0]) ||
+  const distNow = () => distOf(e);
+  const inRange = (a) => (a.melee && distNow() <= a.melee) ||
+    (a.range && distNow() <= +a.range.split("/")[1]);
+  let atk = e.attacks.find((a) => a.melee && distNow() <= a.melee) ||
+            e.attacks.find((a) => a.range && distNow() <= +a.range.split("/")[0] && distNow() > 5) ||
             e.attacks.find(inRange);
 
   // Acercarse si nada alcanza
   if (!atk) {
-    const step = Math.min(move, e.dist - 5);
-    if (step > 0) { e.dist -= step; cLog(`👣 ${eName(e)} ${ct("aiMove")} ${step} ft → ${e.dist} ft (${ct("aiTarget")})`, "log-info"); }
+    const moved = aiMoveSteps(e, move, false);
+    if (moved > 0) cLog(`👣 ${eName(e)} ${ct("aiMove")} ${moved} ft (${ct("aiTarget")})`, "log-info");
     if (dazed) { cLog(`😵 ${ct("dazedNote")}`, "log-info"); enemyEndTurn(e); return; }
-    atk = e.attacks.find((a) => a.melee && e.dist <= a.melee) || e.attacks.find(inRange);
+    atk = e.attacks.find((a) => a.melee && distNow() <= a.melee) || e.attacks.find(inRange);
     if (!atk) {
       // Dash: corre el doble
-      const step2 = Math.min(e.speed, e.dist - 5);
-      if (step2 > 0) { e.dist -= step2; cLog(`💨 ${eName(e)} ${ct("aiDash")} → ${e.dist} ft`, "log-info"); }
-      atk = e.attacks.find((a) => a.melee && e.dist <= a.melee);
+      const moved2 = aiMoveSteps(e, e.speed, false);
+      if (moved2 > 0) cLog(`💨 ${eName(e)} ${ct("aiDash")} (${moved2} ft más)`, "log-info");
+      atk = e.attacks.find((a) => a.melee && distNow() <= a.melee);
       if (!atk) { cLog(`⛔ ${eName(e)}: ${ct("aiNoReach")}`, "log-info"); enemyEndTurn(e); return; }
       canAct = false; // gastó su acción en Dash
     }
@@ -526,6 +602,49 @@ function condBadges(e) {
   }).join(" ");
 }
 
+/* ---------- Tablero visual ---------- */
+let moveMode = false;
+
+function renderBoard() {
+  const bd = ctEl("c-board");
+  if (!bd) return;
+  const p = combat.p;
+  // celdas alcanzables si el modo movimiento está activo
+  const reach = new Set();
+  if (moveMode && isPlayerTurn() && p) {
+    const steps = Math.floor((p.move + p.withdraw) / 5);
+    reachableCells(p.pos, steps).forEach((c) => reach.add(c.x + "," + c.y));
+  }
+  bd.innerHTML = "";
+  bd.style.gridTemplateColumns = `repeat(${BOARD.w}, 1fr)`;
+  for (let y = 0; y < BOARD.h; y++) for (let x = 0; x < BOARD.w; x++) {
+    const cell = document.createElement("div");
+    cell.className = "cell" + ((x + y) % 2 ? " alt" : "");
+    if (reach.has(x + "," + y)) cell.classList.add("reach");
+    if (p && p.pos.x === x && p.pos.y === y) {
+      cell.innerHTML = `<span class="tok tok-p" title="${state.name}">🗡</span>`;
+      if (isPlayerTurn()) cell.classList.add("cur");
+    } else {
+      const e = combat.enemies.find((en) => en.hp > 0 && en.pos.x === x && en.pos.y === y);
+      if (e) {
+        const isCur = combat.on && !isPlayerTurn() && currentCombatant().who === "e" && combat.enemies[currentCombatant().idx] === e;
+        cell.innerHTML = `<span class="tok tok-e" title="${eName(e)} — ${e.hp}/${e.maxHp} PG · CA ${e.ac}">${eName(e).charAt(0)}</span>`;
+        if (isCur) cell.classList.add("cur");
+        if (e.conds.length) cell.classList.add("has-cond");
+      }
+    }
+    if (reach.has(x + "," + y)) {
+      cell.addEventListener("click", () => { moveMode = false; playerMoveTo(x, y); });
+    }
+    bd.appendChild(cell);
+  }
+  const mv = ctEl("c-btn-move");
+  if (mv) {
+    mv.disabled = !isPlayerTurn() || (p.move + p.withdraw) < 5;
+    mv.classList.toggle("btn-crimson", moveMode);
+  }
+}
+
 function renderCombat() {
   const area = ctEl("c-arena");
   if (!area) return;
@@ -575,18 +694,10 @@ function renderCombat() {
       <div class="enemy-info">
         <strong>${eName(e)}</strong> ${condBadges(e)}
         <div class="enemy-bar"><div class="enemy-bar-fill" style="width:${pct}%"></div></div>
-        <span class="hint-inline">${e.hp}/${e.maxHp} PG · CA ${e.ac} · ${ct("distFt")}: ${e.dist} ft</span>
-      </div>
-      <div class="enemy-moves">
-        <button class="btn btn-small" data-melee="${i}" ${!isPlayerTurn() || e.dist <= 5 || e.hp <= 0 ? "disabled" : ""}>${ct("toMelee")}</button>
-        <button class="btn btn-small" data-close="${i}" ${!isPlayerTurn() || e.hp <= 0 ? "disabled" : ""}>−15 ft</button>
-        <button class="btn btn-small" data-far="${i}" ${!isPlayerTurn() || e.hp <= 0 ? "disabled" : ""}>+15 ft</button>
+        <span class="hint-inline">${e.hp}/${e.maxHp} PG · CA ${e.ac} · ${ct("distFt")}: ${distOf(e)} ft</span>
       </div>`;
     eList.appendChild(div);
   });
-  eList.querySelectorAll("[data-melee]").forEach((b) => b.addEventListener("click", () => playerMove(combat.enemies[+b.dataset.melee], 5 - combat.enemies[+b.dataset.melee].dist)));
-  eList.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => playerMove(combat.enemies[+b.dataset.close], -15)));
-  eList.querySelectorAll("[data-far]").forEach((b) => b.addEventListener("click", () => playerMove(combat.enemies[+b.dataset.far], 15)));
 
   // Botones de acción
   ctEl("c-btn-steady").disabled = !isPlayerTurn() || !p.ba;
@@ -596,6 +707,7 @@ function renderCombat() {
   ctEl("c-btn-attack").disabled = !isPlayerTurn() || !p.action;
   ctEl("c-btn-end").disabled = !isPlayerTurn();
   ctEl("c-apply-hp").hidden = combat.on;
+  renderBoard();
   renderCombatLog();
 }
 
@@ -617,7 +729,7 @@ function openAttackPanel() {
     if (e.hp <= 0) return;
     const opt = document.createElement("option");
     opt.value = i;
-    opt.textContent = `${eName(e)} (${e.dist} ft · CA ${e.ac})`;
+    opt.textContent = `${eName(e)} (${distOf(e)} ft · CA ${e.ac})`;
     tSel.appendChild(opt);
   });
   // Golpes Astutos
@@ -671,6 +783,7 @@ function initCombat() {
   ctEl("c-btn-attack").addEventListener("click", openAttackPanel);
   ctEl("c-atk-roll").addEventListener("click", confirmAttack);
   ctEl("c-atk-cancel").addEventListener("click", () => { ctEl("c-attack-panel").hidden = true; });
+  ctEl("c-btn-move").addEventListener("click", () => { moveMode = !moveMode; renderBoard(); });
   ctEl("c-btn-steady").addEventListener("click", () => playerBonus("steady"));
   ctEl("c-btn-hide").addEventListener("click", () => playerBonus("hide"));
   ctEl("c-btn-dash").addEventListener("click", () => playerBonus("dash"));
