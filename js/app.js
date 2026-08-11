@@ -920,7 +920,7 @@ function rollAttack() {
     // Los dados se quitan ANTES de rolar el daño; cada opción cuesta lo suyo.
     const strikes = $$(".cs-check:checked")
       .map((c) => ({ id: c.value, cost: +c.dataset.cost || 1 }))
-      .slice(0, 2);
+      .slice(0, maxCunningStrikes(state.level));
     const costTotal = strikes.reduce((a, s) => a + s.cost, 0);
     const baseSneak = sneakDiceCount(state.level);
     const sneakCount = Math.max(0, baseSneak - costTotal);
@@ -991,13 +991,13 @@ function initSimEvents() {
     $("#sim-adv").checked = !e.target.checked;
   });
 
-  // Máximo 2 Golpes Astutos (Golpe Astuto Mejorado, nivel 11)
-  // y el coste total no puede superar los dados de furtivo.
+  // Nº de efectos simultáneos según nivel (1 desde N5; 2 con Golpe Astuto
+  // Mejorado, N11) y el coste total no puede superar los dados de furtivo.
   $$(".cs-check").forEach((cb) => {
     cb.addEventListener("change", () => {
       const checked = $$(".cs-check:checked");
       const cost = checked.reduce((a, c) => a + (+c.dataset.cost || 1), 0);
-      if (checked.length > 2 || cost > sneakDiceCount(state.level)) cb.checked = false;
+      if (checked.length > maxCunningStrikes(state.level) || cost > sneakDiceCount(state.level)) cb.checked = false;
     });
   });
 
@@ -1037,7 +1037,10 @@ function renderSimAll() {
   renderStrikeLocks();
 }
 
-/** Bloquea las opciones de Golpes Tortuosos (N14) si el nivel es insuficiente. */
+/** Nº máximo de efectos de Golpe Astuto por ataque según el nivel (2024). */
+function maxCunningStrikes(level) { return level >= 11 ? 2 : level >= 5 ? 1 : 0; }
+
+/** Bloquea las opciones de Golpe Astuto por nivel y actualiza la leyenda (máx.). */
 function renderStrikeLocks() {
   $$(".cs-check").forEach((cb) => {
     const req = cb.dataset.lock ? +cb.dataset.lock : 0;
@@ -1051,6 +1054,7 @@ function renderStrikeLocks() {
       if (lockSpan) lockSpan.textContent = "";
     }
   });
+  $("#cs-legend").textContent = t("cunningStrikes").replace("{max}", maxCunningStrikes(state.level));
 }
 
 /* ============================================================
@@ -1145,11 +1149,11 @@ function rollComboDamage(comboId) {
   res.classList.add("visible");
 }
 
-/** Tabla de rasgos por nivel. */
+/** Tabla de rasgos por nivel (1-20, misma fuente que la ficha: LEVEL_PROGRESSION). */
 function renderFeatures() {
   const body = $("#features-body");
   body.innerHTML = "";
-  FEATURES.forEach((f) => {
+  LEVEL_PROGRESSION.forEach((f) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${f.lv}</td><td>${escapeHtml(LANG === "es" ? f.es : f.en)}</td>`;
     body.appendChild(tr);
