@@ -1427,6 +1427,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSimEvents();
   initPcgen();
   initMasteryEvents();
+  if (typeof initCombat === "function") initCombat(); // motor de combate (Fase 1)
   $("#lang-toggle").addEventListener("click", toggleLang);
   // Estado inicial del simulador: enemigo no ha actuado → ventaja marcada.
   $("#sim-adv").checked = true;

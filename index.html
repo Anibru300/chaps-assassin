@@ -28,6 +28,7 @@
       <button class="tab-btn active" data-tab="sheet" data-i18n="tabSheet">Ficha</button>
       <button class="tab-btn" data-tab="sim" data-i18n="tabSim">Simulador</button>
       <button class="tab-btn" data-tab="combos" data-i18n="tabCombos">Combos</button>
+      <button class="tab-btn" data-tab="combat" data-i18n="tabCombat">Combate</button>
     </nav>
   </header>
 
@@ -460,6 +461,82 @@
       </div>
     </section>
 
+    <!-- ============ TAB 4: COMBATE (motor Fase 1) ============ -->
+    <section id="tab-combat" class="tab-panel">
+
+      <!-- Preparación -->
+      <div class="card" id="c-setup">
+        <h2 data-i18n="ctSetup">Nuevo combate</h2>
+        <div class="rest-row">
+          <select id="c-catalog" class="weapon-catalog"></select>
+          <button class="btn btn-small" id="c-btn-add" data-i18n="ctAddEnemy">+ Añadir enemigo</button>
+          <button class="btn btn-crimson" id="c-btn-start" data-i18n="ctStart">⚔ Iniciar combate</button>
+        </div>
+        <div id="c-queue"></div>
+      </div>
+
+      <!-- Arena -->
+      <div id="c-arena" hidden>
+        <div class="card">
+          <div class="combat-head">
+            <h2 id="c-round">RONDA 1</h2>
+            <span id="c-banner" class="combat-banner"></span>
+          </div>
+          <div id="c-order" class="init-order"></div>
+        </div>
+
+        <div class="card">
+          <h2>CHAPS</h2>
+          <div class="grid grid-4">
+            <div class="field"><span data-i18n="hpCurrent">Vida</span> <strong id="c-php"></strong></div>
+            <div class="field"><span data-i18n="ac">CA</span> <strong id="c-pac"></strong></div>
+          </div>
+          <div id="c-pips" class="turn-pips"></div>
+          <div id="c-pconds"></div>
+          <div class="rest-row">
+            <button class="btn btn-crimson" id="c-btn-attack" data-i18n="ctAttack">Atacar</button>
+            <button class="btn btn-small" id="c-btn-steady" data-i18n="steadyAim">Puntería Firme</button>
+            <button class="btn btn-small" id="c-btn-hide" data-i18n="caHide">Esconderse</button>
+            <button class="btn btn-small" id="c-btn-dash" data-i18n="caDash">Dash</button>
+            <button class="btn btn-small" id="c-btn-disengage" data-i18n="caDisengage">Retirarse</button>
+            <button class="btn" id="c-btn-end" data-i18n="ctEndTurn">Finalizar turno</button>
+          </div>
+          <button class="btn btn-small" id="c-apply-hp" data-i18n="ctApplyHp" hidden>Guardar PG en la ficha</button>
+        </div>
+
+        <!-- Panel de ataque -->
+        <div class="card" id="c-attack-panel" hidden>
+          <h2 data-i18n="ctAttackTitle">Tirada de ataque</h2>
+          <div class="grid grid-3">
+            <label class="field"><span data-i18n="weapon">Arma</span> <select id="c-atk-weapon"></select></label>
+            <label class="field"><span data-i18n="ctTarget">Objetivo</span> <select id="c-atk-target"></select></label>
+            <label class="field checkbox-field"><input type="checkbox" id="c-atk-ally"><span data-i18n="ctAlly">Aliado a 5 ft del objetivo</span></label>
+          </div>
+          <fieldset class="cs-fieldset">
+            <legend data-i18n="ctStrikes">Golpes Astutos</legend>
+            <div id="c-atk-strikes"></div>
+          </fieldset>
+          <div class="rest-row">
+            <button class="btn btn-crimson" id="c-atk-roll" data-i18n="ctRoll">¡Tirar!</button>
+            <button class="btn" id="c-atk-cancel" data-i18n="pcgenCancel">Cancelar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 data-i18n="enemySetup">Enemigos</h2>
+          <div id="c-enemies"></div>
+        </div>
+
+        <div class="card">
+          <div class="combat-head">
+            <h2 data-i18n="damageLog">Registro</h2>
+            <button class="btn btn-small btn-danger" id="c-btn-end-combat" data-i18n="ctEndCombat">Terminar combate</button>
+          </div>
+          <ul id="c-log" class="combat-log"></ul>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <footer class="app-footer">
@@ -469,5 +546,7 @@
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/combat-data.js"></script>
+  <script src="js/combat.js"></script>
 </body>
 </html>

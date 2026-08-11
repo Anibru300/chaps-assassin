@@ -557,6 +557,37 @@ td { padding: 6px 8px; border-bottom: 1px solid #1f222c; vertical-align: middle;
   padding: 6px 0 6px 18px;
 }
 
+/* ---------- Motor de combate (Fase 1) ---------- */
+.combat-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.combat-banner { color: var(--gold); font-weight: 700; letter-spacing: 1px; }
+.init-order { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.init-chip {
+  background: #1a1d26; border: 1px solid #2a2e3a; border-radius: 12px;
+  padding: 3px 10px; font-size: 0.8rem; color: var(--text-dim);
+}
+.init-chip.cur { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+.init-chip.dead { opacity: 0.4; text-decoration: line-through; }
+.turn-pips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.turn-pip {
+  border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; border: 1px solid #2a2e3a;
+}
+.turn-pip.on { color: var(--green); border-color: var(--green); }
+.turn-pip.off { color: #666; text-decoration: line-through; }
+.enemy-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid #1f222c; flex-wrap: wrap;
+}
+.enemy-row.dead { opacity: 0.4; }
+.enemy-info { flex: 1; min-width: 220px; }
+.enemy-moves { display: flex; gap: 6px; flex-wrap: wrap; }
+.cond-badge {
+  display: inline-block; background: rgba(201, 162, 39, 0.15); color: var(--gold);
+  border: 1px solid var(--gold); border-radius: 10px; padding: 1px 8px;
+  font-size: 0.7rem; margin-left: 4px;
+}
+.hint-inline { font-size: 0.8rem; color: var(--text-dim); }
+#c-queue .enemy-row { border-bottom: 1px dashed #1f222c; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
