@@ -255,6 +255,14 @@ th {
   padding: 6px 8px;
 }
 td { padding: 6px 8px; border-bottom: 1px solid #1f222c; vertical-align: middle; }
+.weapon-catalog {
+  background: #1a1d26;
+  color: var(--text);
+  border: 1px solid #2a2e3a;
+  border-radius: 6px;
+  padding: 6px 8px;
+  max-width: 260px;
+}
 .weapons-table input, .weapons-table select {
   background: var(--bg-card-alt);
   border: 1px solid var(--border);

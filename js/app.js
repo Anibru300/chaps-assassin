@@ -288,6 +288,42 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** Rellena el catálogo de armas (idioma actual). */
+function renderWeaponCatalog() {
+  const sel = $("#weapon-catalog");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  WEAPON_MASTERY.forEach((w) => {
+    const prop = MASTERY_PROPERTIES.find((p) => p.id === w.mastery);
+    const opt = document.createElement("option");
+    opt.value = w.id;
+    opt.textContent = `${LANG === "es" ? w.es : w.en} — ${w.dmg} — ${prop.name}`;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+/** Añade el arma elegida del catálogo con daño, propiedades y maestría automáticos. */
+function addWeaponFromCatalog() {
+  const w = WEAPON_MASTERY.find((x) => x.id === $("#weapon-catalog").value);
+  if (!w) return;
+  const prop = MASTERY_PROPERTIES.find((p) => p.id === w.mastery);
+  const m = w.dmg.match(/(\d+)d(\d+)/); // "1" (cerbatana) → 1d1 = 1 fijo
+  const dice = m ? +m[1] : 1;
+  const sides = m ? +m[2] : 1;
+  state.weapons.push({
+    name: LANG === "es" ? w.es : w.en,
+    dice, sides,
+    bonus: abilityMod(state.abilities.dex),
+    props: LANG === "es" ? w.propsEs : w.propsEn,
+    mastery: prop.name
+  });
+  saveState();
+  renderWeapons();
+  renderSimWeapons();
+  renderCombos();
+}
+
 /** Rastreador de monedas. */
 function renderCurrency() {
   const grid = $("#currency-grid");
@@ -837,6 +873,8 @@ function initSheetEvents() {
     renderJournal();
   });
 
+  $("#btn-add-catalog").addEventListener("click", addWeaponFromCatalog);
+
   $("#btn-add-weapon").addEventListener("click", () => {
     state.weapons.push({ name: "—", dice: 1, sides: 6, bonus: abilityMod(state.abilities.dex), props: "", mastery: "" });
     saveState();
@@ -1242,6 +1280,7 @@ function renderAll() {
   renderSkills();
   renderTools();
   renderWeapons();
+  renderWeaponCatalog();
   renderCurrency();
   renderSimAll();
   renderCombos();
