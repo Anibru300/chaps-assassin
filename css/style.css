@@ -540,6 +540,23 @@ td { padding: 6px 8px; border-bottom: 1px solid #1f222c; vertical-align: middle;
   50% { box-shadow: 0 0 22px rgba(201, 162, 39, 0.55); }
 }
 
+/* Rasgos de progresión desplegables */
+.prog-detail summary {
+  cursor: pointer;
+  list-style: none;
+}
+.prog-detail summary::before {
+  content: "▸ ";
+  color: var(--gold);
+}
+.prog-detail[open] summary::before { content: "▾ "; }
+.prog-detail div {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  padding: 6px 0 6px 18px;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }

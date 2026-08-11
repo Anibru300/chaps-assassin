@@ -664,10 +664,16 @@ function renderProgression() {
     const asiCell = (f.asi || f.boon)
       ? `<input type="text" class="asi-input" data-asi="${f.lv}" value="${escapeHtml(state.asiNotes[f.lv] || "")}" placeholder="${t("asiNotePh")}">`
       : "";
+    const desc = LANG === "es" ? f.es : f.en;
+    const det = LANG === "es" ? f.detailEs : f.detailEn;
+    // Rasgo desplegable: clic abre la explicación detallada del nivel.
+    const featureCell = det
+      ? `<details class="prog-detail"><summary>${escapeHtml(desc)}</summary><div>${det.split("\n").map(escapeHtml).join("<br>")}</div></details>`
+      : escapeHtml(desc);
     tr.innerHTML = `
       <td><input type="checkbox" data-prog="${f.lv}" ${checked ? "checked" : ""}></td>
       <td class="lv-cell">${f.lv}</td>
-      <td>${escapeHtml(LANG === "es" ? f.es : f.en)}</td>
+      <td>${featureCell}</td>
       <td>${asiCell}</td>`;
     body.appendChild(tr);
   });
