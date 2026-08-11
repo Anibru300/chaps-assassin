@@ -492,6 +492,7 @@ const I18N = {
     ctCatAll: "Todas", ctSearchPh: "Buscar enemigo…",
     ctCustomTitle: "➕ Enemigo personalizado", ctCustomAdd: "+ Crear y añadir",
     cfName: "Nombre", cfHp: "PG", cfAc: "CA", cfBonus: "Bono ataque", cfDmg: "Daño", cfSpeed: "Velocidad", cfInit: "Iniciativa",
+    ctDiffEasy: "IA: Fácil", ctDiffNormal: "IA: Normal", ctDiffHard: "IA: Difícil", ctDiffTactical: "IA: Táctico",
     // Ficha
     identity: "Identidad", name: "Nombre", level: "Nivel", profBonus: "Bono extra (Competencia)",
     hpCurrent: "Vida actual (PG)", hpMax: "Vida máxima (PG)", hpTemp: "Vida extra (PG temp.)",
@@ -631,6 +632,7 @@ const I18N = {
     ctCatAll: "All", ctSearchPh: "Search enemy…",
     ctCustomTitle: "➕ Custom enemy", ctCustomAdd: "+ Create & add",
     cfName: "Name", cfHp: "HP", cfAc: "AC", cfBonus: "Atk bonus", cfDmg: "Damage", cfSpeed: "Speed", cfInit: "Initiative",
+    ctDiffEasy: "AI: Easy", ctDiffNormal: "AI: Normal", ctDiffHard: "AI: Hard", ctDiffTactical: "AI: Tactical",
     identity: "Identity", name: "Name", level: "Level", profBonus: "Proficiency bonus",
     hpCurrent: "Current HP", hpMax: "Max HP", hpTemp: "Temp HP",
     ac: "AC", initiative: "Initiative", speed: "Speed",

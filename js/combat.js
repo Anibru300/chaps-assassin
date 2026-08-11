@@ -35,6 +35,7 @@ const combat = {
   enemies: [],    // instancias
   p: null,        // combatiente jugador
   log: [],        // [{cls, html}]
+  diff: "normal", // easy | normal | hard | tactical (Fase 4)
   confirm: null   // inyectable (UI: window.confirm); tests lo sustituyen
 };
 
@@ -61,6 +62,37 @@ function newCombatPlayer() {
 function hasPCond(id) { return combat.p && combat.p.conds.some((c) => c.id === id); }
 function getPCond(id) { return combat.p.conds.find((c) => c.id === id); }
 function removePCond(id) { combat.p.conds = combat.p.conds.filter((c) => c.id !== id); }
+
+/** Daño medio de una expresión (para decisiones de la IA). */
+function avgDmg(str) { const d = parseDice(str); return d.dice * (d.sides + 1) / 2 + d.bonus; }
+
+/** ¿El paladín usa Castigo? Según dificultad: normal = al primer impacto;
+ *  hard/táctico = solo en crítico o para rematar (jugador < 40% PG). */
+function shouldSmite(e, crit) {
+  if (!e.smite || e.smiteUsed) return false;
+  if (combat.diff === "easy" || combat.diff === "normal") return true;
+  return crit || combat.p.hp <= state.hpMax * 0.4;
+}
+
+/** Elección de hechizo del caster según dificultad (IA explicable). */
+function chooseSpell(e, avail) {
+  const para = avail.find((s) => s.para && !hasPCond("paralyzed"));
+  const area = avail.find((s) => s.save && s.range <= 15 && distOf(e) <= s.range);
+  const bolt = avail.find((s) => s.atk != null);
+  const anySave = avail.find((s) => s.save);
+  if (combat.diff === "easy") return bolt || area || anySave || para; // simple: daño primero
+  if (combat.diff === "normal") return para || area || bolt || anySave;
+  // hard/táctico: Inmovilizar solo si un aliado está en melé contigo (autocríticos),
+  // si está solo, o (hard) a partir de la 2ª ronda
+  const allies = combat.enemies.filter((x) => x !== e && x.hp > 0);
+  const allyClose = allies.some((a) => distBetween(a.pos, combat.p.pos) <= 5);
+  const wantPara = para && (allyClose || !allies.length || (combat.diff === "hard" && combat.round >= 2));
+  if (wantPara) {
+    cLog(`🧠 ${eName(e)}: ${allyClose ? "aliado en melé → Inmovilizar para autocríticos" : "sin aliados → control"}`, "log-info");
+    return para;
+  }
+  return area || bolt || anySave || para;
+}
 
 /** Salvación del jugador (competencia en DES/INT; SAB/CAR desde N15). */
 function playerSave(ability, dc) {
@@ -171,6 +203,9 @@ function enemySave(e, ability, dc) {
 function startCombat() {
   if (!combat.enemies.length) return;
   combat.on = true;
+  // dificultad de la IA (selector del setup; "normal" si no existe, p. ej. tests)
+  const dSel = typeof document !== "undefined" && document.getElementById && document.getElementById("c-diff");
+  combat.diff = (dSel && dSel.value) || combat.diff || "normal";
   combat.round = 1;
   combat.turn = 0;
   combat.p = newCombatPlayer();
@@ -433,7 +468,7 @@ function playerBonus(kind) {
     const r = rollDie(20);
     const best = Math.max(...combat.enemies.filter((e) => e.hp > 0).map((e) => 10 + e.percep), 10);
     const ok = r + mod >= best;
-    if (ok) { p.hidden = true; cLog(`🫥 Sigilo: ${r} ${fmtMod(mod)} = ${r + mod} vs Percepción pasiva ${best} → ${ct("hiddenNow")}`, "log-hit"); }
+    if (ok) { p.hidden = true; p.hiddenDC = r + mod; cLog(`🫥 Sigilo: ${r} ${fmtMod(mod)} = ${r + mod} vs Percepción pasiva ${best} → ${ct("hiddenNow")}`, "log-hit"); }
     else cLog(`🫥 Sigilo: ${r} ${fmtMod(mod)} = ${r + mod} vs ${best} → ${ct("hideFail")}`, "log-miss");
   }
   if (kind === "dash") { p.move += state.speed; cLog("💨 " + ct("dashOn"), "log-info"); }
@@ -464,8 +499,8 @@ function enemyAttackRoll(e, atk, isOA) {
   const crit = chosen === 20 || (hasPCond("paralyzed") && distOf(e) <= 5);
   let res = rollDiceExpr(atk.dmg, crit);
   let dmg = res.total;
-  // Castigo Divino (paladín): primer impacto del turno
-  if (e.smite && !e.smiteUsed) {
+  // Castigo Divino (paladín): según dificultad (primer impacto / solo críticos o remate)
+  if (shouldSmite(e, crit)) {
     e.smiteUsed = true;
     const sm = rollDiceExpr(e.smite, crit);
     dmg += sm.total;
@@ -492,7 +527,8 @@ function enemyAttackRoll(e, atk, isOA) {
  * Movimiento de la IA: avanza paso a paso (5 ft) hacia el jugador
  * (o se aleja si flee=true). Devuelve los ft recorridos.
  */
-function aiMoveSteps(e, ft, flee) {
+function aiMoveSteps(e, ft, flee, stopAt) {
+  stopAt = stopAt || 5;
   let steps = Math.floor(ft / 5);
   let moved = 0;
   while (steps-- > 0) {
@@ -503,16 +539,15 @@ function aiMoveSteps(e, ft, flee) {
       if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h) continue;
       if (cellOccupied(nx, ny)) continue;
       const d = distBetween({ x: nx, y: ny }, combat.p.pos);
-      // melé: parar junto al jugador; a distancia: no entrar en melé si tiene opción
       let score = flee ? -d : d;
-      if (!flee && d <= 5) score = -1; // llegó a melé: suficiente
+      if (!flee && d <= stopAt) score = -1; // ya está a la distancia deseada
       if (bestScore === null || score < bestScore) { bestScore = score; best = { x: nx, y: ny }; }
     }
     if (!best) break;
-    if (!flee && distBetween(best, combat.p.pos) >= distOf(e) && distOf(e) <= 5) break; // ya está en melé
+    if (!flee && distBetween(best, combat.p.pos) >= distOf(e) && distOf(e) <= stopAt) break;
     e.pos = best;
     moved += 5;
-    if (!flee && distOf(e) <= 5) break;
+    if (!flee && distOf(e) <= stopAt) break;
   }
   return moved;
 }
@@ -656,7 +691,8 @@ function enemyTakeTurn(e) {
   }
 
   // Cobardía: PG < 25% → se aleja del jugador (provoca tu AdO si estaba en melé)
-  if (e.coward && e.hp < e.maxHp / 4) {
+  // (en Fácil los enemigos no huyen: pelean hasta el final)
+  if (e.coward && e.hp < e.maxHp / 4 && combat.diff !== "easy") {
     const wasClose = distOf(e) <= 5;
     aiMoveSteps(e, move, true);
     cLog(`🏃 ${eName(e)} ${ct("aiFlee")}`, "log-info");
@@ -665,30 +701,59 @@ function enemyTakeTurn(e) {
     return;
   }
 
+  // Difícil/Táctico: si estás Oculto, gasta su acción en Buscar en vez de atacar con desventaja
+  if (combat.p.hidden && (combat.diff === "hard" || combat.diff === "tactical")) {
+    const r = rollDie(20);
+    const tot = r + e.percep;
+    const dcT = combat.p.hiddenDC || 15;
+    if (tot >= dcT) {
+      combat.p.hidden = false;
+      cLog(`👁 ${eName(e)} Busca: Percepción ${r} ${fmtMod(e.percep)} = ${tot} vs CD ${dcT} → ¡te encuentra!`, "log-miss");
+    } else {
+      cLog(`👁 ${eName(e)} Busca: ${tot} vs CD ${dcT} → ${ct("seekYou")}`, "log-info");
+    }
+    enemyEndTurn(e);
+    return;
+  }
+
   // Casters: mantener distancia y lanzar hechizos
   if (e.role === "caster" && e.spells && e.spells.length) {
-    if (distOf(e) <= 5) { // jugador en melé → se aleja (provoca tu AdO)
-      const wasClose = true;
+    if (distOf(e) <= 5 && combat.diff !== "easy") { // jugador en melé → se aleja (provoca tu AdO)
       const moved = aiMoveSteps(e, move, true);
-      if (moved) cLog(`👣 ${eName(e)} ${ct("aiMove")} ${moved} ft`, "log-info");
-      tryPlayerOA(e, wasClose);
+      if (moved) cLog(`👣 ${eName(e)} ${ct("aiMove")} ${moved} ft (mantiene distancia para lanzar)`, "log-info");
+      tryPlayerOA(e, true);
       if (!combat.on) return;
       if (dazed) { cLog(`😵 ${ct("dazedNote")}`, "log-info"); enemyEndTurn(e); return; }
     }
     const avail = e.spells.filter((s) => s.usesLeft > 0 && distOf(e) <= s.range);
-    const sp = avail.find((s) => s.para && !hasPCond("paralyzed")) ||      // control primero
-               avail.find((s) => s.save && s.range <= 15 && distOf(e) <= s.range) || // área si estás cerca
-               avail.find((s) => s.atk != null) ||                          // ataque a distancia
-               avail.find((s) => s.save);
+    const sp = chooseSpell(e, avail);
     if (sp) { enemyCast(e, sp); enemyEndTurn(e); return; }
     // sin hechizos disponibles: cae a la lógica de melé
   }
 
-  // Dragón: aliento si está listo y estás a 15 ft
+  // Dragón táctico: si el aliento está listo, se coloca a 15 ft (no a melé) para soltarlo
+  if (e.breath && e.breath.ready && distOf(e) > 15 && (combat.diff === "hard" || combat.diff === "tactical")) {
+    const moved = aiMoveSteps(e, move, false, 15);
+    if (moved) cLog(`🐉 ${eName(e)} ${ct("aiMove")} ${moved} ft (se posiciona para el aliento)`, "log-info");
+  }
   if (e.breath && e.breath.ready && distOf(e) <= 15) {
     dragonBreath(e);
     enemyEndTurn(e);
     return;
+  }
+
+  // Difícil/Táctico: tiradores con mejor arma a distancia se alejan de tu melé (kiting)
+  if ((combat.diff === "hard" || combat.diff === "tactical") && e.role !== "caster" && distOf(e) <= 5) {
+    const meleeAtk = e.attacks.find((a) => a.melee);
+    const rangedAtk = e.attacks.find((a) => a.range);
+    if (rangedAtk && (!meleeAtk || avgDmg(rangedAtk.dmg) >= avgDmg(meleeAtk.dmg))) {
+      const moved = aiMoveSteps(e, move, true);
+      if (moved) {
+        cLog(`🏹 ${eName(e)} ${ct("aiMove")} ${moved} ft (kiting: mejor ataque a distancia)`, "log-info");
+        tryPlayerOA(e, true);
+        if (!combat.on) return;
+      }
+    }
   }
 
   // Elegir ataque disponible

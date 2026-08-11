@@ -60,6 +60,47 @@ dragonBreath(wy);
 A(wy.breath.ready===false,"aliento gastado tras usarlo");
 combat.on=false;
 
+// --- Fase 4: IA por dificultad ---
+A(avgDmg("2d8+4")===13,"avgDmg 2d8+4 = 13");
+// shouldSmite por dificultad
+combat.p=newCombatPlayer();combat.p.hp=89;
+const pal4=spawnEnemy("paladin");
+combat.diff="normal";A(shouldSmite(pal4,false)===true,"normal: smite al primer impacto");
+combat.diff="hard";A(shouldSmite(pal4,false)===false,"hard: guarda smite");
+A(shouldSmite(pal4,true)===true,"hard: smite en crítico");
+combat.p.hp=30;A(shouldSmite(pal4,false)===true,"hard: smite para rematar");
+combat.p.hp=89;
+// chooseSpell táctico: para solo con aliado en melé
+const wiz4=spawnEnemy("wizard");
+combat.enemies=[wiz4];combat.p.pos={x:5,y:3};wiz4.pos={x:8,y:3};
+combat.diff="tactical";
+let av=wiz4.spells.filter(s=>s.usesLeft>0&&distOf(wiz4)<=s.range);
+A(chooseSpell(wiz4,av).para===true,"táctico solo: Inmovilizar (sin aliados)");
+const orc4=spawnEnemy("orc");orc4.pos={x:6,y:3};combat.enemies=[wiz4,orc4];
+av=wiz4.spells.filter(s=>s.usesLeft>0&&distOf(wiz4)<=s.range);
+A(chooseSpell(wiz4,av).para===true,"táctico con aliado en melé: Inmovilizar");
+orc4.pos={x:0,y:0}; // aliado lejos
+wiz4.pos={x:10,y:3}; // a 25 ft: fuera del área de Manos Ardientes
+av=wiz4.spells.filter(s=>s.usesLeft>0&&distOf(wiz4)<=s.range);
+A(chooseSpell(wiz4,av).atk===5,"táctico con aliado lejos: prefiere ataque");
+// Buscar cuando estás oculto (hard)
+combat.diff="hard";combat.p.hidden=true;combat.p.hiddenDC=5; // DC baja: lo encuentra
+const g4=spawnEnemy("guard");g4.pos={x:6,y:3};g4.percep=30;combat.enemies=[g4]; // percep alta: determinista
+enemyTakeTurn(g4);
+A(combat.p.hidden===false,"hard: Buscar revela al jugador oculto");
+combat.p.hidden=false;
+// kiting: enemigo con mejor ataque a distancia se aleja de melé (hard)
+const kite={key:"kiter",cat:"custom",role:"melee",es:"Arquero",en:"Archer",cr:"—",hp:20,ac:12,speed:30,init:0,percep:0,
+  mods:{str:0,dex:2,con:0,int:0,wis:0,cha:0},
+  attacks:[{es:"Puño",en:"Fist",bonus:2,dmg:"1d4",melee:5,range:null},{es:"Arco",en:"Bow",bonus:5,dmg:"2d6+2",melee:0,range:"80/320"}]};
+const k=spawnEnemy("kiter");if(!k){ENEMIES.push(kite);}
+const k2=spawnEnemy("kiter");
+combat.enemies=[k2];combat.p.pos={x:5,y:3};k2.pos={x:6,y:3};combat.on=true;combat.round=3;
+combat.p.action=true;combat.p.react=false; // sin reacción: no AdO
+enemyTakeTurn(k2);
+A(distOf(k2)>5,"hard: arquero se aleja de tu melé (kiting)");
+combat.on=false;combat.diff="normal";
+
 combat.enemies=[spawnEnemy("ogre")];
 startCombat();
 A(combat.on&&combat.order.length===2,"combate inicia, orden 2");
@@ -96,6 +137,7 @@ A(combat.log.length>5,"log registrado: "+combat.log.length+" entradas");
 // combate completo vs CASTER (la IA debe lanzar hechizos y no colgarse)
 combat.enemies=[spawnEnemy("sorcerer")];
 startCombat();
+combat.enemies[0].hp=300;combat.enemies[0].maxHp=300; // que sobreviva y lance hechizos
 guard=0;
 while(combat.on&&guard++<200){
   if(isPlayerTurn()){
