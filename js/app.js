@@ -374,6 +374,52 @@ function renderCurrency() {
       saveState();
     });
   });
+  // Peso total del dinero: 50 monedas = 1 lb (0,02 lb cada una).
+  const totalCoins = Object.values(state.currency).reduce((a, b) => a + b, 0);
+  $("#coin-weight").textContent = t("coinWeightTotal")
+    .replace("{coins}", fmtNum(totalCoins))
+    .replace("{lb}", fmtNum(Math.round((totalCoins / 50) * 100) / 100));
+  // Si había una conversión mostrada, se recalcula (p. ej. al cambiar de idioma).
+  const convRes = $("#conv-result");
+  if (convRes && convRes.textContent) convertCoins();
+}
+
+/* ---------- Conversor de monedas ---------- */
+// Valor de cada moneda en cobre (CP): 1 PP = 10 GP, 1 GP = 2 EP = 10 SP = 100 CP.
+const COIN_VALUES = { pp: 1000, gp: 100, ep: 50, sp: 10, cp: 1 };
+let coinConversion = null; // {from, to, spent, gained, leftover} pendiente de aplicar
+
+function convertCoins() {
+  const amt = Math.max(0, parseInt($("#conv-amt").value, 10) || 0);
+  const from = $("#conv-from").value;
+  const to = $("#conv-to").value;
+  const res = $("#conv-result");
+  const btn = $("#btn-conv-apply");
+  coinConversion = null;
+  btn.disabled = true;
+  if (!amt || from === to) { res.textContent = ""; return; }
+  const totalCp = amt * COIN_VALUES[from];
+  const gained = Math.floor(totalCp / COIN_VALUES[to]);
+  const leftoverCp = totalCp - gained * COIN_VALUES[to];
+  const leftover = Math.floor(leftoverCp / COIN_VALUES[from]); // lo que sobra, en la moneda origen
+  res.textContent = `${fmtNum(amt)} ${from.toUpperCase()} = ${fmtNum(gained)} ${to.toUpperCase()}` +
+    (leftover ? " " + t("coinLeftover").replace("{n}", leftover).replace("{coin}", from.toUpperCase()) : "");
+  if (gained > 0) {
+    coinConversion = { from, to, spent: amt - leftover, gained };
+    btn.disabled = false;
+  }
+}
+
+function applyCoinConversion() {
+  if (!coinConversion) return;
+  const { from, to, spent, gained } = coinConversion;
+  if (state.currency[from] < spent) return; // no tienes suficiente
+  state.currency[from] -= spent;
+  state.currency[to] += gained;
+  coinConversion = null;
+  $("#btn-conv-apply").disabled = true;
+  saveState();
+  renderCurrency();
 }
 
 /* ---------- Descansos ---------- */
@@ -949,6 +995,12 @@ function initSheetEvents() {
   };
   $("#btn-coin-add").addEventListener("click", () => adjustCoin(1));
   $("#btn-coin-remove").addEventListener("click", () => adjustCoin(-1));
+
+  // --- Conversor de monedas ---
+  $("#btn-conv").addEventListener("click", convertCoins);
+  $("#btn-conv-apply").addEventListener("click", applyCoinConversion);
+  ["#conv-amt", "#conv-from", "#conv-to"].forEach((id) =>
+    $(id).addEventListener("change", convertCoins));
 
   $("#btn-add-weapon").addEventListener("click", () => {
     state.weapons.push({ name: "—", dice: 1, sides: 6, bonus: abilityMod(state.abilities.dex), props: "", mastery: "" });

@@ -248,6 +248,8 @@
         <h2 data-i18n="currency">Monedas</h2>
         <div class="grid grid-5" id="currency-grid"></div>
         <p class="hint" data-i18n="coinsNote"></p>
+        <p class="hint" data-i18n="coinWeightNote"></p>
+        <p class="hint" id="coin-weight"></p>
         <div class="rest-row">
           <select id="coin-select" class="weapon-catalog">
             <option value="pp" data-i18n="coin_pp">PP</option>
@@ -259,6 +261,29 @@
           <input type="number" id="coin-amt" min="1" value="10" style="width:90px" title="">
           <button class="btn btn-small btn-crimson" id="btn-coin-add" data-i18n="coinAdd">Poner (+)</button>
           <button class="btn btn-small" id="btn-coin-remove" data-i18n="coinRemove">Quitar (−)</button>
+        </div>
+        <h2 data-i18n="coinConvertSection">Conversor de monedas</h2>
+        <div class="rest-row">
+          <input type="number" id="conv-amt" min="1" value="1" style="width:80px">
+          <select id="conv-from" class="weapon-catalog">
+            <option value="pp" data-i18n="coin_pp" selected>PP</option>
+            <option value="gp" data-i18n="coin_gp">GP</option>
+            <option value="ep" data-i18n="coin_ep">EP</option>
+            <option value="sp" data-i18n="coin_sp">SP</option>
+            <option value="cp" data-i18n="coin_cp">CP</option>
+          </select>
+          <button class="btn btn-small" id="btn-conv" data-i18n="coinConvert">Convertir</button>
+          <select id="conv-to" class="weapon-catalog">
+            <option value="pp" data-i18n="coin_pp">PP</option>
+            <option value="gp" data-i18n="coin_gp" selected>GP</option>
+            <option value="ep" data-i18n="coin_ep">EP</option>
+            <option value="sp" data-i18n="coin_sp">SP</option>
+            <option value="cp" data-i18n="coin_cp">CP</option>
+          </select>
+        </div>
+        <p class="hint" id="conv-result"></p>
+        <div class="rest-row">
+          <button class="btn btn-small btn-crimson" id="btn-conv-apply" data-i18n="coinApply" disabled>Aplicar cambio</button>
         </div>
         <h2 data-i18n="notes">Inventario y notas</h2>
         <textarea id="f-notes" rows="6" placeholder="..."></textarea>
