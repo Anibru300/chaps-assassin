@@ -245,7 +245,7 @@ function renderWeapons() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="text" value="${escapeHtml(w.name)}" data-i="${i}" data-f="name"></td>
-      <td><input type="text" value="${w.dice}d${w.sides}+${w.bonus}" readonly class="readonly" style="min-width:80px"></td>
+      <td><input type="text" value="${w.dice}d${w.sides}${w.bonus >= 0 ? "+" : ""}${w.bonus}" data-i="${i}" data-f="dmg" title="dados+característica, p. ej. 1d8+5" style="min-width:80px"></td>
       <td>${fmtMod(atkBonus)}</td>
       <td><input type="text" value="${escapeHtml(w.props)}" data-i="${i}" data-f="props"></td>
       <td><input type="text" value="${escapeHtml(w.mastery)}" data-i="${i}" data-f="mastery" style="min-width:70px"></td>
@@ -254,8 +254,21 @@ function renderWeapons() {
   });
   body.querySelectorAll("input[data-f]").forEach((inp) => {
     inp.addEventListener("change", () => {
-      state.weapons[+inp.dataset.i][inp.dataset.f] = inp.value;
-      saveState();
+      const w = state.weapons[+inp.dataset.i];
+      if (inp.dataset.f === "dmg") {
+        // Daño editable: "1d8+5" → dados, caras y bono. Si no se entiende, se revierte.
+        const m = inp.value.match(/(\d+)\s*d\s*(\d+)\s*([+-]?\s*\d+)?/);
+        if (m) {
+          w.dice = +m[1];
+          w.sides = +m[2];
+          w.bonus = m[3] ? parseInt(m[3].replace(/\s/g, ""), 10) : 0;
+        }
+        saveState();
+        renderWeapons();
+      } else {
+        w[inp.dataset.f] = inp.value;
+        saveState();
+      }
       renderSimWeapons();
       renderCombos();
     });
