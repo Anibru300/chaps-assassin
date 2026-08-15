@@ -662,3 +662,37 @@ body.locked main, body.locked footer { display: none; }
 .login-card h1 { margin: 0; color: var(--crimson-light); letter-spacing: 4px; }
 .login-card .field { text-align: left; }
 .login-error { color: var(--crimson-light); min-height: 1.2em; margin: 0; font-size: .85rem; }
+
+/* ---------- Móvil: Ficha usable en celular ---------- */
+@media (max-width: 720px) {
+  /* Grids de 2 columnas → 1 (personalidad, identidad, monedas) */
+  .grid-2 { grid-template-columns: 1fr; }
+
+  /* Barra de tabs con scroll horizontal si no cabe */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { white-space: nowrap; }
+
+  /* font-size 16px evita el auto-zoom de iOS al enfocar inputs */
+  .field input, .field select, textarea, .asi-input { font-size: 16px; }
+
+  /* Botones con tamaño táctil mínimo */
+  button, .btn { min-height: 38px; }
+
+  /* Botones de PX: que envuelvan en vez de desbordar */
+  .xp-add-row { flex-wrap: wrap; }
+  .xp-bar-label { min-width: 0; }
+
+  /* Cabecera de diario: apilada */
+  .journal-head { flex-direction: column; align-items: stretch; }
+
+  /* Tarjetas con menos padding para ganar ancho */
+  .card { padding: 12px; }
+  main { padding: 10px; }
+}
+
+@media (max-width: 420px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .card { padding: 10px; }
+  h2 { font-size: 1rem; }
+}
