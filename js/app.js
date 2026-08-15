@@ -670,6 +670,13 @@ function renderXp() {
   $("#f-xp").value = fmtNum(state.xp);
   const lv = levelForXp(state.xp);
   $("#f-xp-level").value = lv;
+  // Auto-sync: el nivel lo manda la tabla de PX 2024 (sin botón manual)
+  if (state.level !== lv) {
+    state.level = lv;
+    saveState();
+    renderIdentity();
+    renderProgression();
+  }
   const fill = $("#xp-bar-fill");
   const label = $("#xp-bar-label");
   if (lv >= 20) {

@@ -19,8 +19,10 @@ Ficha web de CHAPS (Pícaro Asesino N12, D&D 2024, Dragonlance). Sitio estático
 
 ## Pendiente / ideas
 - Inventario con catálogo desplegable (ref-data/items.json existe en carpeta padre).
-- Idiomas elegidos reales de CHAPS (usuario debe decir cuáles: +1 Humano, +1 Jerga).
-- Sincronizar chaps-ficha.json (carpeta padre) con nuevos campos.
+- ~~Idiomas elegidos~~ ✅ Común, Jerga de ladrones, Dracónido, Orco.
+- ~~Sincronizar chaps-ficha.json~~ ✅ hecho (2026-08-15).
+- Pasiva editable: `passiveManual` en state (null=auto). Auto de CHAPS = 12 (sin competencia Percepción).
+- Pendiente DM: PG 111, 3 dotes faltantes N12, PX=N13, 7 skills (regla 6), velocidad 40?, moneda "st" inválida.
 - Posible Fase 6 combate (Vex/Nick ya empezado en combat.js, sin commitear antes).
 
 ## Reglas clave
