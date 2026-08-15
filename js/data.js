@@ -132,6 +132,7 @@ const DEFAULT_STATE = {
   deathSuccess: 0,
   deathFail: 0,
   inspiration: false,
+  passiveManual: null, // override manual de Percepción pasiva (null = auto)
   abilities: { str: 10, dex: 20, con: 14, int: 12, wis: 14, cha: 12 },
   // p = competencia, e = pericia (expertise, dobla el bono)
   // Herramientas: ladrón (trasfondo Criminal), disfraz y envenenador (N3 Asesino)
