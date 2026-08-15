@@ -180,6 +180,9 @@ const DEFAULT_STATE = {
   ],
   currency: { pp: 0, gp: 120, st: 0, ep: 0, sp: 45, cp: 10 }, // st = acero (Dragonlance)
   masteryChoices: ["dagger", "rapier"], // 2 armas elegidas para Maestría (N1)
+  backstory: "Crecí huérfano en los callejones portuarios de Palanthas, donde una mano rápida valía más que una espada. Los ladrones del muelle me enseñaron la Jerga y a abrir cerraduras antes de aprender a leer.\n\nUna noche vi lo que no debía: un noble pagando oro por un asesinato. Mandaron a sus perros tras de mí; sobreviví convirtiéndome en la sombra que me cazaba. Aprendí del veneno, del disfraz, del cuchillo silencioso.\n\nAhora vendo mi sigilo al mejor postor. Pero cada contrato me acerca al noble que me quitó la infancia. Krynn es grande. Yo soy paciente.",
+  personality: { traits: "", ideal: "", bond: "", flaw: "" },
+  appearance: { age: "", height: "", weight: "", desc: "" },
   notes: ""
 };
 
@@ -522,6 +525,10 @@ const I18N = {
     profSection: "Competencias (armadura y armas)", addProf: "+ Añadir", profPh: "Nueva competencia…",
     invSection: "Inventario (mochila)", invItem: "Objeto", invQty: "Cant.", invWt: "lb c/u", invNote: "Nota",
     invAdd: "+ Añadir objeto", invTotal: "Peso total: {wt} lb de {cap} lb de capacidad (FUE × 15)", invOver: " — ¡SOBRECARGADO!",
+    passivePerception: "Percepción pasiva",
+    physSection: "Descripción física", physAge: "Edad", physHeight: "Altura", physWeight: "Peso", physDesc: "Apariencia",
+    personalitySection: "Personalidad", traitTraits: "Rasgos", traitIdeal: "Ideal", traitBond: "Vínculo", traitFlaw: "Defecto",
+    backstorySection: "Historia (pasado)", backstoryHint: "Texto precargado de ejemplo — bórralo y escribe tu propia historia.",
     tool_thievesTools: "Herramientas de Ladrón", tool_disguiseKit: "Kit de Disfraz", tool_poisonersKit: "Kit de Envenenador",
     weapons: "Armas y ataques", weapon: "Arma", damage: "Daño (dados)", properties: "Propiedades", mastery: "Maestría (truco)",
     addWeapon: "+ Añadir arma (manual)", addFromCatalog: "Añadir del catálogo", remove: "Quitar",
@@ -666,6 +673,10 @@ const I18N = {
     profSection: "Proficiencies (armor & weapons)", addProf: "+ Add", profPh: "New proficiency…",
     invSection: "Inventory (backpack)", invItem: "Item", invQty: "Qty", invWt: "lb ea", invNote: "Note",
     invAdd: "+ Add item", invTotal: "Total weight: {wt} lb of {cap} lb capacity (STR × 15)", invOver: " — OVERLOADED!",
+    passivePerception: "Passive Perception",
+    physSection: "Physical description", physAge: "Age", physHeight: "Height", physWeight: "Weight", physDesc: "Appearance",
+    personalitySection: "Personality", traitTraits: "Traits", traitIdeal: "Ideal", traitBond: "Bond", traitFlaw: "Flaw",
+    backstorySection: "Backstory", backstoryHint: "Sample pre-filled text — delete it and write your own story.",
     tool_thievesTools: "Thieves' Tools", tool_disguiseKit: "Disguise Kit", tool_poisonersKit: "Poisoner's Kit",
     weapons: "Weapons & Attacks", weapon: "Weapon", damage: "Damage", properties: "Properties", mastery: "Mastery",
     addWeapon: "+ Add weapon (manual)", addFromCatalog: "Add from catalog", remove: "Remove",

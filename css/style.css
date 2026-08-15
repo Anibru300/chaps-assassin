@@ -129,6 +129,7 @@ main { max-width: 1000px; margin: 0 auto; padding: 16px; }
 
 /* ---------- Campos ---------- */
 .grid { display: grid; gap: 12px; margin-bottom: 12px; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 .grid-5 { grid-template-columns: repeat(5, 1fr); }

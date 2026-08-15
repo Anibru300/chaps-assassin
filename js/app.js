@@ -207,6 +207,7 @@ function renderAbilities() {
       renderSkills();      // los mods de habilidades dependen de las características
       renderTools();
       renderInventory();   // la capacidad de carga depende de FUE
+      renderPassivePerception();
     });
   });
   grid.querySelectorAll("input[data-save]").forEach((cb) => {
@@ -531,6 +532,7 @@ function renderTools() {
       renderTools();
     });
   });
+  renderPassivePerception();
 }
 
 /* ---------- Idiomas ---------- */
@@ -607,6 +609,40 @@ function renderInventory() {
       saveState();
       renderInventory();
     });
+  });
+}
+
+/** Percepción pasiva = 10 + mod de Percepción (auto). */
+function renderPassivePerception() {
+  const pb = profBonus(state.level);
+  const s = state.skills.perception || { p: false, e: false };
+  const mod = abilityMod(state.abilities.wis) + (s.e ? pb * 2 : s.p ? pb : 0);
+  $("#f-passive").value = 10 + mod;
+}
+
+/* ---------- Roleplay: físico, personalidad, historia ---------- */
+const FLAVOR_FIELDS = [
+  ["#f-age", ["appearance", "age"]],
+  ["#f-height", ["appearance", "height"]],
+  ["#f-weight", ["appearance", "weight"]],
+  ["#f-appear", ["appearance", "desc"]],
+  ["#f-traits", ["personality", "traits"]],
+  ["#f-ideal", ["personality", "ideal"]],
+  ["#f-bond", ["personality", "bond"]],
+  ["#f-flaw", ["personality", "flaw"]],
+  ["#f-backstory", ["backstory"]]
+];
+
+/** Rellena y enlaza los campos de roleplay (guardado al editar). */
+function renderFlavor() {
+  FLAVOR_FIELDS.forEach(([sel, path]) => {
+    const el = $(sel);
+    el.value = path.reduce((o, k) => (o ? o[k] : ""), state) || "";
+    el.onchange = () => {
+      if (path.length === 1) state[path[0]] = el.value;
+      else state[path[0]][path[1]] = el.value;
+      saveState();
+    };
   });
 }
 
@@ -1280,6 +1316,8 @@ function renderAll() {
   renderLanguages();
   renderProficiencies();
   renderInventory();
+  renderPassivePerception();
+  renderFlavor();
   renderWeapons();
   renderWeaponCatalog();
   renderCurrency();

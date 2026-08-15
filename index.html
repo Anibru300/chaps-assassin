@@ -92,6 +92,8 @@
             <input type="number" id="f-ac" min="0"></label>
           <label class="field"><span data-i18n="initiative">Iniciativa</span>
             <input type="number" id="f-initiative"></label>
+          <label class="field"><span data-i18n="passivePerception">Percepción pasiva</span>
+            <input type="text" id="f-passive" readonly class="readonly" title="10 + Percepción"></label>
         </div>
         <div class="grid grid-4">
           <label class="field"><span data-i18n="hpCurrent">PG actuales</span>
@@ -352,6 +354,43 @@
         <h2 data-i18n="journalSection">Diario de aventuras</h2>
         <div id="journal-list"></div>
         <button class="btn btn-small" id="btn-add-journal" data-i18n="journalAdd">+ Nueva entrada</button>
+      </div>
+
+      <!-- Descripción física -->
+      <div class="card">
+        <h2 data-i18n="physSection">Descripción física</h2>
+        <div class="grid grid-3">
+          <label class="field"><span data-i18n="physAge">Edad</span>
+            <input type="text" id="f-age"></label>
+          <label class="field"><span data-i18n="physHeight">Altura</span>
+            <input type="text" id="f-height"></label>
+          <label class="field"><span data-i18n="physWeight">Peso</span>
+            <input type="text" id="f-weight"></label>
+        </div>
+        <label class="field"><span data-i18n="physDesc">Apariencia</span>
+          <textarea id="f-appear" rows="2"></textarea></label>
+      </div>
+
+      <!-- Personalidad -->
+      <div class="card">
+        <h2 data-i18n="personalitySection">Personalidad</h2>
+        <div class="grid grid-2">
+          <label class="field"><span data-i18n="traitTraits">Rasgos</span>
+            <textarea id="f-traits" rows="2"></textarea></label>
+          <label class="field"><span data-i18n="traitIdeal">Ideal</span>
+            <textarea id="f-ideal" rows="2"></textarea></label>
+          <label class="field"><span data-i18n="traitBond">Vínculo</span>
+            <textarea id="f-bond" rows="2"></textarea></label>
+          <label class="field"><span data-i18n="traitFlaw">Defecto</span>
+            <textarea id="f-flaw" rows="2"></textarea></label>
+        </div>
+      </div>
+
+      <!-- Historia / pasado -->
+      <div class="card">
+        <h2 data-i18n="backstorySection">Historia (pasado)</h2>
+        <p class="hint" data-i18n="backstoryHint"></p>
+        <textarea id="f-backstory" rows="8"></textarea>
       </div>
 
       <!-- Importar desde PCGen -->
