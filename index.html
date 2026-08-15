@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CHAPS — Asesino D&D 2024</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗡</text></svg>">
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -41,6 +41,7 @@
       <button class="tab-btn active" data-tab="sheet" data-i18n="tabSheet">Ficha</button>
       <button class="tab-btn" data-tab="combos" data-i18n="tabCombos">Combos</button>
       <button class="tab-btn" data-tab="combat" data-i18n="tabCombat">Combate</button>
+      <button class="tab-btn" data-tab="library">Biblioteca</button>
     </nav>
   </header>
 
@@ -571,12 +572,93 @@
         </div>
       </div>
 
+      <!-- Dados rápidos -->
+      <div class="card" id="dice-card">
+        <h2>🎲 Dados rápidos</h2>
+        <div class="dice-row" id="dice-buttons"></div>
+        <div class="rest-row dice-controls">
+          <label class="field dice-field"><span>Cantidad</span>
+            <input type="number" id="dice-count" min="1" max="20" value="1"></label>
+          <label class="field dice-field"><span>Modificador</span>
+            <input type="number" id="dice-mod" value="0"></label>
+          <label class="field checkbox-field"><input type="checkbox" id="dice-adv"><span>Ventaja (d20)</span></label>
+          <label class="field checkbox-field"><input type="checkbox" id="dice-dis"><span>Desventaja</span></label>
+        </div>
+        <div id="dice-result" class="dice-result"></div>
+        <ul id="dice-log" class="combat-log dice-log"></ul>
+      </div>
+
+      <!-- Calculadora de daño por turno -->
+      <div class="card" id="dpr-card">
+        <div class="combat-head">
+          <h2>📊 Calculadora de daño (DPR 2024)</h2>
+          <button class="btn btn-small" id="dpr-refresh" title="Volver a cargar bono de ataque, daño y Furtivo desde la ficha">↻ Desde ficha</button>
+        </div>
+        <p class="hint">Precargada con tus stats (bono de ataque = competencia + DES). Cambia la CA del enemigo y compara armas, ventaja y Furtivo antes de decidir tu turno.</p>
+        <div class="grid grid-4">
+          <label class="field"><span>Bono de ataque</span>
+            <input type="number" id="dpr-atk"></label>
+          <label class="field"><span>CA objetivo</span>
+            <input type="number" id="dpr-ac" value="15"></label>
+          <label class="field"><span>Dados de daño</span>
+            <input type="text" id="dpr-dice" value="1d8"></label>
+          <label class="field"><span>Bono de daño</span>
+            <input type="number" id="dpr-dmg"></label>
+          <label class="field"><span>Ataques por turno</span>
+            <input type="number" id="dpr-attacks" min="1" max="6" value="2"></label>
+          <label class="field"><span>Dados de Furtivo</span>
+            <input type="text" id="dpr-sneak" readonly class="readonly"></label>
+          <label class="field checkbox-field"><input type="checkbox" id="dpr-use-sneak" checked><span>Aplicar Furtivo</span></label>
+          <label class="field checkbox-field"><input type="checkbox" id="dpr-adv"><span>Con ventaja</span></label>
+        </div>
+        <div class="rest-row">
+          <button class="btn btn-crimson" id="dpr-calc">Calcular</button>
+        </div>
+        <div id="dpr-out" class="dpr-out"></div>
+      </div>
+
       <!-- Condiciones (referencia rápida) -->
       <div class="card">
         <details class="conditions-ref">
           <summary data-i18n="conditionsSection"></summary>
           <ul id="conditions-list" class="conditions-list"></ul>
         </details>
+      </div>
+    </section>
+
+    <!-- ============ TAB 4: BIBLIOTECA ============ -->
+    <section id="tab-library" class="tab-panel">
+      <h2 class="section-title">📚 Biblioteca D&D 2024</h2>
+      <p class="hint">Hechizos, armas, armaduras, monstruos, clases, condiciones y objetos mágicos del
+        <strong>System Reference Document 5.2 (reglas 2024)</strong>, servidos por Open5e.
+        El texto oficial del SRD está en inglés; la interfaz está en español.
+        Cada categoría se descarga la primera vez y queda guardada en tu navegador (7 días) para consulta rápida.</p>
+
+      <div class="lib-nav" id="lib-nav">
+        <button class="lib-cat active" data-cat="spells">✨ Hechizos</button>
+        <button class="lib-cat" data-cat="weapons">🗡 Armas</button>
+        <button class="lib-cat" data-cat="armor">🛡 Armaduras</button>
+        <button class="lib-cat" data-cat="creatures">🐉 Monstruos</button>
+        <button class="lib-cat" data-cat="classes">📜 Clases</button>
+        <button class="lib-cat" data-cat="conditions">💫 Condiciones</button>
+        <button class="lib-cat" data-cat="magicitems">💍 Obj. mágicos</button>
+      </div>
+
+      <div class="card">
+        <div class="rest-row lib-controls">
+          <input type="text" id="lib-search" class="weapon-catalog lib-search" placeholder="Buscar… (p. ej. fireball, goblin)">
+          <select id="lib-filter" class="weapon-catalog"></select>
+          <button class="btn btn-small" id="lib-reload" title="Volver a descargar esta categoría">↻</button>
+        </div>
+        <p id="lib-status" class="hint"></p>
+        <div id="lib-results" class="lib-results"></div>
+      </div>
+
+      <div class="card lib-attrib">
+        <p class="hint">Fuente: <a href="https://open5e.com" target="_blank" rel="noopener">Open5e</a> ·
+          System Reference Document 5.2 © Wizards of the Coast LLC, bajo licencia
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY-4.0</a>.
+          Las condiciones y los objetos mágicos proceden del SRD 5.1 (2014), equivalente en contenido.</p>
       </div>
     </section>
 
@@ -592,5 +674,7 @@
   <script src="js/app.js?v=2"></script>
   <script src="js/combat-data.js?v=2"></script>
   <script src="js/combat.js?v=2"></script>
+  <script src="js/simulador.js?v=3"></script>
+  <script src="js/biblioteca.js?v=3"></script>
 </body>
 </html>
