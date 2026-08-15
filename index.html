@@ -6,20 +6,35 @@
   <title>CHAPS — Asesino D&D 2024</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗡</text></svg>">
   <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/v4.css?v=4">
 </head>
 <body>
   <!-- Puerta de acceso -->
   <div id="login-gate">
-    <form id="login-form" class="login-card">
-      <div class="brand-icon">🗡</div>
-      <h1>CHAPS</h1>
-      <label class="field"><span>Usuario</span>
-        <input type="text" id="login-user" autocomplete="username" required></label>
-      <label class="field"><span>Contraseña</span>
-        <input type="password" id="login-pass" autocomplete="current-password" required></label>
-      <p id="login-error" class="login-error"></p>
-      <button type="submit" class="btn btn-crimson btn-big">Entrar</button>
-    </form>
+    <div class="lg-scene" aria-hidden="true">
+      <span class="lg-ember e1"></span><span class="lg-ember e2"></span><span class="lg-ember e3"></span>
+      <span class="lg-ember e4"></span><span class="lg-ember e5"></span><span class="lg-ember e6"></span>
+      <span class="lg-ember e7"></span><span class="lg-ember e8"></span>
+    </div>
+    <div class="lg-wrap">
+      <div class="lg-brand">
+        <div class="lg-sigil">🗡</div>
+        <h1 class="lg-title">CHAPS</h1>
+        <p class="lg-sub">Asesino · D&amp;D 2024</p>
+        <div class="lg-divider"><span></span>◆<span></span></div>
+        <p class="lg-flavor">«Krynn es grande. Yo soy paciente.»</p>
+      </div>
+      <form id="login-form" class="login-card">
+        <h2 class="lg-form-title">Acceso al gremio</h2>
+        <label class="field"><span>Usuario</span>
+          <input type="text" id="login-user" autocomplete="username" required></label>
+        <label class="field"><span>Contraseña</span>
+          <input type="password" id="login-pass" autocomplete="current-password" required></label>
+        <p id="login-error" class="login-error"></p>
+        <button type="submit" class="btn btn-crimson btn-big lg-btn">Entrar</button>
+        <p class="lg-hint">Solo quien porta la daga puede pasar</p>
+      </form>
+    </div>
   </div>
 
   <!-- ===== Cabecera y navegación ===== -->
@@ -84,7 +99,7 @@
             </div>
           </div>
         </div>
-        <div class="grid grid-4">
+        <div class="grid grid-4 keystat-grid">
           <label class="field"><span data-i18n="profBonus">Bono de competencia</span>
             <input type="text" id="f-prof" readonly class="readonly"></label>
           <label class="field"><span data-i18n="speed">Velocidad</span>
@@ -96,7 +111,7 @@
           <label class="field"><span data-i18n="passivePerception">Percepción pasiva</span>
             <input type="text" id="f-passive" title="Auto: 10 + Percepción. Editable: escribe valor manual; vacío = vuelve a auto"></label>
         </div>
-        <div class="grid grid-4">
+        <div class="grid grid-4 hp-grid">
           <label class="field"><span data-i18n="hpCurrent">PG actuales</span>
             <input type="number" id="f-hpCurrent" min="0"></label>
           <label class="field"><span data-i18n="hpMax">PG máximos</span>
@@ -133,32 +148,6 @@
         <div class="rest-row">
           <button class="btn" id="btn-short-rest" data-i18n="shortRest">Descanso corto</button>
           <button class="btn btn-crimson" id="btn-long-rest" data-i18n="longRest">Descanso largo</button>
-        </div>
-      </div>
-
-      <!-- Experiencia y nivel -->
-      <div class="card">
-        <h2 data-i18n="xpSection">Experiencia y nivel</h2>
-        <div class="grid grid-4">
-          <label class="field"><span data-i18n="xpCurrent">PX actuales</span>
-            <input type="text" id="f-xp" inputmode="numeric"></label>
-          <label class="field"><span data-i18n="xpLevelByXp">Nivel según PX</span>
-            <input type="text" id="f-xp-level" readonly class="readonly"></label>
-          <label class="field"><span data-i18n="xpToNext">PX para el siguiente nivel</span>
-            <input type="text" id="f-xp-tonext" readonly class="readonly"></label>
-          <div class="field"><span>&nbsp;</span>
-            <button class="btn" id="btn-apply-level" data-i18n="xpApply">Aplicar nivel</button></div>
-        </div>
-        <div class="xp-bar-wrap">
-          <div class="xp-bar"><div id="xp-bar-fill" class="xp-bar-fill"></div></div>
-          <span id="xp-bar-label" class="xp-bar-label"></span>
-        </div>
-        <div class="rest-row xp-add-row">
-          <button class="btn btn-small xp-add" data-amt="100">+100</button>
-          <button class="btn btn-small xp-add" data-amt="500">+500</button>
-          <button class="btn btn-small xp-add" data-amt="1000">+1000</button>
-          <input type="number" id="xp-custom" min="0" step="50" placeholder="2500">
-          <button class="btn btn-small" id="btn-xp-custom" data-i18n="xpAdd">Añadir PX</button>
         </div>
       </div>
 
@@ -248,6 +237,32 @@
           <summary data-i18n="masteryGlossaryTitle"></summary>
           <ul id="mastery-glossary-list"></ul>
         </details>
+      </div>
+
+      <!-- Experiencia y nivel -->
+      <div class="card">
+        <h2 data-i18n="xpSection">Experiencia y nivel</h2>
+        <div class="grid grid-4">
+          <label class="field"><span data-i18n="xpCurrent">PX actuales</span>
+            <input type="text" id="f-xp" inputmode="numeric"></label>
+          <label class="field"><span data-i18n="xpLevelByXp">Nivel según PX</span>
+            <input type="text" id="f-xp-level" readonly class="readonly"></label>
+          <label class="field"><span data-i18n="xpToNext">PX para el siguiente nivel</span>
+            <input type="text" id="f-xp-tonext" readonly class="readonly"></label>
+          <div class="field"><span>&nbsp;</span>
+            <button class="btn" id="btn-apply-level" data-i18n="xpApply">Aplicar nivel</button></div>
+        </div>
+        <div class="xp-bar-wrap">
+          <div class="xp-bar"><div id="xp-bar-fill" class="xp-bar-fill"></div></div>
+          <span id="xp-bar-label" class="xp-bar-label"></span>
+        </div>
+        <div class="rest-row xp-add-row">
+          <button class="btn btn-small xp-add" data-amt="100">+100</button>
+          <button class="btn btn-small xp-add" data-amt="500">+500</button>
+          <button class="btn btn-small xp-add" data-amt="1000">+1000</button>
+          <input type="number" id="xp-custom" min="0" step="50" placeholder="2500">
+          <button class="btn btn-small" id="btn-xp-custom" data-i18n="xpAdd">Añadir PX</button>
+        </div>
       </div>
 
       <!-- Dotes -->
@@ -496,6 +511,15 @@
             <label class="field"><span data-i18n="cfSpeed">Velocidad</span><input type="number" id="cf-speed"></label>
             <label class="field"><span data-i18n="cfInit">Iniciativa</span><input type="number" id="cf-init"></label>
           </div>
+          <div class="mx-bridge">
+            <p class="mx-title">📚 Autocompletar desde la Biblioteca (SRD 2024)</p>
+            <div class="rest-row">
+              <input type="text" id="mx-search" class="weapon-catalog" placeholder="Buscar monstruo… (p. ej. goblin)">
+              <select id="mx-pick" class="weapon-catalog"></select>
+              <button class="btn btn-small btn-crimson" id="mx-fill">Autocompletar</button>
+            </div>
+            <p class="hint" id="mx-status">Escribe un nombre, elige el monstruo y pulsa Autocompletar; revisa los campos y pulsa «+ Crear y añadir».</p>
+          </div>
           <button class="btn btn-small" id="c-btn-custom" data-i18n="ctCustomAdd">+ Crear y añadir</button>
         </details>
         <div id="c-queue"></div>
@@ -676,5 +700,6 @@
   <script src="js/combat.js?v=2"></script>
   <script src="js/simulador.js?v=3"></script>
   <script src="js/biblioteca.js?v=3"></script>
+  <script src="js/combat-extra.js?v=4"></script>
 </body>
 </html>
