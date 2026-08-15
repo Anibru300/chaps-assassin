@@ -612,12 +612,21 @@ function renderInventory() {
   });
 }
 
-/** Percepción pasiva = 10 + mod de Percepción (auto). */
+/** Percepción pasiva = 10 + mod de Percepción (auto). Editable: si el usuario
+    escribe un valor manual se respeta; si deja el campo vacío vuelve al auto. */
 function renderPassivePerception() {
   const pb = profBonus(state.level);
   const s = state.skills.perception || { p: false, e: false };
   const mod = abilityMod(state.abilities.wis) + (s.e ? pb * 2 : s.p ? pb : 0);
-  $("#f-passive").value = 10 + mod;
+  const el = $("#f-passive");
+  el.value = state.passiveManual != null ? state.passiveManual : 10 + mod;
+  el.onchange = () => {
+    const v = el.value.trim();
+    if (v === "") delete state.passiveManual;
+    else state.passiveManual = v;
+    saveState();
+    renderPassivePerception();
+  };
 }
 
 /* ---------- Roleplay: físico, personalidad, historia ---------- */
@@ -696,7 +705,7 @@ function renderFeats() {
         <input type="text" value="${escapeHtml(v.name)}" placeholder="${t("featNamePh")}" data-fi="${i}" data-ff="name">
         <button class="btn btn-small btn-danger" data-fdel="${i}" title="${t("remove")}">✕</button>
       </div>
-      <textarea rows="2" placeholder="${t("featDescPh")}" data-fi="${i}" data-ff="desc">${escapeHtml(v.desc)}</textarea>`;
+      <textarea rows="3" placeholder="${t("featDescPh")}" data-fi="${i}" data-ff="desc">${escapeHtml(v.desc)}</textarea>`;
     list.appendChild(row);
   });
   list.querySelectorAll("[data-ff]").forEach((inp) => {
