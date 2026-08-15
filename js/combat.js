@@ -55,6 +55,10 @@ function newCombatPlayer() {
     action: true, ba: true, react: true,
     sneak: false, hidden: false, diseng: false, steady: false, withdraw: 0,
     conds: [],        // [{id, save, dc}] condiciones del jugador (Fase 3)
+    vexTarget: null,  // Vex: próximo ataque contra este enemigo con ventaja (Fase 5)
+    nickReady: false, // Ligera: ataque extra disponible (Fase 5)
+    nickFree: false,  // Nick dominado: el ataque extra no gasta acción adicional
+    ac: state.ac,
     pos: { x: 1, y: 3 } // posición en el tablero (Fase 2)
   };
 }
@@ -92,6 +96,16 @@ function chooseSpell(e, avail) {
     return para;
   }
   return area || bolt || anySave || para;
+}
+
+/** Salvación de un objetivo del jugador: el jugador real usa su ficha; un proxy (IA vs IA) usa sus mods. */
+function targetSave(tc, ability, dc) {
+  if (tc.proxy) {
+    const mod = tc.mods ? (tc.mods[ability] || 0) : 0;
+    const r = rollDie(20);
+    return r + mod >= dc;
+  }
+  return playerSave(ability, dc);
 }
 
 /** Salvación del jugador (competencia en DES/INT; SAB/CAR desde N15). */
@@ -161,6 +175,7 @@ function reachableCells(from, steps) {
 function eName(e) { return LANG === "es" ? e.es : e.en; }
 
 function cLog(html, cls) {
+  if (combat.quiet) return; // simulación masiva: sin registro (Fase 6)
   combat.log.unshift({ cls: cls || "log-info", html });
   if (typeof renderCombatLog === "function") renderCombatLog();
 }
@@ -240,6 +255,8 @@ function beginTurn() {
     const p = combat.p;
     p.action = true; p.ba = true; p.react = true;
     p.move = state.speed; p.sneak = false; p.diseng = false; p.steady = false; p.withdraw = 0;
+    p.vexTarget = null; p.nickReady = false; p.nickFree = false;
+    combat.enemies.forEach((x) => { x.slow = false; }); // Slow dura hasta el inicio de tu próximo turno
     cLog(`— ${ct("round")} ${combat.round} · ${ct("turnStart")} <strong>${state.name}</strong> —`, "log-info");
     // Paralizado: pierde el turno y repite la salvación al final
     const para = getPCond("paralyzed");
@@ -289,7 +306,11 @@ function checkCombatEnd() {
 function playerAttack(w, e, opts) {
   const p = combat.p;
   opts = opts || {};
-  if (!p.action) { cLog("⛔ " + ct("noAction"), "log-miss"); return false; }
+  if (opts.extra) {
+    // Ataque extra (Ligera/Nick): no gasta acción; sin Nick dominado gasta la acción adicional
+    if (p.nickFree) { /* gratis */ } else if (p.ba) { p.ba = false; } else { cLog("⛔ " + ct("noBA"), "log-miss"); return false; }
+    p.nickReady = false;
+  } else if (!p.action) { cLog("⛔ " + ct("noAction"), "log-miss"); return false; }
 
   // --- Alcance ---
   const cat = w.weaponId ? WEAPON_MASTERY.find((x) => x.id === w.weaponId) : null;
@@ -308,11 +329,13 @@ function playerAttack(w, e, opts) {
   // --- Ventaja / desventaja ---
   const reasons = [];
   let adv = false, dis = false;
+  const mastActive = cat && state.masteryChoices.includes(cat.id) ? cat.mastery : null;
   const cm = condModsVs(e, dist);
   if (cm.adv) { adv = true; if (hasCond(e, "prone")) reasons.push(ct("proneAdv")); else if (hasCond(e, "blinded")) reasons.push(ct("blindAdv")); }
   if (cm.dis) { dis = true; }
   if (p.steady) { adv = true; reasons.push(ct("steadyOn")); }
   if (p.hidden) { adv = true; reasons.push("🫥 " + ct("hiddenNow")); }
+  if (p.vexTarget === e) { adv = true; reasons.push("Vex"); p.vexTarget = null; } // Vex: se consume
   if (combat.round === 1 && !e.acted) { adv = true; reasons.push("🗡 " + ct("firstRound")); }
   if (mode === "ranged") {
     const [rn] = range.split("/").map(Number);
@@ -333,12 +356,22 @@ function playerAttack(w, e, opts) {
   const isHit = natCrit || crit || (!natMiss && total >= e.ac);
   const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
 
-  p.action = false;
+  if (!opts.extra) p.action = false;
   p.steady = false;
   p.hidden = false; // atacar revela tu posición
 
   if (!isHit) {
+    // Graze: al FALLAR, daño = modificador de la característica
+    if (mastActive === "graze") {
+      const g = Math.max(0, dexMod());
+      if (g > 0) {
+        e.hp = Math.max(0, e.hp - g);
+        cLog(`🎯 Graze: ${ct("missWord")} pero ${eName(e)} recibe ${g} ${ct("dmgWord")} [${e.hp}/${e.maxHp}]`, "log-hit");
+        if (e.hp <= 0) { cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead"); checkCombatEnd(); }
+      }
+    }
     cLog(`${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <em>${ct("missWord")}</em>`, "log-miss");
+    if (typeof renderCombat === "function") renderCombat();
     return true;
   }
 
@@ -407,10 +440,56 @@ function playerAttack(w, e, opts) {
     }
   });
 
+  // --- Maestría de arma (si la tienes dominada) ---
+  if (mastActive === "vex") { p.vexTarget = e; cLog(`🌀 Vex: ${ct("mVex")}`, "log-info"); }
+  if (mastActive === "slow") { e.slow = true; cLog(`🐌 Slow: ${eName(e)} −10 ft ${ct("mSlow")}`, "log-info"); }
+  if (mastActive === "sap") { e.sap = true; cLog(`🥊 Sap: ${eName(e)} ${ct("mSap")}`, "log-info"); }
+  if (mastActive === "push") pushEnemy(e, 10);
+  if (mastActive === "topple") {
+    const dcT = 8 + dexMod() + profBonus(state.level);
+    if (!enemySave(e, "con", dcT)) addCond(e, "prone");
+  }
+  if (mastActive === "cleave" && mode === "melee") {
+    const o = combat.enemies.find((x) => x !== e && x.hp > 0 && distBetween(x.pos, e.pos) <= 5 && distOf(x) <= melee);
+    if (o) {
+      const r2 = rollDie(20);
+      const tot2 = r2 + atkBonus;
+      if (r2 !== 1 && (r2 === 20 || tot2 >= o.ac)) {
+        const d2 = rollDiceExpr(`${w.dice}d${w.sides}+0`, r2 === 20).total; // sin modificador
+        o.hp = Math.max(0, o.hp - d2);
+        cLog(`⚔ Cleave → ${eName(o)}: ${r2} ${fmtMod(atkBonus)} = ${tot2} ${ct("vsAc")} ${o.ac} → <strong>${d2} ${ct("dmgWord")}</strong> [${o.hp}/${o.maxHp}]`, "log-hit");
+        if (o.hp <= 0) cLog(`💀 ${eName(o)} ${ct("enemyDead")}`, "log-dead");
+      } else {
+        cLog(`⚔ Cleave → ${eName(o)}: ${tot2} ${ct("vsAc")} ${o.ac} → <em>${ct("missWord")}</em>`, "log-miss");
+      }
+    }
+  }
+  // Ligera: habilita el ataque extra (1/turno)
+  if (!opts.extra && cat && cat.light && e.hp >= 0) {
+    p.nickReady = true;
+    p.nickFree = mastActive === "nick";
+    cLog(`🗡 ${ct("mNick")}${p.nickFree ? " (Nick: " + ct("mNickFree") + ")" : ""}`, "log-info");
+  }
+
+  if (combat.stats) { combat.stats.dmg += dmg; if (crit) combat.stats.crits++; }
   if (e.hp <= 0) cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead");
   checkCombatEnd();
   if (typeof renderCombat === "function") renderCombat();
   return true;
+}
+
+/** Push: empuja al enemigo en línea recta alejándolo del jugador. */
+function pushEnemy(e, ft) {
+  const steps = Math.floor(ft / 5);
+  const dx = Math.sign(e.pos.x - combat.p.pos.x), dy = Math.sign(e.pos.y - combat.p.pos.y);
+  let moved = 0;
+  for (let i = 0; i < steps; i++) {
+    const nx = e.pos.x + dx, ny = e.pos.y + dy;
+    if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h || cellOccupied(nx, ny)) break;
+    e.pos = { x: nx, y: ny };
+    moved += 5;
+  }
+  if (moved) cLog(`💨 Push: ${eName(e)} ${ct("mPush")} ${moved} ft`, "log-info");
 }
 
 /* ================= MOVIMIENTO DEL JUGADOR ================= */
@@ -482,16 +561,18 @@ function enemyAttackRoll(e, atk, isOA) {
   const p = combat.p;
   let dis = false;
   if (hasCond(e, "poisoned") || hasCond(e, "blinded")) dis = true;
+  if (e.sap) { dis = true; e.sap = false; } // Sap: desventaja en su próximo ataque
   if (p.hidden) dis = true; // sabe dónde estabas, pero no te ve bien
   let rolls, chosen;
   if (dis) { rolls = [rollDie(20), rollDie(20)]; chosen = Math.min(...rolls); }
   else { rolls = [rollDie(20)]; chosen = rolls[0]; }
   const total = chosen + atk.bonus;
-  const isHit = chosen !== 1 && (chosen === 20 || total >= state.ac);
+  const tgtAc = p.ac != null ? p.ac : state.ac; // proxy en IA vs IA
+  const isHit = chosen !== 1 && (chosen === 20 || total >= tgtAc);
   const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
   const aName = LANG === "es" ? atk.es : atk.en;
   if (!isHit) {
-    cLog(`🛡 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${state.ac} → <em>${ct("missWord")}</em>`, "log-miss");
+    cLog(`🛡 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${tgtAc} → <em>${ct("missWord")}</em>`, "log-miss");
     if (p.hidden) { p.hidden = false; }
     return 0;
   }
@@ -507,8 +588,8 @@ function enemyAttackRoll(e, atk, isOA) {
     res.rolls = res.rolls.concat(sm.rolls);
     cLog(`✨ ${ct("smiteLog")}: ${e.smite}(${sm.rolls.join(",")})`, "log-miss");
   }
-  // Esquiva Asombrosa
-  if (p.react && !isOA) {
+  // Esquiva Asombrosa (solo el jugador real, no proxies)
+  if (p.react && !isOA && !p.proxy) {
     const ask = combat.confirm || ((q) => (typeof window !== "undefined" ? window.confirm(q) : false));
     if (ask(`${ct("uncannyQ")}\n${ct("dmgWord")}: ${dmg}`)) {
       dmg = Math.floor(dmg / 2);
@@ -518,7 +599,7 @@ function enemyAttackRoll(e, atk, isOA) {
   }
   p.hp = Math.max(0, p.hp - dmg);
   if (p.hidden) p.hidden = false;
-  cLog(`🩸 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${state.ac} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong> — ${dmg} ${ct("dmgWord")} [${state.name}: ${p.hp} PG]`, "log-miss");
+  cLog(`🩸 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${tgtAc} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong> — ${dmg} ${ct("dmgWord")} [${p.proxy ? p.name : state.name}: ${p.hp} PG]`, "log-miss");
   checkCombatEnd();
   return dmg;
 }
@@ -614,7 +695,7 @@ function enemyCast(e, sp) {
   const sName = LANG === "es" ? sp.es : sp.en;
   cLog(`🔮 ${eName(e)} ${ct("castLog")} <strong>${sName}</strong>`, "log-info");
   if (sp.para) { // Inmovilizar Persona y similares
-    if (!playerSave(sp.save, sp.dc)) {
+    if (!targetSave(combat.p, sp.save, sp.dc)) {
       combat.p.conds.push({ id: "paralyzed", save: sp.save, dc: sp.dc });
       cLog(`😵 ${ct("paraYou")}`, "log-miss");
     }
@@ -625,7 +706,7 @@ function enemyCast(e, sp) {
     return;
   }
   // salvación del jugador
-  const ok = playerSave(sp.save, sp.dc);
+  const ok = targetSave(combat.p, sp.save, sp.dc);
   let res = rollDiceExpr(sp.dmg, false);
   let dmg = res.total;
   if (ok) {
@@ -650,7 +731,7 @@ function dragonBreath(e) {
   b.ready = false;
   const bName = LANG === "es" ? b.es : b.en;
   cLog(`🐉 ${eName(e)}: <strong>${bName}</strong>!`, "log-info");
-  const ok = playerSave(b.save, b.dc);
+  const ok = targetSave(combat.p, b.save, b.dc);
   let res = rollDiceExpr(b.dmg, false);
   let dmg = ok ? Math.floor(res.total / 2) : res.total;
   if (b.save === "dex" && b.half && state.level >= 7) {
@@ -681,7 +762,7 @@ function enemyTakeTurn(e) {
     return;
   }
   const dazed = hasCond(e, "dazed");
-  let move = e.speed;
+  let move = Math.max(0, e.speed - (e.slow ? 10 : 0)); // Slow (maestría)
   let canAct = true;
 
   if (hasCond(e, "prone")) {

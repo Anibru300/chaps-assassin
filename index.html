@@ -8,6 +8,19 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- Puerta de acceso -->
+  <div id="login-gate">
+    <form id="login-form" class="login-card">
+      <div class="brand-icon">🗡</div>
+      <h1>CHAPS</h1>
+      <label class="field"><span>Usuario</span>
+        <input type="text" id="login-user" autocomplete="username" required></label>
+      <label class="field"><span>Contraseña</span>
+        <input type="password" id="login-pass" autocomplete="current-password" required></label>
+      <p id="login-error" class="login-error"></p>
+      <button type="submit" class="btn btn-crimson btn-big">Entrar</button>
+    </form>
+  </div>
 
   <!-- ===== Cabecera y navegación ===== -->
   <header class="app-header">
@@ -26,7 +39,6 @@
     </div>
     <nav class="tabs">
       <button class="tab-btn active" data-tab="sheet" data-i18n="tabSheet">Ficha</button>
-      <button class="tab-btn" data-tab="sim" data-i18n="tabSim">Simulador</button>
       <button class="tab-btn" data-tab="combos" data-i18n="tabCombos">Combos</button>
       <button class="tab-btn" data-tab="combat" data-i18n="tabCombat">Combate</button>
     </nav>
@@ -173,6 +185,27 @@
         <div id="tools-list"></div>
       </div>
 
+      <!-- Idiomas -->
+      <div class="card">
+        <h2 data-i18n="languagesSection">Idiomas</h2>
+        <div id="languages-list" class="lang-list"></div>
+        <div class="rest-row">
+          <input type="text" id="lang-input" class="weapon-catalog" data-i18n-ph="languagePh" placeholder="Nuevo idioma…">
+          <button class="btn btn-small btn-crimson" id="btn-add-lang" data-i18n="addLanguage">+ Añadir idioma</button>
+        </div>
+        <p class="hint" data-i18n="languagesHint"></p>
+      </div>
+
+      <!-- Competencias (armadura/armas) -->
+      <div class="card">
+        <h2 data-i18n="profSection">Competencias</h2>
+        <div id="proficiencies-list" class="lang-list"></div>
+        <div class="rest-row">
+          <input type="text" id="prof-input" class="weapon-catalog" data-i18n-ph="profPh" placeholder="Nueva competencia…">
+          <button class="btn btn-small btn-crimson" id="btn-add-prof" data-i18n="addProf">+ Añadir</button>
+        </div>
+      </div>
+
       <!-- Armas -->
       <div class="card">
         <h2 data-i18n="weapons">Armas y ataques</h2>
@@ -242,6 +275,27 @@
             <tbody id="progression-body"></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Inventario / mochila -->
+      <div class="card">
+        <h2 data-i18n="invSection">Inventario</h2>
+        <div class="table-wrap">
+          <table class="weapons-table">
+            <thead>
+              <tr>
+                <th data-i18n="invItem">Objeto</th>
+                <th data-i18n="invQty">Cant.</th>
+                <th data-i18n="invWt">lb c/u</th>
+                <th data-i18n="invNote">Nota</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="inv-body"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-small" id="btn-add-item" data-i18n="invAdd">+ Añadir objeto</button>
+        <p class="hint" id="inv-total"></p>
       </div>
 
       <!-- Monedas y notas -->
@@ -344,105 +398,7 @@
       </div>
     </section>
 
-    <!-- ============ TAB 2: SIMULADOR ============ -->
-    <section id="tab-sim" class="tab-panel">
-      <h2 class="section-title" data-i18n="simTitle">Simulador de combate</h2>
-
-      <!-- Iniciativa -->
-      <div class="card">
-        <h2 data-i18n="initiativeRoll">Iniciativa (con ventaja)</h2>
-        <div class="init-row">
-          <button class="btn btn-crimson" id="btn-init" data-i18n="rollInitiative">Tirar iniciativa</button>
-          <div id="init-result" class="init-result"></div>
-        </div>
-      </div>
-
-      <!-- Enemigo -->
-      <div class="card">
-        <h2 data-i18n="enemySetup">Enemigo</h2>
-        <div class="grid grid-4">
-          <label class="field"><span data-i18n="enemyName">Nombre</span>
-            <input type="text" id="e-name" value="Orco"></label>
-          <label class="field"><span data-i18n="enemyHp">PG</span>
-            <input type="number" id="e-hp" value="30" min="1"></label>
-          <label class="field"><span data-i18n="enemyAc">CA</span>
-            <input type="number" id="e-ac" value="13" min="1"></label>
-          <label class="field checkbox-field">
-            <input type="checkbox" id="e-acted">
-            <span data-i18n="enemyHasActed">El enemigo YA ha actuado</span>
-          </label>
-        </div>
-        <p class="hint" id="assassinate-hint"></p>
-        <div class="enemy-bar-wrap">
-          <div class="enemy-bar"><div id="enemy-bar-fill" class="enemy-bar-fill"></div></div>
-          <span id="enemy-hp-label" class="enemy-hp-label"></span>
-        </div>
-        <div class="rest-row">
-          <button class="btn btn-small" id="btn-new-turn" data-i18n="newTurn">Nuevo turno</button>
-          <button class="btn btn-small btn-danger" id="btn-new-combat" data-i18n="newCombat">Nuevo combate</button>
-        </div>
-      </div>
-
-      <!-- Ataque -->
-      <div class="card">
-        <h2 data-i18n="attackPanel">Ataque</h2>
-        <div class="grid grid-4">
-          <label class="field"><span data-i18n="weapon">Arma</span>
-            <select id="sim-weapon"></select></label>
-          <label class="field"><span data-i18n="attackBonus">Bono de ataque</span>
-            <input type="text" id="sim-atkbonus" readonly class="readonly"></label>
-          <label class="field checkbox-field">
-            <input type="checkbox" id="sim-adv"><span data-i18n="advantage">Ventaja</span></label>
-          <label class="field checkbox-field">
-            <input type="checkbox" id="sim-dis"><span data-i18n="disadvantage">Desventaja</span></label>
-        </div>
-        <fieldset class="cs-fieldset">
-          <legend><span id="cs-legend"></span> — <span id="save-dc"></span></legend>
-          <label class="cs-option"><input type="checkbox" class="cs-check" value="poison" data-cost="1" data-lock="5"><span data-i18n="csPoison">Veneno</span></label>
-          <label class="cs-option"><input type="checkbox" class="cs-check" value="trip" data-cost="1" data-lock="5"><span data-i18n="csTrip">Derribo</span></label>
-          <label class="cs-option"><input type="checkbox" class="cs-check" value="withdraw" data-cost="1" data-lock="5"><span data-i18n="csWithdraw">Retirada</span></label>
-          <label class="cs-option cs-devious"><input type="checkbox" class="cs-check" value="daze" data-cost="2" data-lock="14"><span data-i18n="csDaze">Aturdir</span><span class="cs-lock"></span></label>
-          <label class="cs-option cs-devious"><input type="checkbox" class="cs-check" value="knockout" data-cost="6" data-lock="14"><span data-i18n="csKnockOut">Noquear</span><span class="cs-lock"></span></label>
-          <label class="cs-option cs-devious"><input type="checkbox" class="cs-check" value="obscure" data-cost="3" data-lock="14"><span data-i18n="csObscure">Obnubilar</span><span class="cs-lock"></span></label>
-        </fieldset>
-        <p class="hint" data-i18n="sneakHint"></p>
-        <button class="btn btn-crimson btn-big" id="btn-attack" data-i18n="rollAttack">Tirar ataque</button>
-        <div id="attack-result" class="attack-result"></div>
-      </div>
-
-      <!-- Acciones adicionales y reacciones -->
-      <div class="card">
-        <h2 data-i18n="bonusActions">Acciones adicionales</h2>
-        <div class="ba-row">
-          <button class="btn btn-small ba-btn" data-i18n="caDash">Dash</button>
-          <button class="btn btn-small ba-btn" data-i18n="caDisengage">Retirarse</button>
-          <button class="btn btn-small ba-btn" data-i18n="caHide">Esconderse</button>
-          <button class="btn btn-small" id="btn-steady" data-i18n="steadyAim">Puntería Firme</button>
-        </div>
-        <p class="hint" data-i18n="steadyAimRules"></p>
-        <h2 data-i18n="reactions">Reacciones</h2>
-        <ul class="reaction-list">
-          <li data-i18n="uncannyDodge"></li>
-          <li data-i18n="evasion"></li>
-        </ul>
-      </div>
-
-      <!-- Condiciones (referencia rápida) -->
-      <div class="card">
-        <details class="conditions-ref">
-          <summary data-i18n="conditionsSection"></summary>
-          <ul id="conditions-list" class="conditions-list"></ul>
-        </details>
-      </div>
-
-      <!-- Registro -->
-      <div class="card">
-        <h2 data-i18n="damageLog">Registro de daño</h2>
-        <ul id="combat-log" class="combat-log"></ul>
-      </div>
-    </section>
-
-    <!-- ============ TAB 3: COMBOS ============ -->
+    <!-- ============ TAB 2: COMBOS ============ -->
     <section id="tab-combos" class="tab-panel">
       <h2 class="section-title" data-i18n="combosTitle">Guía de combos</h2>
       <p class="hint" data-i18n="combosIntro"></p>
@@ -461,7 +417,7 @@
       </div>
     </section>
 
-    <!-- ============ TAB 4: COMBATE (motor Fase 1) ============ -->
+    <!-- ============ TAB 3: COMBATE ============ -->
     <section id="tab-combat" class="tab-panel">
 
       <!-- Preparación -->
@@ -575,6 +531,14 @@
           <ul id="c-log" class="combat-log"></ul>
         </div>
       </div>
+
+      <!-- Condiciones (referencia rápida) -->
+      <div class="card">
+        <details class="conditions-ref">
+          <summary data-i18n="conditionsSection"></summary>
+          <ul id="conditions-list" class="conditions-list"></ul>
+        </details>
+      </div>
     </section>
 
   </main>
@@ -584,6 +548,7 @@
   </footer>
 
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
+  <script src="js/auth.js"></script>
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
   <script src="js/combat-data.js"></script>

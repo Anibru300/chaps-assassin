@@ -182,24 +182,38 @@ function renderDeathPips() {
 function renderAbilities() {
   const grid = $("#ability-grid");
   grid.innerHTML = "";
+  const pb = profBonus(state.level);
   ABILITIES.forEach((ab) => {
     const box = document.createElement("div");
     box.className = "ability-box";
     const mod = abilityMod(state.abilities[ab]);
+    const sProf = state.saveProfs[ab] || false;
+    const saveMod = mod + (sProf ? pb : 0);
     box.innerHTML = `
       <div class="ab-name">${t("ability_" + ab)}</div>
       <input type="number" min="1" max="30" value="${state.abilities[ab]}" data-ab="${ab}">
-      <div class="ab-mod">${fmtMod(mod)}</div>`;
+      <div class="ab-mod">${fmtMod(mod)}</div>
+      <div class="ab-save">
+        <label><input type="checkbox" data-save="${ab}" ${sProf ? "checked" : ""}> ${t("saveAbbr")}</label>
+        <span class="save-val">${fmtMod(saveMod)}</span>
+      </div>`;
     grid.appendChild(box);
   });
-  grid.querySelectorAll("input").forEach((inp) => {
+  grid.querySelectorAll("input[data-ab]").forEach((inp) => {
     inp.addEventListener("change", () => {
       state.abilities[inp.dataset.ab] = parseInt(inp.value, 10) || 10;
       saveState();
       renderAbilities();
       renderSkills();      // los mods de habilidades dependen de las características
       renderTools();
-      renderSimWeaponBonus();
+      renderInventory();   // la capacidad de carga depende de FUE
+    });
+  });
+  grid.querySelectorAll("input[data-save]").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      state.saveProfs[cb.dataset.save] = cb.checked;
+      saveState();
+      renderAbilities();
     });
   });
 }
@@ -301,7 +315,6 @@ function renderWeapons() {
         w.custom = true; // edición manual: deja de seguir la traducción del catálogo
         saveState();
       }
-      renderSimWeapons();
       renderCombos();
     });
   });
@@ -310,7 +323,6 @@ function renderWeapons() {
       state.weapons.splice(+btn.dataset.del, 1);
       saveState();
       renderWeapons();
-      renderSimWeapons();
       renderCombos();
     });
   });
@@ -353,7 +365,6 @@ function addWeaponFromCatalog() {
   });
   saveState();
   renderWeapons();
-  renderSimWeapons();
   renderCombos();
 }
 
@@ -518,6 +529,83 @@ function renderTools() {
       if (cb.dataset.kind === "e" && cb.checked) tl.p = true; // pericia implica competencia
       saveState();
       renderTools();
+    });
+  });
+}
+
+/* ---------- Idiomas ---------- */
+/** Lista editable de idiomas (etiquetas con borrado). */
+function renderLanguages() {
+  const list = $("#languages-list");
+  list.innerHTML = "";
+  state.languages.forEach((lang, i) => {
+    const tag = document.createElement("span");
+    tag.className = "lang-tag";
+    tag.innerHTML = `${escapeHtml(lang)} <button type="button" data-lang-del="${i}" aria-label="×">×</button>`;
+    list.appendChild(tag);
+  });
+  list.querySelectorAll("button[data-lang-del]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.languages.splice(+btn.dataset.langDel, 1);
+      saveState();
+      renderLanguages();
+    });
+  });
+}
+
+/** Lista editable de competencias (armadura/armas). */
+function renderProficiencies() {
+  const list = $("#proficiencies-list");
+  list.innerHTML = "";
+  state.proficiencies.forEach((pr, i) => {
+    const tag = document.createElement("span");
+    tag.className = "lang-tag";
+    tag.innerHTML = `${escapeHtml(pr)} <button type="button" data-prof-del="${i}" aria-label="×">×</button>`;
+    list.appendChild(tag);
+  });
+  list.querySelectorAll("button[data-prof-del]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.proficiencies.splice(+btn.dataset.profDel, 1);
+      saveState();
+      renderProficiencies();
+    });
+  });
+}
+
+/** Inventario con peso por objeto, total y capacidad (FUE × 15). */
+function renderInventory() {
+  const body = $("#inv-body");
+  body.innerHTML = "";
+  let total = 0;
+  state.inventory.forEach((it, i) => {
+    total += (it.qty || 0) * (it.wt || 0);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(it.name)}" data-i="${i}" data-f="name"></td>
+      <td><input type="number" min="0" value="${it.qty}" data-i="${i}" data-f="qty" style="width:64px"></td>
+      <td><input type="number" min="0" step="0.1" value="${it.wt}" data-i="${i}" data-f="wt" style="width:72px"></td>
+      <td><input type="text" value="${escapeHtml(it.note || "")}" data-i="${i}" data-f="note"></td>
+      <td><button class="btn btn-small btn-danger" data-inv-del="${i}">×</button></td>`;
+    body.appendChild(tr);
+  });
+  const cap = state.abilities.str * 15;
+  const rounded = Math.round(total * 100) / 100;
+  const el = $("#inv-total");
+  el.textContent = t("invTotal").replace("{wt}", rounded).replace("{cap}", cap) + (total > cap ? t("invOver") : "");
+  el.classList.toggle("overloaded", total > cap);
+  body.querySelectorAll("input").forEach((inp) => {
+    inp.addEventListener("change", () => {
+      const it = state.inventory[+inp.dataset.i];
+      it[inp.dataset.f] = (inp.dataset.f === "name" || inp.dataset.f === "note") ? inp.value : parseFloat(inp.value) || 0;
+      saveState();
+      renderInventory();
+    });
+  });
+  body.querySelectorAll("button[data-inv-del]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.inventory.splice(+btn.dataset.invDel, 1);
+      saveState();
+      renderInventory();
     });
   });
 }
@@ -925,7 +1013,7 @@ function initSheetEvents() {
       state[key] = numeric ? (parseInt(e.target.value, 10) || 0) : e.target.value;
       saveState();
       if (key === "level" || key === "hpMax") renderIdentity();
-      if (key === "level") { renderAbilities(); renderSkills(); renderTools(); renderWeapons(); renderSimAll(); renderCombos(); renderProgression(); }
+      if (key === "level") { renderAbilities(); renderSkills(); renderTools(); renderWeapons(); renderCombos(); renderProgression(); }
     });
   };
   bind("#f-name", "name", false);
@@ -1012,8 +1100,41 @@ function initSheetEvents() {
     state.weapons.push({ name: "—", dice: 1, sides: 6, bonus: abilityMod(state.abilities.dex), props: "", mastery: "" });
     saveState();
     renderWeapons();
-    renderSimWeapons();
     renderCombos();
+  });
+
+  const addLang = () => {
+    const inp = $("#lang-input");
+    const v = inp.value.trim();
+    if (!v) return;
+    if (!state.languages.some((l) => l.toLowerCase() === v.toLowerCase())) state.languages.push(v);
+    inp.value = "";
+    saveState();
+    renderLanguages();
+  };
+  $("#btn-add-lang").addEventListener("click", addLang);
+  $("#lang-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addLang(); }
+  });
+
+  const addProf = () => {
+    const inp = $("#prof-input");
+    const v = inp.value.trim();
+    if (!v) return;
+    if (!state.proficiencies.some((x) => x.toLowerCase() === v.toLowerCase())) state.proficiencies.push(v);
+    inp.value = "";
+    saveState();
+    renderProficiencies();
+  };
+  $("#btn-add-prof").addEventListener("click", addProf);
+  $("#prof-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addProf(); }
+  });
+
+  $("#btn-add-item").addEventListener("click", () => {
+    state.inventory.push({ name: "—", qty: 1, wt: 0, note: "" });
+    saveState();
+    renderInventory();
   });
 
   $("#btn-export").addEventListener("click", exportJson);
@@ -1031,268 +1152,11 @@ function initSheetEvents() {
   });
 }
 
-/* ============================================================
-   TAB 2 — SIMULADOR DE COMBATE
-   ============================================================ */
-
-// Estado transitorio del simulador (no persiste: es una herramienta de entrenamiento).
-const sim = {
-  sneakUsed: false,
-  enemyMax: 30,
-  enemyCur: 30
-};
-
+/* ---------- Helpers de tirada (usados por Combos y ficha) ---------- */
 function dexMod() { return abilityMod(state.abilities.dex); }
 function saveDC() { return 8 + profBonus(state.level) + dexMod(); }
-
-/** Rellena el selector de armas del simulador. */
-function renderSimWeapons() {
-  const sel = $("#sim-weapon");
-  const prev = sel.value;
-  sel.innerHTML = "";
-  state.weapons.forEach((w, i) => {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = `${weaponView(w).name} (${w.dice}d${w.sides}+${w.bonus})`;
-    sel.appendChild(opt);
-  });
-  if (prev !== "" && +prev < state.weapons.length) sel.value = prev;
-  renderSimWeaponBonus();
-}
-
-function renderSimWeaponBonus() {
-  $("#sim-atkbonus").value = fmtMod(profBonus(state.level) + dexMod());
-  $("#save-dc").textContent = `${t("saveDC")} ${saveDC()}`;
-}
-
-/** Pista de Asesinar: +nivel si el enemigo no ha actuado. */
-function renderAssassinateHint() {
-  $("#assassinate-hint").textContent = t("assassinateHint").replace("{lv}", state.level);
-}
-
-function renderEnemyBar() {
-  const pct = sim.enemyMax > 0 ? Math.max(0, (sim.enemyCur / sim.enemyMax) * 100) : 0;
-  $("#enemy-bar-fill").style.width = pct + "%";
-  $("#enemy-hp-label").textContent = `${sim.enemyCur} / ${sim.enemyMax}`;
-}
-
-/** Añade una entrada al registro de combate. */
-function addLog(html, cls) {
-  const li = document.createElement("li");
-  li.className = cls || "log-info";
-  li.innerHTML = html;
-  const log = $("#combat-log");
-  log.prepend(li);
-}
-
-/** Sincroniza los PG del enemigo desde el input y refresca la barra. */
-function syncEnemyFromInput() {
-  sim.enemyMax = Math.max(1, parseInt($("#e-hp").value, 10) || 1);
-  sim.enemyCur = sim.enemyMax;
-  renderEnemyBar();
-}
-
-/* ---------- Iniciativa con ventaja (Asesinar 2024) ---------- */
-function rollInitiative() {
-  const r1 = rollDie(20), r2 = rollDie(20);
-  const best = Math.max(r1, r2);
-  const total = best + state.initiative;
-  $("#init-result").innerHTML =
-    `d20(${r1}, ${r2}) → ${best} ${fmtMod(state.initiative)} = <strong>${total}</strong>`;
-  addLog(`${t("logInitiative")}: d20(${r1}, ${r2}) ${fmtMod(state.initiative)} = <strong>${total}</strong>`, "log-info");
-}
-
-/* ---------- Tirada de ataque completa ---------- */
-function rollAttack() {
-  const wIdx = parseInt($("#sim-weapon").value, 10) || 0;
-  const w = state.weapons[wIdx];
-  if (!w) return;
-  const enemyAc = parseInt($("#e-ac").value, 10) || 10;
-  const enemyName = $("#e-name").value || "—";
-  const acted = $("#e-acted").checked;
-  const adv = $("#sim-adv").checked;
-  const dis = $("#sim-dis").checked;
-  const flat = adv && dis; // ventaja y desventaja se anulan (2024)
-
-  // --- Tirada para impactar ---
-  let rolls, chosen;
-  if (flat || (!adv && !dis)) {
-    rolls = [rollDie(20)];
-    chosen = rolls[0];
-  } else {
-    rolls = [rollDie(20), rollDie(20)];
-    chosen = adv ? Math.max(...rolls) : Math.min(...rolls);
-  }
-  const atkBonus = profBonus(state.level) + dexMod();
-  const total = chosen + atkBonus;
-  const natCrit = chosen === 20;
-  const natMiss = chosen === 1;
-  const isHit = natCrit || (!natMiss && total >= enemyAc);
-
-  const resultEl = $("#attack-result");
-  const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
-
-  if (!isHit) {
-    const why = natMiss ? t("nat1") : `${total} &lt; ${t("lVsAc")} ${enemyAc}`;
-    resultEl.innerHTML = `<span class="miss-text">✗ ${t("miss")}</span> — ${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total}. ${why}`;
-    addLog(`${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${t("lVsAc")} ${enemyAc} → <em>${t("miss")}</em>`, "log-miss");
-    return;
-  }
-
-  // --- Daño ---
-  const crit = natCrit;
-  const parts = [];   // fragmentos legibles del desglose
-  let dmgTotal = 0;
-
-  // Dados del arma (el crítico duplica TODOS los dados)
-  const wDiceCount = crit ? w.dice * 2 : w.dice;
-  const wRolls = rollDice(wDiceCount, w.sides);
-  parts.push(`${wDiceCount}d${w.sides}(${wRolls.join(",")})+${w.bonus}`);
-  dmgTotal += sum(wRolls) + w.bonus;
-
-  // Ataque Furtivo (una vez por turno)
-  let sneakApplied = false;
-  let strikesApplied = [];
-  if (!sim.sneakUsed) {
-    // Los dados se quitan ANTES de rolar el daño; cada opción cuesta lo suyo.
-    const strikes = $$(".cs-check:checked")
-      .map((c) => ({ id: c.value, cost: +c.dataset.cost || 1 }))
-      .slice(0, maxCunningStrikes(state.level));
-    const costTotal = strikes.reduce((a, s) => a + s.cost, 0);
-    const baseSneak = sneakDiceCount(state.level);
-    const sneakCount = Math.max(0, baseSneak - costTotal);
-    if (sneakCount > 0) {
-      const sDiceCount = crit ? sneakCount * 2 : sneakCount;
-      const sRolls = rollDice(sDiceCount, 6);
-      const label = costTotal ? `${sDiceCount}d6 (base ${baseSneak}d6 − ${costTotal})` : `${sDiceCount}d6`;
-      parts.push(`${t("lSneak")} ${label}(${sRolls.join(",")})`);
-      dmgTotal += sum(sRolls);
-    }
-    sneakApplied = true;
-    sim.sneakUsed = true;
-    strikesApplied = strikes;
-
-    // Asesinar: +nivel si el enemigo no ha actuado y el furtivo impacta
-    if (!acted) {
-      parts.push(`${t("lAssassinate")} +${state.level}`);
-      dmgTotal += state.level;
-    }
-  }
-
-  // --- Aplicar daño al enemigo ---
-  sim.enemyCur = Math.max(0, sim.enemyCur - dmgTotal);
-  renderEnemyBar();
-
-  const critTag = crit ? `<span class="crit-text"> ${t("crit")}</span>` : "";
-  resultEl.innerHTML = `<span class="${crit ? "crit-text" : "hit-text"}">✓ ${crit ? t("crit") : t("hit")}</span> — ${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${t("lVsAc")} ${enemyAc}. <strong>${t("lDamageWord")}: ${dmgTotal}</strong>`;
-
-  let logHtml = `${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${t("lVsAc")} ${enemyAc} → <strong>${t("hit")}</strong>${critTag}<br>` +
-    `${parts.join(" + ")} = <strong>${dmgTotal}</strong> [${t("lEnemyHp")}: ${sim.enemyCur}/${sim.enemyMax}]`;
-
-  // Notas de Golpes Astutos con CD
-  if (strikesApplied.length) {
-    const dc = saveDC();
-    const notes = strikesApplied.map((s) => {
-      if (s.id === "poison") return t("lPoisonSave").replace("{dc}", dc);
-      if (s.id === "trip") return t("lTripSave").replace("{dc}", dc);
-      if (s.id === "daze") return t("lDazeSave").replace("{dc}", dc);
-      if (s.id === "knockout") return t("lKnockOutSave").replace("{dc}", dc);
-      if (s.id === "obscure") return t("lObscureSave").replace("{dc}", dc);
-      return t("lWithdrawNote");
-    });
-    logHtml += `<br>⚔ ${notes.join(" · ")}`;
-    // Armas Envenenadas (N13): +2d6 veneno que ignora resistencia si falla la salvación.
-    if (strikesApplied.some((s) => s.id === "poison") && state.level >= 13) {
-      const eRolls = rollDice(2, 6);
-      logHtml += `<br>🧪 ${t("envenomNote").replace("{rolls}", eRolls.join(",")).replace("{n}", sum(eRolls))}`;
-    }
-  }
-  if (!sneakApplied && sim.sneakUsed) {
-    logHtml += `<br><em>${t("sneakUsed")}</em>`;
-  }
-  addLog(logHtml, crit ? "log-crit" : "log-hit");
-
-  if (sim.enemyCur === 0) {
-    addLog(`💀 ${enemyName}: ${t("dead")}`, "log-dead");
-  }
-}
-
-/* ---------- Eventos del simulador ---------- */
-function initSimEvents() {
-  $("#btn-init").addEventListener("click", rollInitiative);
-  $("#btn-attack").addEventListener("click", rollAttack);
-  $("#e-hp").addEventListener("change", syncEnemyFromInput);
-
-  // Asesinar: si el enemigo no ha actuado, marca ventaja automáticamente.
-  $("#e-acted").addEventListener("change", (e) => {
-    $("#sim-adv").checked = !e.target.checked;
-  });
-
-  // Nº de efectos simultáneos según nivel (1 desde N5; 2 con Golpe Astuto
-  // Mejorado, N11) y el coste total no puede superar los dados de furtivo.
-  $$(".cs-check").forEach((cb) => {
-    cb.addEventListener("change", () => {
-      const checked = $$(".cs-check:checked");
-      const cost = checked.reduce((a, c) => a + (+c.dataset.cost || 1), 0);
-      if (checked.length > maxCunningStrikes(state.level) || cost > sneakDiceCount(state.level)) cb.checked = false;
-    });
-  });
-
-  // Acciones adicionales: solo anotan en el registro.
-  $$(".ba-btn").forEach((btn) => {
-    btn.addEventListener("click", () => addLog(`${t("logBonus")}: ${btn.textContent}`, "log-info"));
-  });
-  // Puntería Firme: concede ventaja en el próximo ataque.
-  $("#btn-steady").addEventListener("click", () => {
-    $("#sim-adv").checked = true;
-    addLog(`${t("logBonus")}: ${t("steadyAim")}`, "log-info");
-  });
-
-  $("#btn-new-turn").addEventListener("click", () => {
-    sim.sneakUsed = false;
-    $$(".cs-check").forEach((c) => (c.checked = false));
-    $("#sim-adv").checked = !$("#e-acted").checked;
-    addLog("— " + t("newTurn") + " —", "log-info");
-  });
-
-  $("#btn-new-combat").addEventListener("click", () => {
-    sim.sneakUsed = false;
-    $("#combat-log").innerHTML = "";
-    $("#attack-result").innerHTML = "";
-    $("#init-result").innerHTML = "";
-    $("#e-acted").checked = false;
-    $("#sim-adv").checked = true;
-    $$(".cs-check").forEach((c) => (c.checked = false));
-    syncEnemyFromInput();
-  });
-}
-
-function renderSimAll() {
-  renderSimWeapons();
-  renderAssassinateHint();
-  renderEnemyBar();
-  renderStrikeLocks();
-}
-
-/** Nº máximo de efectos de Golpe Astuto por ataque según el nivel (2024). */
+/** Nº máximo de efectos de Golpe Astuto por ataque según el nivel (2024). Usado por combat.js. */
 function maxCunningStrikes(level) { return level >= 11 ? 2 : level >= 5 ? 1 : 0; }
-
-/** Bloquea las opciones de Golpe Astuto por nivel y actualiza la leyenda (máx.). */
-function renderStrikeLocks() {
-  $$(".cs-check").forEach((cb) => {
-    const req = cb.dataset.lock ? +cb.dataset.lock : 0;
-    const lockSpan = cb.parentElement.querySelector(".cs-lock");
-    if (req && state.level < req) {
-      cb.disabled = true;
-      cb.checked = false;
-      if (lockSpan) lockSpan.textContent = " 🔒 N" + req;
-    } else {
-      cb.disabled = false;
-      if (lockSpan) lockSpan.textContent = "";
-    }
-  });
-  $("#cs-legend").textContent = t("cunningStrikes").replace("{max}", maxCunningStrikes(state.level));
-}
 
 /* ============================================================
    TAB 3 — GUÍA DE COMBOS
@@ -1413,10 +1277,13 @@ function renderAll() {
   renderAbilities();
   renderSkills();
   renderTools();
+  renderLanguages();
+  renderProficiencies();
+  renderInventory();
   renderWeapons();
   renderWeaponCatalog();
   renderCurrency();
-  renderSimAll();
+ 
   renderCombos();
   renderFeatures();
 }
@@ -1424,13 +1291,9 @@ function renderAll() {
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initSheetEvents();
-  initSimEvents();
   initPcgen();
   initMasteryEvents();
   if (typeof initCombat === "function") initCombat(); // motor de combate (Fase 1)
   $("#lang-toggle").addEventListener("click", toggleLang);
-  // Estado inicial del simulador: enemigo no ha actuado → ventaja marcada.
-  $("#sim-adv").checked = true;
-  syncEnemyFromInput();
   renderAll();
 });
