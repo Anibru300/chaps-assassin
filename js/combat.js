@@ -1092,7 +1092,8 @@ function initCombat() {
   ctEl("c-search").addEventListener("input", renderSetup);
   // Enemigo personalizado
   ctEl("c-btn-custom").addEventListener("click", () => {
-    const v = (id) => ctEl(id).value.trim();
+    const cf = (id) => document.getElementById(id.replace(/^#/, ""));
+    const v = (id) => cf(id).value.trim();
     const name = v("#cf-name");
     if (!name) return;
     const custom = {
@@ -1107,7 +1108,7 @@ function initCombat() {
     };
     ENEMIES.push(custom);
     combat.enemies.push(spawnEnemy(custom.key));
-    ["#cf-name", "#cf-hp", "#cf-ac", "#cf-bonus", "#cf-dmg", "#cf-speed", "#cf-init"].forEach((id) => { ctEl(id).value = ""; });
+    ["#cf-name", "#cf-hp", "#cf-ac", "#cf-bonus", "#cf-dmg", "#cf-speed", "#cf-init"].forEach((id) => { cf(id).value = ""; });
     renderSetup();
   });
   ctEl("c-btn-start").addEventListener("click", () => {

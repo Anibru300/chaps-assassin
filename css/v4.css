@@ -1,0 +1,214 @@
+/* ============================================================
+   CHAPS — v4.css (capa visual 2024-08)
+   Rediseño del login + mejoras de legibilidad de la ficha +
+   arena de combate más viva. Se carga DESPUÉS de style.css:
+   mismas especificidades → estas reglas ganan por cascada.
+   No cambia datos ni lógica; solo presentación.
+   ============================================================ */
+
+/* Login — puerta del gremio */
+body.locked main, body.locked footer { display: none; }
+#login-gate {
+  position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(1100px 700px at 50% -10%, rgba(179, 18, 46, 0.22), transparent 60%),
+    radial-gradient(900px 600px at 85% 110%, rgba(201, 162, 39, 0.10), transparent 55%),
+    radial-gradient(700px 500px at 8% 100%, rgba(179, 18, 46, 0.14), transparent 55%),
+    linear-gradient(160deg, #131017 0%, #0d0a08 45%, #120a0c 100%);
+}
+#login-gate::before { /* textura de viñeta */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 220px 60px rgba(0, 0, 0, 0.75);
+}
+.lg-scene { position: absolute; inset: 0; pointer-events: none; }
+.lg-ember {
+  position: absolute; bottom: -12px; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold); opacity: 0; filter: blur(0.5px);
+  animation: ember-rise 9s linear infinite;
+}
+.lg-ember.e1 { left: 12%; animation-delay: 0s;    animation-duration: 8s; }
+.lg-ember.e2 { left: 24%; animation-delay: 2.4s;  animation-duration: 11s; width: 4px; height: 4px; }
+.lg-ember.e3 { left: 38%; animation-delay: 5.1s;  animation-duration: 9s;  background: var(--crimson-light); }
+.lg-ember.e4 { left: 52%; animation-delay: 1.2s;  animation-duration: 12s; width: 3px; height: 3px; }
+.lg-ember.e5 { left: 63%; animation-delay: 6.8s;  animation-duration: 8.5s; background: var(--crimson-light); }
+.lg-ember.e6 { left: 74%; animation-delay: 3.6s;  animation-duration: 10s; }
+.lg-ember.e7 { left: 85%; animation-delay: 0.8s;  animation-duration: 9.5s; width: 4px; height: 4px; }
+.lg-ember.e8 { left: 93%; animation-delay: 4.9s;  animation-duration: 11.5s; width: 3px; height: 3px; }
+@keyframes ember-rise {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  8%   { opacity: 0.85; }
+  60%  { opacity: 0.5; }
+  100% { transform: translateY(-105vh) translateX(28px) scale(0.4); opacity: 0; }
+}
+.lg-wrap {
+  position: relative; display: flex; align-items: center; gap: 56px;
+  padding: 24px; max-width: 860px; width: 100%; justify-content: center;
+  animation: lg-in 0.7s ease-out;
+}
+@keyframes lg-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.lg-brand { text-align: center; max-width: 340px; }
+.lg-sigil {
+  font-size: 3.6rem; line-height: 1; margin-bottom: 10px;
+  filter: drop-shadow(0 0 18px rgba(179, 18, 46, 0.8));
+  animation: sigil-pulse 3.2s ease-in-out infinite;
+}
+@keyframes sigil-pulse {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(179, 18, 46, 0.55)); }
+  50%      { filter: drop-shadow(0 0 26px rgba(224, 48, 78, 0.95)); }
+}
+.lg-title {
+  margin: 0; font-size: 3.1rem; letter-spacing: 14px; font-weight: 800;
+  background: linear-gradient(180deg, #f4e9c8 15%, var(--gold) 55%, #8a6d15 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 2px 24px rgba(201, 162, 39, 0.25);
+}
+.lg-sub {
+  margin: 6px 0 0; color: var(--crimson-light); font-weight: 700;
+  letter-spacing: 5px; text-transform: uppercase; font-size: 0.8rem;
+}
+.lg-divider {
+  display: flex; align-items: center; gap: 12px; margin: 22px 0;
+  color: var(--gold); font-size: 0.7rem;
+}
+.lg-divider span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.lg-flavor { margin: 0; color: var(--text-dim); font-style: italic; font-size: 0.92rem; line-height: 1.5; }
+.login-card {
+  display: flex; flex-direction: column; gap: 14px; width: 330px; padding: 34px 30px;
+  background: linear-gradient(170deg, rgba(28, 31, 40, 0.92), rgba(16, 14, 18, 0.96));
+  border: 1px solid rgba(201, 162, 39, 0.35); border-radius: 14px; text-align: center;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 40px rgba(179, 18, 46, 0.12);
+  backdrop-filter: blur(6px);
+}
+.lg-form-title {
+  margin: 0 0 4px; font-size: 1rem; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--gold); border: none; padding: 0;
+}
+.login-card .field { text-align: left; }
+.login-card .field span { letter-spacing: 1px; text-transform: uppercase; font-size: 0.72rem; color: var(--text-dim); }
+.login-card .field input {
+  background: rgba(13, 14, 18, 0.85); border-color: var(--border);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.login-card .field input:focus {
+  border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18); outline: none;
+}
+.lg-btn {
+  margin-top: 4px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+  box-shadow: 0 6px 22px rgba(179, 18, 46, 0.45);
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.lg-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(224, 48, 78, 0.55); }
+.login-error { color: var(--crimson-light); min-height: 1.2em; margin: 0; font-size: .85rem; }
+.lg-hint { margin: 2px 0 0; color: var(--text-dim); font-size: 0.75rem; font-style: italic; }
+@media (max-width: 720px) {
+  .lg-wrap { flex-direction: column; gap: 26px; }
+  .lg-brand { max-width: none; }
+  .lg-title { font-size: 2.4rem; letter-spacing: 10px; }
+  .lg-flavor { display: none; }
+  .login-card { width: 100%; max-width: 340px; }
+}
+
+/* ============================================================
+   v4 — Rediseño visual: ficha más legible, combate más vivo
+   (solo presentación; no cambia datos ni lógica)
+   ============================================================ */
+
+/* ----- Tabs pegajosas: navegación siempre a mano ----- */
+.tabs {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(13, 14, 18, 0.96);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn { padding: 12px 6px; }
+
+/* ----- Ficha: tarjetas numeradas para orientarse ----- */
+#tab-sheet { counter-reset: sheetcard; }
+#tab-sheet > .card { counter-increment: sheetcard; }
+#tab-sheet > .card > h2:first-of-type::before {
+  content: counter(sheetcard, decimal-leading-zero);
+  color: var(--crimson-light); margin-right: 8px; font-weight: 800;
+}
+
+/* ----- Ficha: stats clave grandes y legibles ----- */
+.keystat-grid .field input {
+  font-size: 1.35rem; font-weight: 700; text-align: center; color: var(--gold);
+}
+.hp-grid .field input { font-size: 1.25rem; font-weight: 700; text-align: center; }
+.keystat-grid, .hp-grid {
+  background: var(--bg-card-alt); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px;
+}
+
+/* ----- Ficha: características con presencia ----- */
+.ability-box { transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s; }
+.ability-box:hover {
+  transform: translateY(-2px); border-color: var(--gold);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.ability-box .ab-mod {
+  font-size: 1.3rem; margin: 6px auto 0; width: 46px; height: 46px; line-height: 46px;
+  border-radius: 50%; border: 2px solid var(--gold);
+  background: radial-gradient(circle at 35% 30%, #2a2410, #17130a);
+  text-shadow: 0 0 10px rgba(201, 162, 39, 0.6);
+}
+
+/* ----- Ficha: habilidades con cebra y hover ----- */
+#skills-list .skill-row:nth-child(even), #tools-list .skill-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.skill-row { border-radius: 4px; transition: background 0.15s; }
+.skill-row:hover { background: rgba(201, 162, 39, 0.07); }
+
+/* ----- Ficha: encabezados de tabla dorados ----- */
+th { color: var(--gold); letter-spacing: 0.06em; }
+tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* ----- Combate: arena más viva ----- */
+#c-round { letter-spacing: 4px; }
+.init-chip { transition: transform 0.15s, box-shadow 0.2s; }
+.init-chip.cur {
+  animation: cur-chip 1.6s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(201, 162, 39, 0.45);
+}
+@keyframes cur-chip {
+  0%, 100% { box-shadow: 0 0 6px rgba(201, 162, 39, 0.3); }
+  50%      { box-shadow: 0 0 16px rgba(201, 162, 39, 0.7); }
+}
+.combat-banner:not(:empty) {
+  animation: banner-in 0.5s ease-out;
+  background: rgba(179, 18, 46, 0.15); border: 1px solid var(--crimson-dark);
+  padding: 4px 12px; border-radius: 20px;
+}
+@keyframes banner-in { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+.enemy-bar-fill {
+  background: linear-gradient(90deg, var(--crimson-dark), var(--crimson-light));
+  transition: width 0.4s ease;
+}
+.enemy-row { transition: opacity 0.3s; }
+.tok { transition: transform 0.15s; }
+.cell:hover .tok { transform: scale(1.25); }
+.cell { border-radius: 3px; }
+
+/* ----- Combate: puente con la Biblioteca ----- */
+.mx-bridge {
+  margin: 12px 0; padding: 12px;
+  border: 1px dashed rgba(201, 162, 39, 0.5); border-radius: var(--radius);
+  background: rgba(201, 162, 39, 0.04);
+}
+.mx-title { margin: 0 0 8px; font-weight: 700; color: var(--gold); font-size: 0.9rem; }
+#mx-status.ok { color: var(--green); }
+#mx-status.err { color: var(--crimson-light); }
+
+/* ----- Responsive: grids de 4 → 2 en pantallas estrechas ----- */
+@media (max-width: 720px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .ability-grid { grid-template-columns: repeat(3, 1fr); }
+  .keystat-grid .field input, .hp-grid .field input { font-size: 1.15rem; }
+}
+
+/* ----- Accesibilidad: sin animaciones si el usuario lo prefiere ----- */
+@media (prefers-reduced-motion: reduce) {
+  .lg-ember, .lg-sigil, .init-chip.cur, .combat-banner:not(:empty), .lg-wrap { animation: none !important; }
+}

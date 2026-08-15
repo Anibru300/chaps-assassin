@@ -13,15 +13,23 @@ Plataforma web estática de **entrenamiento y gestión de personaje** para **CHA
   - **Maestría de armas (2024)**: elige las 2 armas dominadas (con su propiedad de maestría visible) y un glosario desplegable de las 8 propiedades (Vex, Nick, Slow, Sap, Topple, Push, Graze, Cleave). Tras un descanso largo la tarjeta se ilumina para recordarte que puedes cambiar la elección.
   - **Diario de aventuras**: entradas con fecha, título y texto; las más recientes primero.
   - Todo se **guarda automáticamente en el navegador** (localStorage) y se puede **exportar/importar en JSON** (incluye todas las secciones).
-- **Simulador** — Simulador de combate turno a turno: iniciativa con ventaja (Asesinar), ataques con ventaja/desventaja, críticos que duplican dados, Ataque Furtivo 6d6 (una vez por turno), Golpes Astutos con CD de salvación y coste en dados (incluidos los **Golpes Tortuosos** de nivel 14 — Aturdir, Noquear y Obnubilar — que se desbloquean al subir de nivel), nota automática de **Armas Envenenadas** a nivel 13+, acciones adicionales, recordatorios de reacciones (reglas 2024), referencia rápida de **condiciones** y registro de daño detallado.
+- **Combate** — Simulador de combate turno a turno: iniciativa con ventaja (Asesinar), ataques con ventaja/desventaja, críticos que duplican dados, Ataque Furtivo 6d6 (una vez por turno), Golpes Astutos con CD de salvación y coste en dados (incluidos los **Golpes Tortuosos** de nivel 14 — Aturdir, Noquear y Obnubilar — que se desbloquean al subir de nivel), nota automática de **Armas Envenenadas** a nivel 13+, acciones adicionales, recordatorios de reacciones (reglas 2024), referencia rápida de **condiciones** y registro de daño detallado.
+  - **🎲 Dados rápidos**: tirador de d4 a d100 con cantidad, modificador, ventaja/desventaja en d20 y registro de las últimas 30 tiradas.
+  - **📊 Calculadora de daño (DPR 2024)**: probabilidad de impacto y de crítico, daño medio por ataque y daño total por turno con varios ataques, Furtivo (con sus dados según tu nivel) y ventaja. Se **precarga desde la ficha** (bono de ataque = competencia + DES) y compara opciones contra la CA del enemigo.
 - **Combos** — Guía interactiva de combos paso a paso con calculadora de daño real (tira los dados), más tabla de rasgos por nivel y avance de mejoras futuras (niveles 13, 14 y 17).
+- **📚 Biblioteca** — Consulta del **System Reference Document 5.2 (reglas 2024)** servida por la API de [Open5e](https://open5e.com):
+  - **✨ Hechizos** (339): filtro por nivel, tiempo de lanzamiento, componentes, concentración/ritual, escalado a niveles superiores y clases que lo conocen.
+  - **🗡 Armas** y **🛡 Armaduras**: daño, propiedades y **propiedad de maestría 2024** de cada arma, CA y requisitos de las armaduras.
+  - **🐉 Monstruos** (331): statblock completo (CA, PG, velocidad, características, rasgos y acciones), con filtro por bandas de CR.
+  - **📜 Clases** (12 base), **💫 Condiciones** y **💍 Objetos mágicos**.
+  - Buscador instantáneo en cada categoría. Los datos se **guardan en el navegador durante 7 días**, así que tras la primera descarga funcionan incluso sin conexión. El texto del SRD está en inglés (es el oficial); la interfaz está en español.
 
-Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defecto).
+Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defecto). *Nota: las secciones de Biblioteca, Dados rápidos y Calculadora DPR están solo en español de momento.*
 
 ## Cómo usarla
 
 ### En local
-No necesita servidor ni instalación: **haz doble clic en `index.html`** y se abre en tu navegador. Funciona sin conexión.
+No necesita servidor ni instalación: **haz doble clic en `index.html`** y se abre en tu navegador. Funciona sin conexión (la Biblioteca necesita internet solo la primera vez que abres cada categoría).
 
 ### En GitHub Pages
 1. Crea un repositorio en GitHub y sube el contenido de esta carpeta (`index.html`, `css/`, `js/`).
@@ -41,7 +49,7 @@ Si usas **PCGen 6.09.08** (instalado en `C:\Users\Carlos\Desktop\D&D\PCGen\PcGen
 
 ## Tecnología
 
-HTML + CSS + JavaScript puro. Sin frameworks, sin build, sin CDNs: funciona offline y con el protocolo `file://`.
+HTML + CSS + JavaScript puro. Sin frameworks, sin build, sin CDNs: funciona offline y con el protocolo `file://`. La Biblioteca consume la API pública de **Open5e** (SRD 5.2 © Wizards of the Coast, licencia CC-BY-4.0; condiciones y objetos mágicos del SRD 5.1).
 
 ---
 
