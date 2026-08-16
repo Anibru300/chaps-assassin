@@ -12,10 +12,14 @@ body.locked main, body.locked footer { display: none; }
   position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   background:
-    radial-gradient(1100px 700px at 50% -10%, rgba(179, 18, 46, 0.22), transparent 60%),
-    radial-gradient(900px 600px at 85% 110%, rgba(201, 162, 39, 0.10), transparent 55%),
-    radial-gradient(700px 500px at 8% 100%, rgba(179, 18, 46, 0.14), transparent 55%),
-    linear-gradient(160deg, #131017 0%, #0d0a08 45%, #120a0c 100%);
+    linear-gradient(180deg, rgba(10, 8, 10, 0.52) 0%, rgba(10, 8, 10, 0.26) 45%, rgba(10, 8, 10, 0.74) 100%),
+    url("../assets/dragon-gate.svg") center / cover no-repeat,
+    #0d0a08;
+  animation: dragon-drift 42s ease-in-out infinite alternate;
+}
+@keyframes dragon-drift { /* deriva lenta de la cámara sobre el dragón */
+  from { background-position: 0 0, 50% 38%, 0 0; }
+  to   { background-position: 0 0, 50% 62%, 0 0; }
 }
 #login-gate::before { /* textura de viñeta */
   content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -66,6 +70,7 @@ body.locked main, body.locked footer { display: none; }
 .lg-sub {
   margin: 6px 0 0; color: var(--crimson-light); font-weight: 700;
   letter-spacing: 5px; text-transform: uppercase; font-size: 0.8rem;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
 }
 .lg-divider {
   display: flex; align-items: center; gap: 12px; margin: 22px 0;
@@ -210,5 +215,5 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
 /* ----- Accesibilidad: sin animaciones si el usuario lo prefiere ----- */
 @media (prefers-reduced-motion: reduce) {
-  .lg-ember, .lg-sigil, .init-chip.cur, .combat-banner:not(:empty), .lg-wrap { animation: none !important; }
+  .lg-ember, .lg-sigil, .init-chip.cur, .combat-banner:not(:empty), .lg-wrap, #login-gate { animation: none !important; }
 }
