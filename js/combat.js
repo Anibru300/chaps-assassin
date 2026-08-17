@@ -1024,15 +1024,17 @@ function renderSetup() {
   const catFilter = (ctEl("c-cat-filter") || {}).value || "all";
   const q = ((ctEl("c-search") || {}).value || "").trim().toLowerCase();
   sel.innerHTML = "";
-  ENEMIES
+  const filtered = ENEMIES
     .filter((e) => catFilter === "all" || e.cat === catFilter)
-    .filter((e) => !q || e.es.toLowerCase().includes(q) || e.en.toLowerCase().includes(q))
-    .forEach((e) => {
-      const opt = document.createElement("option");
-      opt.value = e.key;
-      opt.textContent = `${eName(e)} (CR ${e.cr} · ${e.hp} PG · CA ${e.ac})`;
-      sel.appendChild(opt);
-    });
+    .filter((e) => !q || e.es.toLowerCase().includes(q) || e.en.toLowerCase().includes(q));
+  filtered.forEach((e) => {
+    const opt = document.createElement("option");
+    opt.value = e.key;
+    opt.textContent = `${eName(e)} (CR ${e.cr} · ${e.hp} PG · CA ${e.ac})`;
+    sel.appendChild(opt);
+  });
+  const count = ctEl("c-catalog-count");
+  if (count) count.textContent = filtered.length ? `${filtered.length} enemigo(s)` : "Sin coincidencias";
   const list = ctEl("c-queue");
   list.innerHTML = "";
   combat.enemies.forEach((e, i) => {
