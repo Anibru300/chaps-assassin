@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CHAPS — Asesino D&D 2024</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗡</text></svg>">
-  <link rel="stylesheet" href="css/style.css?v=3">
-  <link rel="stylesheet" href="css/v4.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/v4.css?v=7">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -49,6 +49,9 @@
       </div>
       <div class="header-controls">
         <span id="save-indicator" class="save-indicator"></span>
+        <button id="btn-header-export" class="btn btn-small" title="Exportar JSON">⬇</button>
+        <button id="btn-header-import" class="btn btn-small" title="Importar JSON">⬆</button>
+        <input type="file" id="header-import-file" accept=".json,application/json" hidden>
         <button id="lang-toggle" class="btn btn-small" title="ES / EN">EN</button>
       </div>
     </div>
@@ -64,9 +67,36 @@
 
     <!-- ============ TAB 1: FICHA ============ -->
     <section id="tab-sheet" class="tab-panel active">
+      <aside class="sheet-sidebar" id="sheet-sidebar">
+        <div class="sheet-sidebar-inner">
+          <h3>Secciones</h3>
+          <nav class="sheet-nav">
+            <a href="#section-identity">Identidad</a>
+            <a href="#section-abilities">Características</a>
+            <a href="#section-skills">Habilidades</a>
+            <a href="#section-languages">Idiomas</a>
+            <a href="#section-profs">Competencias</a>
+            <a href="#section-weapons">Armas</a>
+            <a href="#section-mastery">Maestría</a>
+            <a href="#section-xp">Experiencia</a>
+            <a href="#section-feats">Dotes</a>
+            <a href="#section-progression">Progresión</a>
+            <a href="#section-inventory">Inventario</a>
+            <a href="#section-currency">Monedas</a>
+            <a href="#section-journal">Diario</a>
+            <a href="#section-physical">Apariencia</a>
+            <a href="#section-personality">Personalidad</a>
+            <a href="#section-backstory">Historia</a>
+            <a href="#section-pcgen">PCGen</a>
+            <a href="#section-persist">Persistencia</a>
+          </nav>
+        </div>
+      </aside>
+      <button type="button" class="sheet-nav-toggle" id="sheet-nav-toggle" aria-label="Secciones">☰</button>
+      <div class="sheet-overlay" id="sheet-overlay"></div>
 
       <!-- Identidad y stats principales -->
-      <div class="card">
+      <div class="card" id="section-identity">
         <h2 data-i18n="identity">Identidad</h2>
         <div class="identity-layout">
           <div class="portrait-frame">
@@ -152,13 +182,13 @@
       </div>
 
       <!-- Características -->
-      <div class="card">
+      <div class="card" id="section-abilities">
         <h2 data-i18n="abilities">Características</h2>
         <div class="ability-grid" id="ability-grid"></div>
       </div>
 
       <!-- Habilidades -->
-      <div class="card">
+      <div class="card" id="section-skills">
         <h2 data-i18n="skills">Habilidades</h2>
         <div class="skills-header">
           <span data-i18n="skill">Habilidad</span>
@@ -178,7 +208,7 @@
       </div>
 
       <!-- Idiomas -->
-      <div class="card">
+      <div class="card" id="section-languages">
         <h2 data-i18n="languagesSection">Idiomas</h2>
         <div id="languages-list" class="lang-list"></div>
         <div class="rest-row">
@@ -189,7 +219,7 @@
       </div>
 
       <!-- Competencias (armadura/armas) -->
-      <div class="card">
+      <div class="card" id="section-profs">
         <h2 data-i18n="profSection">Competencias</h2>
         <div id="proficiencies-list" class="lang-list"></div>
         <div class="rest-row">
@@ -199,7 +229,7 @@
       </div>
 
       <!-- Armas -->
-      <div class="card">
+      <div class="card" id="section-weapons">
         <h2 data-i18n="weapons">Armas y ataques</h2>
         <div class="table-wrap">
           <table class="weapons-table" id="weapons-table">
@@ -224,7 +254,7 @@
       </div>
 
       <!-- Maestría de armas -->
-      <div class="card" id="mastery-card">
+      <div class="card" id="section-mastery">
         <h2 data-i18n="masterySection">Maestría de armas</h2>
         <div class="grid grid-4">
           <label class="field"><span data-i18n="masteryWeapon">Arma</span> 1
@@ -240,7 +270,7 @@
       </div>
 
       <!-- Experiencia y nivel -->
-      <div class="card">
+      <div class="card" id="section-xp">
         <h2 data-i18n="xpSection">Experiencia y nivel</h2>
         <div class="grid grid-4">
           <label class="field"><span data-i18n="xpCurrent">PX actuales</span>
@@ -266,7 +296,7 @@
       </div>
 
       <!-- Dotes -->
-      <div class="card">
+      <div class="card" id="section-feats">
         <h2 data-i18n="featsSection">Dotes</h2>
         <div class="rest-row">
           <select id="feat-catalog" class="weapon-catalog"></select>
@@ -278,7 +308,7 @@
       </div>
 
       <!-- Progresión por nivel -->
-      <div class="card">
+      <div class="card" id="section-progression">
         <h2 data-i18n="progressionSection">Progresión por nivel</h2>
         <div class="table-wrap">
           <table class="progression-table">
@@ -296,7 +326,7 @@
       </div>
 
       <!-- Inventario / mochila -->
-      <div class="card">
+      <div class="card" id="section-inventory">
         <h2 data-i18n="invSection">Inventario</h2>
         <div class="table-wrap">
           <table class="weapons-table">
@@ -317,7 +347,7 @@
       </div>
 
       <!-- Monedas y notas -->
-      <div class="card">
+      <div class="card" id="section-currency">
         <h2 data-i18n="currency">Monedas</h2>
         <div class="grid grid-5" id="currency-grid"></div>
         <p class="hint" data-i18n="coinsNote"></p>
@@ -366,14 +396,14 @@
       </div>
 
       <!-- Diario de aventuras -->
-      <div class="card">
+      <div class="card" id="section-journal">
         <h2 data-i18n="journalSection">Diario de aventuras</h2>
         <div id="journal-list"></div>
         <button class="btn btn-small" id="btn-add-journal" data-i18n="journalAdd">+ Nueva entrada</button>
       </div>
 
       <!-- Descripción física -->
-      <div class="card">
+      <div class="card" id="section-physical">
         <h2 data-i18n="physSection">Descripción física</h2>
         <div class="grid grid-3">
           <label class="field"><span data-i18n="physAge">Edad</span>
@@ -388,7 +418,7 @@
       </div>
 
       <!-- Personalidad -->
-      <div class="card">
+      <div class="card" id="section-personality">
         <h2 data-i18n="personalitySection">Personalidad</h2>
         <div class="grid grid-2">
           <label class="field"><span data-i18n="traitTraits">Rasgos</span>
@@ -403,14 +433,14 @@
       </div>
 
       <!-- Historia / pasado -->
-      <div class="card">
+      <div class="card" id="section-backstory">
         <h2 data-i18n="backstorySection">Historia (pasado)</h2>
         <p class="hint" data-i18n="backstoryHint"></p>
         <textarea id="f-backstory" rows="12"></textarea>
       </div>
 
       <!-- Importar desde PCGen -->
-      <div class="card pcgen-card">
+      <div class="card pcgen-card" id="section-pcgen">
         <h2>PCGen</h2>
         <ol class="pcgen-steps">
           <li data-i18n="pcgenStep1"></li>
@@ -445,7 +475,7 @@
       </div>
 
       <!-- Persistencia -->
-      <div class="card persistence-card">
+      <div class="card persistence-card" id="section-persist">
         <button class="btn" id="btn-export" data-i18n="exportJson">Exportar JSON</button>
         <button class="btn" id="btn-import" data-i18n="importJson">Importar JSON</button>
         <input type="file" id="import-file" accept=".json,application/json" hidden>
@@ -553,24 +583,24 @@
           </div>
           <div id="c-pips" class="turn-pips"></div>
           <div id="c-pconds"></div>
-          <div class="rest-row">
-            <button class="btn btn-crimson" id="c-btn-attack" data-i18n="ctAttack">Atacar</button>
-            <button class="btn btn-small" id="c-btn-steady" data-i18n="steadyAim">Puntería Firme</button>
-            <button class="btn btn-small" id="c-btn-hide" data-i18n="caHide">Esconderse</button>
-            <button class="btn btn-small" id="c-btn-dash" data-i18n="caDash">Dash</button>
-            <button class="btn btn-small" id="c-btn-disengage" data-i18n="caDisengage">Retirarse</button>
-            <button class="btn" id="c-btn-end" data-i18n="ctEndTurn">Finalizar turno</button>
+          <div class="combat-actions">
+            <button class="ca-btn btn-crimson" id="c-btn-attack" title="Atacar"><span>⚔</span><b>Atacar</b></button>
+            <button class="ca-btn" id="c-btn-steady" title="Puntería Firme"><span>🎯</span><b>Puntería</b></button>
+            <button class="ca-btn" id="c-btn-hide" title="Esconderse"><span>🌑</span><b>Ocultar</b></button>
+            <button class="ca-btn" id="c-btn-dash" title="Dash"><span>💨</span><b>Dash</b></button>
+            <button class="ca-btn" id="c-btn-disengage" title="Retirarse"><span>🏃</span><b>Retirar</b></button>
+            <button class="ca-btn" id="c-btn-end" title="Finalizar turno"><span>⏭</span><b>Fin turno</b></button>
           </div>
           <button class="btn btn-small" id="c-apply-hp" data-i18n="ctApplyHp" hidden>Guardar PG en la ficha</button>
         </div>
 
         <!-- Panel de ataque -->
-        <div class="card" id="c-attack-panel" hidden>
+        <div class="card attack-panel" id="c-attack-panel" hidden>
           <h2 data-i18n="ctAttackTitle">Tirada de ataque</h2>
-          <div class="grid grid-3">
+          <div class="grid grid-3 atk-grid">
             <label class="field"><span data-i18n="weapon">Arma</span> <select id="c-atk-weapon"></select></label>
             <label class="field"><span data-i18n="ctTarget">Objetivo</span> <select id="c-atk-target"></select></label>
-            <label class="field checkbox-field"><input type="checkbox" id="c-atk-ally"><span data-i18n="ctAlly">Aliado a 5 ft del objetivo</span></label>
+            <label class="field checkbox-field"><input type="checkbox" id="c-atk-ally"><span data-i18n="ctAlly">Aliado cerca</span></label>
           </div>
           <fieldset class="cs-fieldset">
             <legend data-i18n="ctStrikes">Golpes Astutos</legend>
@@ -590,6 +620,7 @@
         <div class="card">
           <div class="combat-head">
             <h2 data-i18n="damageLog">Registro</h2>
+            <button type="button" class="btn btn-small" id="c-log-toggle" aria-expanded="true">Ocultar</button>
             <button class="btn btn-small btn-danger" id="c-btn-end-combat" data-i18n="ctEndCombat">Terminar combate</button>
           </div>
           <ul id="c-log" class="combat-log"></ul>
@@ -688,18 +719,31 @@
 
   </main>
 
+  <!-- Modal de detalle de Biblioteca -->
+  <div id="lib-modal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="lib-modal-title">—</h2>
+        <button type="button" class="btn btn-small" id="lib-modal-close">✕</button>
+      </div>
+      <div id="lib-modal-body" class="modal-body"></div>
+      <div class="modal-actions" id="lib-modal-actions"></div>
+    </div>
+  </div>
+
   <footer class="app-footer">
     <p data-i18n="footer"></p>
   </footer>
 
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
-  <script src="js/auth.js?v=2"></script>
-  <script src="js/data.js?v=2"></script>
-  <script src="js/app.js?v=2"></script>
-  <script src="js/combat-data.js?v=2"></script>
-  <script src="js/combat.js?v=2"></script>
-  <script src="js/simulador.js?v=3"></script>
-  <script src="js/biblioteca.js?v=3"></script>
-  <script src="js/combat-extra.js?v=4"></script>
+  <script src="js/auth.js?v=3"></script>
+  <script src="js/data.js?v=3"></script>
+  <script src="js/app.js?v=3"></script>
+  <script src="js/combat-data.js?v=3"></script>
+  <script src="js/combat.js?v=3"></script>
+  <script src="js/simulador.js?v=4"></script>
+  <script src="js/biblioteca.js?v=4"></script>
+  <script src="js/combat-extra.js?v=5"></script>
 </body>
 </html>

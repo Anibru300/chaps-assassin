@@ -349,8 +349,9 @@ function renderWeaponCatalog() {
 }
 
 /** Añade el arma elegida del catálogo con daño, propiedades y maestría automáticos. */
-function addWeaponFromCatalog() {
-  const w = WEAPON_MASTERY.find((x) => x.id === $("#weapon-catalog").value);
+function addWeaponFromCatalog(weaponId) {
+  const id = weaponId || $("#weapon-catalog").value;
+  const w = WEAPON_MASTERY.find((x) => x.id === id);
   if (!w) return;
   const prop = MASTERY_PROPERTIES.find((p) => p.id === w.mastery);
   const m = w.dmg.match(/(\d+)d(\d+)/); // "1" (cerbatana) → 1d1 = 1 fijo
@@ -1342,11 +1343,97 @@ function renderAll() {
   renderFeatures();
 }
 
+/* ---------- Sidebar de secciones ---------- */
+function initSheetSidebar() {
+  const toggle = $("#sheet-nav-toggle");
+  const overlay = $("#sheet-overlay");
+  const sidebar = $("#sheet-sidebar");
+  const links = $$('.sheet-nav a');
+  if (!toggle || !overlay || !sidebar) return;
+
+  function openNav() { document.body.classList.add("sheet-nav-open"); }
+  function closeNav() { document.body.classList.remove("sheet-nav-open"); }
+  toggle.addEventListener("click", () => {
+    if (document.body.classList.contains("sheet-nav-open")) closeNav(); else openNav();
+  });
+  overlay.addEventListener("click", closeNav);
+
+  links.forEach((a) => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute("href"));
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        closeNav();
+      }
+    });
+  });
+
+  // Resaltar sección visible
+  const cards = $$('#tab-sheet > .card[id^="section-"]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        links.forEach((l) => l.classList.toggle("active", l.getAttribute("href") === "#" + entry.target.id));
+      }
+    });
+  }, { rootMargin: "-20% 0px -70% 0px", threshold: 0 });
+  cards.forEach((c) => observer.observe(c));
+}
+
+/* ---------- Export/Import desde header ---------- */
+function initHeaderPersistence() {
+  const exportBtn = $("#btn-header-export");
+  const importBtn = $("#btn-header-import");
+  const importFile = $("#header-import-file");
+  if (exportBtn) exportBtn.addEventListener("click", exportJson);
+  if (importBtn && importFile) {
+    importBtn.addEventListener("click", () => importFile.click());
+    importFile.addEventListener("change", (e) => {
+      if (e.target.files[0]) importJson(e.target.files[0]);
+      e.target.value = "";
+    });
+  }
+}
+
+/* ---------- Modal de biblioteca ---------- */
+const LIB_MODAL = {
+  el: null, title: null, body: null, actions: null,
+  init() {
+    this.el = $("#lib-modal");
+    this.title = $("#lib-modal-title");
+    this.body = $("#lib-modal-body");
+    this.actions = $("#lib-modal-actions");
+    if (!this.el) return;
+    $("#lib-modal-close").addEventListener("click", () => this.hide());
+    this.el.querySelector(".modal-backdrop").addEventListener("click", () => this.hide());
+  },
+  show(title, html, buttonsHtml = "") {
+    if (!this.el) this.init();
+    this.title.textContent = title;
+    this.body.innerHTML = html;
+    this.actions.innerHTML = buttonsHtml;
+    this.el.hidden = false;
+    document.body.style.overflow = "hidden";
+  },
+  hide() {
+    if (!this.el) return;
+    this.el.hidden = true;
+    document.body.style.overflow = "";
+  }
+};
+
+function initLibraryModal() { LIB_MODAL.init(); }
+
+/* ---------- Arranque ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initSheetEvents();
   initPcgen();
   initMasteryEvents();
+  initSheetSidebar();
+  initHeaderPersistence();
+  initLibraryModal();
   if (typeof initCombat === "function") initCombat(); // motor de combate (Fase 1)
   $("#lang-toggle").addEventListener("click", toggleLang);
   renderAll();

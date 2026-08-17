@@ -23,8 +23,16 @@ Plataforma web estática de **entrenamiento y gestión de personaje** para **CHA
   - **🐉 Monstruos** (331): statblock completo (CA, PG, velocidad, características, rasgos y acciones), con filtro por bandas de CR.
   - **📜 Clases** (12 base), **💫 Condiciones** y **💍 Objetos mágicos**.
   - Buscador instantáneo en cada categoría. Los datos se **guardan en el navegador durante 7 días**, así que tras la primera descarga funcionan incluso sin conexión. El texto del SRD está en inglés (es el oficial); la interfaz está en español.
+  - **Nuevo**: detalle en modal, botón para **añadir un monstruo directamente como enemigo** en el combate y botón para **añadir un arma del catálogo** a tu ficha.
 
 Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defecto). *Nota: las secciones de Biblioteca, Dados rápidos y Calculadora DPR están solo en español de momento.*
+
+## Diseño mobile-first
+
+- En **escritorio** la pestaña **Ficha** muestra un **sidebar izquierdo** con todas las secciones; pulsa una para ir directamente.
+- En **móvil** el sidebar se oculte y aparece un **botón flotante ☰** para abrir el índice de secciones.
+- Tablas, grids, botones y checkboxes están adaptados para uso táctil: inputs de 16 px (evita zoom en iOS), botones de al menos 44 × 44 px y tablas con scroll horizontal cuando no caben.
+- Exportar e importar JSON están ahora en la **cabecera** para encontrarlos rápido en cualquier dispositivo.
 
 ## Cómo usarla
 

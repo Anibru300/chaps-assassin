@@ -366,6 +366,73 @@
     });
   }
 
+  function actionButtons(cat, it) {
+    const btns = [];
+    if (cat === "creatures") {
+      btns.push('<button type="button" class="btn btn-crimson lib-add-enemy" data-name="' + esc(it.name) + '">➕ Añadir como enemigo</button>');
+    }
+    if (cat === "weapons") {
+      btns.push('<button type="button" class="btn btn-crimson lib-add-weapon" data-name="' + esc(it.name) + '">➕ Añadir a armas</button>');
+    }
+    return btns.join("");
+  }
+
+  function openDetail(it) {
+    const html = detailHtml(currentCat, it);
+    const buttons = actionButtons(currentCat, it);
+    if (typeof window.LIB_MODAL !== "undefined") {
+      window.LIB_MODAL.show(it.name, html, buttons);
+      // Enlazar acciones del modal
+      const modalBody = document.getElementById("lib-modal");
+      if (!modalBody) return;
+      const enemyBtn = modalBody.querySelector(".lib-add-enemy");
+      if (enemyBtn && typeof window.addEnemyFromLibrary === "function") {
+        enemyBtn.addEventListener("click", () => {
+          const data = normalizeCreatureForCombat(it);
+          window.addEnemyFromLibrary(data);
+          window.LIB_MODAL.hide();
+          // Cambiar a pestaña combate
+          const combatTab = document.querySelector('.tab-btn[data-tab="combat"]');
+          if (combatTab) combatTab.click();
+        });
+      }
+      const weaponBtn = modalBody.querySelector(".lib-add-weapon");
+      if (weaponBtn && typeof window.addWeaponFromCatalog === "function") {
+        weaponBtn.addEventListener("click", () => {
+          const w = window.WEAPON_MASTERY.find((x) => x.es === it.name || x.en === it.name);
+          if (w) window.addWeaponFromCatalog(w.id);
+          window.LIB_MODAL.hide();
+        });
+      }
+    } else {
+      // Fallback: detalle inline si no existe modal
+      const box = document.getElementById("lib-results");
+      box.querySelectorAll(".lib-detail-inline").forEach((d) => { d.hidden = true; });
+      box.querySelectorAll(".lib-row").forEach((r) => r.classList.remove("lib-open"));
+    }
+  }
+
+  function normalizeCreatureForCombat(it) {
+    // Extrae el primer ataque con bono y daño del texto
+    let bonus = 0, dmg = "1d6";
+    if (it.actions && it.actions.length) {
+      const text = it.actions[0].d || "";
+      const bm = text.match(/([+-]\s?\d+)\s*to hit/i) || text.match(/attack roll:\s*([+-]\s?\d+)/i);
+      const dm = text.match(/(\d+d\d+(?:\s*\+\s*\d+)?)/);
+      if (bm) bonus = parseInt(bm[1].replace(/\s/g, ""), 10) || 0;
+      if (dm) dmg = dm[1].replace(/\s/g, "");
+    }
+    const attacks = [{ es: "Ataque", en: "Attack", bonus, dmg, melee: 5, range: null }];
+    return {
+      name: it.name,
+      hp: it.hp, ac: it.ac, speed: firstNum(it.speed),
+      init: it.ab ? Math.floor((it.ab.dexterity - 10) / 2) : 0,
+      dex: it.ab ? it.ab.dexterity : 10,
+      cr: it.cr, pp: it.pp,
+      attacks
+    };
+  }
+
   function renderList() {
     const box = document.getElementById("lib-results");
     const list = LIB[currentCat] || [];
@@ -386,17 +453,8 @@
         '<div class="lib-row-head"><span class="lib-name">' + esc(it.name) + '</span>' +
         '<span class="lib-badges">' + rowBadges(currentCat, it)
           .map((b) => '<span class="lib-badge">' + esc(b) + "</span>").join("") +
-        "</span></div>" +
-        '<div class="lib-detail-inline" hidden>' + detailHtml(currentCat, it) + "</div>";
-      row.querySelector(".lib-row-head").addEventListener("click", () => {
-        const det = row.querySelector(".lib-detail-inline");
-        const open = det.hidden;
-        // Solo una entrada abierta a la vez.
-        box.querySelectorAll(".lib-detail-inline").forEach((d) => { d.hidden = true; });
-        box.querySelectorAll(".lib-row").forEach((r) => r.classList.remove("lib-open"));
-        det.hidden = !open;
-        row.classList.toggle("lib-open", open);
-      });
+        "</span></div>";
+      row.querySelector(".lib-row-head").addEventListener("click", () => openDetail(it));
       box.appendChild(row);
       if (i >= 399) { // seguridad: nunca más de 400 filas renderizadas
         const more = document.createElement("p");

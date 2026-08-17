@@ -12,14 +12,13 @@ body.locked main, body.locked footer { display: none; }
   position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(10, 8, 10, 0.52) 0%, rgba(10, 8, 10, 0.26) 45%, rgba(10, 8, 10, 0.74) 100%),
-    url("../assets/dragon-gate.svg") center / cover no-repeat,
+    linear-gradient(180deg, rgba(10, 8, 10, 0.45) 0%, rgba(10, 8, 10, 0.20) 40%, rgba(10, 8, 10, 0.80) 100%),
+    url("../assets/login-bg.png") center / cover no-repeat,
     #0d0a08;
-  animation: dragon-drift 42s ease-in-out infinite alternate;
 }
-@keyframes dragon-drift { /* deriva lenta de la cámara sobre el dragón */
-  from { background-position: 0 0, 50% 38%, 0 0; }
-  to   { background-position: 0 0, 50% 62%, 0 0; }
+@keyframes dragon-drift { /* deriva lenta de la cámara sobre el fondo */
+  from { background-position: 0 0, 50% 48%, 0 0; }
+  to   { background-position: 0 0, 50% 52%, 0 0; }
 }
 #login-gate::before { /* textura de viñeta */
   content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -206,11 +205,178 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
 #mx-status.ok { color: var(--green); }
 #mx-status.err { color: var(--crimson-light); }
 
+/* ============================================================
+   Sidebar de secciones en la ficha (desktop)
+   ============================================================ */
+#tab-sheet { position: relative; }
+.sheet-sidebar {
+  display: none;
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 200px;
+  padding: 92px 10px 20px 14px;
+  background: rgba(13, 14, 18, 0.98);
+  border-right: 1px solid var(--border);
+  z-index: 40;
+  overflow-y: auto;
+}
+.sheet-sidebar-inner h3 {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+.sheet-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sheet-nav a {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.sheet-nav a:hover, .sheet-nav a.active {
+  background: rgba(179, 18, 46, 0.15);
+  color: var(--text);
+}
+.sheet-nav-toggle {
+  display: none;
+  position: fixed;
+  left: 14px; bottom: 18px;
+  z-index: 55;
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  background: var(--crimson);
+  border-color: var(--crimson-light);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+}
+.sheet-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 45;
+}
+body.sheet-nav-open .sheet-sidebar { display: block; }
+body.sheet-nav-open .sheet-overlay { display: block; }
+
+/* ============================================================
+   Modal de detalle (Biblioteca)
+   ============================================================ */
+.modal {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal[hidden] { display: none; }
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+}
+.modal-card {
+  position: relative;
+  width: min(720px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  display: flex; flex-direction: column;
+}
+.modal-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h2 { margin: 0; font-size: 1.05rem; color: var(--crimson-light); }
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+.modal-actions {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
+}
+
+/* ============================================================
+   Mejoras mobile-first adicionales
+   ============================================================ */
+.skill-row { min-height: 38px; }
+.skill-row input[type="checkbox"] { width: 20px; height: 20px; }
+button, .btn { min-height: 38px; }
+#btn-header-export, #btn-header-import { min-width: 38px; }
+
+/* ----- Desktop: sidebar visible ----- */
+@media (min-width: 1024px) {
+  .sheet-sidebar { display: block; }
+  #tab-sheet { padding-left: 210px; }
+  main { max-width: none; padding-left: 16px; }
+}
+
+/* ============================================================
+   Combate: barra de acciones táctil
+   ============================================================ */
+.combat-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.ca-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  min-height: 64px;
+  padding: 8px 4px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.ca-btn span { font-size: 1.4rem; line-height: 1; }
+.ca-btn:hover { border-color: var(--crimson); background: #232634; }
+.ca-btn:active { transform: scale(0.96); }
+.ca-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ca-btn.btn-crimson { background: linear-gradient(180deg, var(--crimson), var(--crimson-dark)); border-color: var(--crimson-light); color: #fff; }
+.ca-btn.btn-crimson:hover { background: linear-gradient(180deg, var(--crimson-light), var(--crimson)); }
+
+.attack-panel { border-left-color: var(--crimson); }
+.atk-grid { grid-template-columns: repeat(3, 1fr); }
+
+#c-log-toggle { margin-left: auto; }
+.combat-log.collapsed { display: none; }
+
+/* Tablero táctil */
+.cell { min-height: 34px; }
+
 /* ----- Responsive: grids de 4 → 2 en pantallas estrechas ----- */
 @media (max-width: 720px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .ability-grid { grid-template-columns: repeat(3, 1fr); }
   .keystat-grid .field input, .hp-grid .field input { font-size: 1.15rem; }
+  .sheet-nav-toggle { display: block; }
+}
+
+@media (max-width: 600px) {
+  .grid-4 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-5 { grid-template-columns: repeat(2, 1fr); }
+  .ability-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ----- Accesibilidad: sin animaciones si el usuario lo prefiere ----- */

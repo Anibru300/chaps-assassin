@@ -134,6 +134,34 @@ function spawnEnemy(key) {
   return e;
 }
 
+/** Crea un enemigo "custom" a partir de los datos de la Biblioteca (SRD 2024). */
+function addEnemyFromLibrary(data) {
+  const name = data.name || "Enemigo";
+  const key = "lib" + Date.now();
+  const attacks = Array.isArray(data.attacks) && data.attacks.length
+    ? data.attacks
+    : [{ es: "Ataque", en: "Attack", bonus: data.bonus || 0, dmg: data.dmg || "1d6", melee: 5, range: null }];
+  const tpl = {
+    key, cat: "custom", role: "melee",
+    es: name, en: name, cr: data.cr || "—",
+    hp: Math.max(1, parseInt(data.hp, 10) || 10),
+    ac: parseInt(data.ac, 10) || 12,
+    speed: parseInt(data.speed, 10) || 30,
+    init: typeof data.init === "number" ? data.init : (data.dex ? Math.floor((data.dex - 10) / 2) : 0),
+    percep: data.pp || 0,
+    mods: { str: 0, dex: data.dex || 0, con: 0, int: 0, wis: 0, cha: 0 },
+    attacks
+  };
+  ENEMIES.push(tpl);
+  const e = spawnEnemy(key);
+  if (e) {
+    combat.enemies.push(e);
+    renderSetup();
+    renderCombat();
+  }
+  return e;
+}
+
 /* ---------- Tablero (Fase 2): rejilla 12×8, casilla = 5 ft ---------- */
 const BOARD = { w: 12, h: 8 };
 
@@ -1121,6 +1149,15 @@ function initCombat() {
     combat.on = false; combat.log = []; combat.enemies = []; combat.p = null;
     renderSetup(); renderCombat();
   });
+  const logToggle = ctEl("c-log-toggle");
+  if (logToggle) {
+    logToggle.addEventListener("click", () => {
+      const log = ctEl("c-log");
+      const collapsed = log.classList.toggle("collapsed");
+      logToggle.textContent = collapsed ? "Mostrar" : "Ocultar";
+      logToggle.setAttribute("aria-expanded", String(!collapsed));
+    });
+  }
   ctEl("c-btn-attack").addEventListener("click", openAttackPanel);
   ctEl("c-atk-roll").addEventListener("click", confirmAttack);
   ctEl("c-atk-cancel").addEventListener("click", () => { ctEl("c-attack-panel").hidden = true; });
