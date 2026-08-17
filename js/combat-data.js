@@ -179,7 +179,7 @@ const CT = {
     // motor
     atkRoll: "Ataque", vsAc: "vs CA", hitWord: "Impacto", missWord: "Fallo", critWord: "¡CRÍTICO!",
     dmgWord: "Daño", sneakNoFinesse: "arma sin Sutil/distancia: no hay Ataque Furtivo",
-    noRange: "fuera de alcance", longRangeDis: "largo alcance: desventaja",
+    noRange: "fuera de alcance", noLoS: "sin línea de visión", longRangeDis: "largo alcance: desventaja",
     rangedInMelee: "a distancia con enemigo a 5 ft: desventaja",
     saveLog: "salvación", savePass: "SUPERA", saveFail: "FALLA",
     condApplied: "Estado aplicado", condEnd: "supera el estado",
@@ -229,7 +229,7 @@ const CT = {
     initLog: "Initiative", orderLog: "Turn order",
     atkRoll: "Attack", vsAc: "vs AC", hitWord: "Hit", missWord: "Miss", critWord: "CRITICAL!",
     dmgWord: "Damage", sneakNoFinesse: "weapon lacks Finesse/Ranged: no Sneak Attack",
-    noRange: "out of range", longRangeDis: "long range: Disadvantage",
+    noRange: "out of range", noLoS: "no line of sight", longRangeDis: "long range: Disadvantage",
     rangedInMelee: "ranged attack with an enemy within 5 ft: Disadvantage",
     saveLog: "save", savePass: "SUCCEEDS", saveFail: "FAILS",
     condApplied: "Condition applied", condEnd: "shakes off the condition",

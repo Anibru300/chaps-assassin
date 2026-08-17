@@ -160,5 +160,26 @@ A(combat.log.some(l=>l.html.includes("castLog")||l.html.includes("🔮")),"el he
 const victoria=combat.enemies.every(x=>x.hp<=0);
 console.log("resultado:",victoria?"victoria CHAPS":"derrota","| PG jugador:",combat.p.hp);
 console.log(combat.log.slice(-6).map(l=>l.html.replace(/<[^>]+>/g,"")).join(" || "));
+
+// --- Mapa y obstáculos ---
+clearMap();
+A(combat.map.obstacles.length===0,"mapa limpio");
+addObstacle(5,3,"pillar");
+A(cellBlocked(5,3),"pilar bloquea celda");
+A(!cellBlocked(4,3),"celda vecina libre");
+combat.p=newCombatPlayer();combat.p.pos={x:1,y:3};
+const testEnemy=spawnEnemy("orc");testEnemy.pos={x:9,y:3};combat.enemies=[testEnemy];
+A(!hasLineOfSight(combat.p.pos,testEnemy.pos),"pilar bloquea línea de visión");
+removeObstacle(5,3);
+A(hasLineOfSight(combat.p.pos,testEnemy.pos),"al quitar pilar hay línea de visión");
+generateRandomMap(0.25);
+A(combat.map.obstacles.length>0,"mapa aleatorio genera obstáculos");
+ensureConnectivity();
+const freeRight=findFreeCell((x)=>x>=BOARD.w-3);
+testEnemy.pos=freeRight||{x:BOARD.w-3,y:3};
+const path=reachableCells(combat.p.pos,50);
+A(path.some(c=>distBetween(c,testEnemy.pos)<=5),"mapa aleatorio deja camino al enemigo");
+A(hasLineOfSight(combat.p.pos,testEnemy.pos)||path.some(c=>hasLineOfSight(c,testEnemy.pos)),"existe línea de visión alcanzable");
+console.log("mapa aleatorio:",combat.map.obstacles.length,"obstáculos | tema:",combat.map.theme);
 `;
 vm.runInContext(src + test, ctx);

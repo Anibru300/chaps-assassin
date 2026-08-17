@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0d0e12">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css?v=4">
-  <link rel="stylesheet" href="css/v4.css?v=13">
+  <link rel="stylesheet" href="css/v4.css?v=14">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -557,6 +557,45 @@
           </div>
           <button class="btn btn-small" id="c-btn-custom" data-i18n="ctCustomAdd">+ Crear y añadir</button>
         </details>
+
+        <!-- Editor de mapa -->
+        <details class="mastery-glossary" id="map-editor">
+          <summary>🗺 Editor de mapa</summary>
+          <div class="grid grid-4">
+            <label class="field"><span>Tema del suelo</span>
+              <select id="me-theme">
+                <option value="stone">Piedra</option>
+                <option value="wood">Madera</option>
+                <option value="grass">Hierba</option>
+                <option value="mosaic">Mosaico</option>
+              </select></label>
+            <label class="field"><span>Pincel</span>
+              <select id="me-brush">
+                <option value="pillar">⬛ Pilar</option>
+                <option value="crate">📦 Caja</option>
+                <option value="barrel">🛢 Barril</option>
+                <option value="wall">🧱 Muro</option>
+                <option value="erase">🧽 Borrador</option>
+              </select></label>
+            <label class="field"><span>Densidad aleatoria</span>
+              <input type="range" id="me-density" min="0" max="40" value="20"></label>
+            <label class="field checkbox-field"><input type="checkbox" id="me-auto" checked>
+              <span>Auto al iniciar</span></label>
+            <div class="field"><span>&nbsp;</span>
+              <button class="btn btn-small" id="me-random">🎲 Mapa aleatorio</button></div>
+          </div>
+          <div class="rest-row">
+            <button class="btn btn-small" id="me-clear">Limpiar mapa</button>
+            <input type="text" id="me-slot-name" class="weapon-catalog" placeholder="Nombre del mapa…">
+            <button class="btn btn-small" id="me-save">💾 Guardar</button>
+            <select id="me-slot-list" class="weapon-catalog"></select>
+            <button class="btn btn-small" id="me-load">📂 Cargar</button>
+            <button class="btn btn-small btn-crimson" id="me-toggle">✏ Activar editor</button>
+          </div>
+          <p class="hint">Activa el editor y toca/arrastra sobre el tablero para pintar obstáculos. Los obstáculos bloquean movimiento y línea de visión. Se guardan en este dispositivo.</p>
+          <div id="me-board" class="board"></div>
+        </details>
+
         <div id="c-queue"></div>
       </div>
 
@@ -771,7 +810,7 @@
   <script src="js/data.js?v=3"></script>
   <script src="js/app.js?v=4"></script>
   <script src="js/combat-data.js?v=3"></script>
-  <script src="js/combat.js?v=6"></script>
+  <script src="js/combat.js?v=7"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>
