@@ -388,7 +388,10 @@ function playerAttack(w, e, opts) {
   p.steady = false;
   p.hidden = false; // atacar revela tu posición
 
+  fxLine(p.pos, e.pos);
   if (!isHit) {
+    fxMiss(e);
+    flashCell(e.pos.x, e.pos.y, "flash-miss");
     // Graze: al FALLAR, daño = modificador de la característica
     if (mastActive === "graze") {
       const g = Math.max(0, dexMod());
@@ -436,6 +439,8 @@ function playerAttack(w, e, opts) {
   }
 
   e.hp = Math.max(0, e.hp - dmg);
+  fxHit(e, dmg, crit);
+  flashCell(e.pos.x, e.pos.y, crit ? "flash-crit" : "shake");
   let html = `⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong><br>` +
     `${parts.join(" + ")} = <strong>${dmg} ${ct("dmgWord")}</strong> [${eName(e)}: ${e.hp}/${e.maxHp} PG]`;
   if (reasons.length) html += `<br><em>${reasons.join(" · ")}</em>`;
@@ -599,7 +604,10 @@ function enemyAttackRoll(e, atk, isOA) {
   const isHit = chosen !== 1 && (chosen === 20 || total >= tgtAc);
   const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
   const aName = LANG === "es" ? atk.es : atk.en;
+  fxLine(e.pos, p.pos);
   if (!isHit) {
+    fxMissAt(p.pos.x, p.pos.y);
+    flashCell(p.pos.x, p.pos.y, "flash-miss");
     cLog(`🛡 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${tgtAc} → <em>${ct("missWord")}</em>`, "log-miss");
     if (p.hidden) { p.hidden = false; }
     return 0;
@@ -626,6 +634,8 @@ function enemyAttackRoll(e, atk, isOA) {
     }
   }
   p.hp = Math.max(0, p.hp - dmg);
+  fxHitAt(p.pos.x, p.pos.y, dmg, crit);
+  flashCell(p.pos.x, p.pos.y, crit ? "flash-crit" : "shake");
   if (p.hidden) p.hidden = false;
   cLog(`🩸 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${tgtAc} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong> — ${dmg} ${ct("dmgWord")} [${p.proxy ? p.name : state.name}: ${p.hp} PG]`, "log-miss");
   checkCombatEnd();
@@ -964,6 +974,7 @@ function renderBoard() {
   bd.style.gridTemplateColumns = `repeat(${BOARD.w}, 1fr)`;
   for (let y = 0; y < BOARD.h; y++) for (let x = 0; x < BOARD.w; x++) {
     const cell = document.createElement("div");
+    cell.id = `cell-${x}-${y}`;
     cell.className = "cell" + ((x + y) % 2 ? " alt" : "");
     if (reach.has(x + "," + y)) cell.classList.add("reach");
     if (p && p.pos.x === x && p.pos.y === y) {
@@ -990,6 +1001,83 @@ function renderBoard() {
   }
 }
 
+/* ---------- Efectos visuales del tablero ---------- */
+function cellCenter(x, y) {
+  const cell = ctEl(`cell-${x}-${y}`);
+  if (!cell) return null;
+  const bd = ctEl("c-board").getBoundingClientRect();
+  const r = cell.getBoundingClientRect();
+  return { x: r.left - bd.left + r.width / 2, y: r.top - bd.top + r.height / 2 };
+}
+
+function boardFx(type, x, y, text) {
+  const bd = ctEl("c-board");
+  if (!bd) return;
+  const pos = cellCenter(x, y);
+  if (!pos) return;
+  const el = document.createElement("div");
+  el.className = "board-fx " + type;
+  if (text) el.textContent = text;
+  el.style.left = pos.x + "px";
+  el.style.top = pos.y + "px";
+  bd.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function fxHitAt(x, y, dmg, crit) {
+  boardFx(crit ? "crit" : "hit", x, y, dmg ? "−" + dmg : "");
+}
+
+function fxHit(e, dmg, crit) {
+  fxHitAt(e.pos.x, e.pos.y, dmg, crit);
+}
+
+function fxMissAt(x, y) {
+  boardFx("miss", x, y, "×");
+}
+
+function fxMiss(e) {
+  fxMissAt(e.pos.x, e.pos.y);
+}
+
+function flashCell(x, y, cls) {
+  const cell = ctEl(`cell-${x}-${y}`);
+  if (!cell) return;
+  cell.classList.add(cls);
+  setTimeout(() => cell.classList.remove(cls), 500);
+}
+
+function fxLine(from, to) {
+  const bd = ctEl("c-board");
+  if (!bd) return;
+  const a = cellCenter(from.x, from.y), b = cellCenter(to.x, to.y);
+  if (!a || !b) return;
+  const line = document.createElement("div");
+  line.className = "fx-line";
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  const ang = Math.atan2(dy, dx);
+  line.style.width = len + "px";
+  line.style.left = a.x + "px";
+  line.style.top = a.y + "px";
+  line.style.transform = `rotate(${ang}rad)`;
+  bd.appendChild(line);
+  setTimeout(() => line.remove(), 500);
+}
+
+function renderSuggestions() {
+  if (!combat.on || !isPlayerTurn() || !combat.p) return "";
+  const p = combat.p;
+  const tips = [];
+  if (combat.round === 1) tips.push("🗡 1ª ronda: <strong>Asesinar</strong> da ventaja y +" + state.level + " daño si el enemigo no ha actuado.");
+  const meleeFoes = combat.enemies.filter((e) => e.hp > 0 && distOf(e) <= 5);
+  if (meleeFoes.length && !p.diseng && !p.withdraw) tips.push("⚠ Enemigo a 5 ft. <strong>Retirarse</strong> evita ataques de oportunidad.");
+  if (!p.hidden && !p.steady && p.ba && meleeFoes.length === 0) tips.push("🌑 <strong>Esconderse</strong> → ataque con ventaja → Furtivo.");
+  if (!p.steady && p.ba && p.move > 0 && meleeFoes.length === 0) tips.push("🎯 <strong>Puntería Firme</strong> da ventaja en tu próximo ataque.");
+  if (p.nickReady && p.ba) tips.push("🗡 Arma ligera: puedes hacer un <strong>ataque extra</strong>.");
+  return tips.length ? "💡 " + tips[0] : "";
+}
+
 function renderCombat() {
   const area = ctEl("c-arena");
   if (!area) return;
@@ -1001,12 +1089,16 @@ function renderCombat() {
   const ord = ctEl("c-order");
   ord.innerHTML = "";
   combat.order.forEach((o, i) => {
-    const span = document.createElement("span");
     const isCur = combat.on && i === combat.turn;
     const dead = o.who === "e" && combat.enemies[o.idx].hp <= 0;
-    span.className = "init-chip" + (isCur ? " cur" : "") + (dead ? " dead" : "");
-    span.textContent = (o.who === "p" ? state.name : eName(combat.enemies[o.idx])) + ` (${o.init})`;
-    ord.appendChild(span);
+    const div = document.createElement("div");
+    div.className = "init-chip" + (isCur ? " cur" : "") + (dead ? " dead" : "");
+    const name = o.who === "p" ? state.name : eName(combat.enemies[o.idx]);
+    const hpPct = o.who === "p" ? (combat.p.hp / state.hpMax * 100) : (combat.enemies[o.idx].hp / combat.enemies[o.idx].maxHp * 100);
+    const conds = o.who === "e" ? condBadges(combat.enemies[o.idx]) : "";
+    div.innerHTML = `<span><strong>${name}</strong> · ${o.init}${conds ? " " + conds : ""}</span>
+      <span class="init-hp-bar" aria-hidden="true"><span class="init-hp-fill" style="width:${Math.max(0, hpPct)}%"></span></span>`;
+    ord.appendChild(div);
   });
 
   if (!combat.p) return;
@@ -1028,6 +1120,10 @@ function renderCombat() {
     (p.diseng ? `<span class="cond-badge">Disengage</span>` : "") +
     (p.steady ? `<span class="cond-badge">🎯 Steady</span>` : "") +
     p.conds.map((c) => `<span class="cond-badge">😵 ${c.id}</span>`).join("");
+
+  // Sugerencias contextuales
+  const sug = ctEl("c-suggestions");
+  if (sug) sug.innerHTML = renderSuggestions();
 
   // Enemigos
   const eList = ctEl("c-enemies");
