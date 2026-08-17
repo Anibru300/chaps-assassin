@@ -1,0 +1,26 @@
+{
+  "name": "CHAPS — Asesino D&D 2024",
+  "short_name": "CHAPS",
+  "description": "Ficha y asistente de combate para CHAPS, pícaro asesino D&D 2024.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d0e12",
+  "theme_color": "#0d0e12",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "es"
+}

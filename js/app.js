@@ -1425,6 +1425,33 @@ const LIB_MODAL = {
 
 function initLibraryModal() { LIB_MODAL.init(); }
 
+/* ---------- PWA: Service Worker + instalación ---------- */
+function initPWA() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch((err) => console.warn("SW error", err));
+  }
+  let deferredPrompt = null;
+  const installBtn = $("#btn-install");
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.hidden = false;
+  });
+  if (installBtn) {
+    installBtn.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") installBtn.hidden = true;
+      deferredPrompt = null;
+    });
+  }
+  window.addEventListener("appinstalled", () => {
+    if (installBtn) installBtn.hidden = true;
+    deferredPrompt = null;
+  });
+}
+
 /* ---------- Arranque ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
@@ -1434,6 +1461,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSheetSidebar();
   initHeaderPersistence();
   initLibraryModal();
+  initPWA();
   if (typeof initCombat === "function") initCombat(); // motor de combate (Fase 1)
   $("#lang-toggle").addEventListener("click", toggleLang);
   renderAll();

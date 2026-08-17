@@ -40,9 +40,12 @@ Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defect
 No necesita servidor ni instalación: **haz doble clic en `index.html`** y se abre en tu navegador. Funciona sin conexión (la Biblioteca necesita internet solo la primera vez que abres cada categoría).
 
 ### En GitHub Pages
-1. Crea un repositorio en GitHub y sube el contenido de esta carpeta (`index.html`, `css/`, `js/`).
+1. Crea un repositorio en GitHub y sube el contenido de esta carpeta (`index.html`, `css/`, `js/`, `manifest.json`, `sw.js`, `assets/`).
 2. En el repositorio: **Settings → Pages → Source: Deploy from a branch**, elige la rama (`main`) y la carpeta raíz (`/root`).
 3. Espera un minuto y abre la URL que te indica GitHub: `https://<tu-usuario>.github.io/<repo>/`.
+
+### Instalar en el celular (PWA)
+La app cuenta con **Web App Manifest** y **Service Worker**, por lo que el navegador ofrecerá "Añadir a pantalla de inicio" / "Instalar aplicación". También puedes pulsar el botón flotante **📲 Instalar aplicación** cuando aparezca. Funciona offline una vez cargada (la Biblioteca necesita internet solo la primera vez que abres cada categoría).
 
 ## Importar desde PCGen
 

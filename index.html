@@ -4,9 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CHAPS — Asesino D&D 2024</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗡</text></svg>">
+  <link rel="icon" href="assets/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="theme-color" content="#0d0e12">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css?v=4">
-  <link rel="stylesheet" href="css/v4.css?v=9">
+  <link rel="stylesheet" href="css/v4.css?v=10">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -732,6 +735,8 @@
     </div>
   </div>
 
+  <button type="button" id="btn-install" class="install-btn" hidden>📲 Instalar aplicación</button>
+
   <footer class="app-footer">
     <p data-i18n="footer"></p>
   </footer>
@@ -739,7 +744,7 @@
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/auth.js?v=3"></script>
   <script src="js/data.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/app.js?v=4"></script>
   <script src="js/combat-data.js?v=3"></script>
   <script src="js/combat.js?v=3"></script>
   <script src="js/simulador.js?v=4"></script>
