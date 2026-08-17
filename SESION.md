@@ -18,7 +18,7 @@ Ficha web de CHAPS (Pícaro Asesino N12, D&D 2024, Dragonlance). Sitio estático
 - ✅ Sidebar de secciones en la ficha (desktop) + botón flotente en móvil.
 - ✅ Mobile-first: grids 1 col, tablas con scroll, inputs 16 px, botones táctiles ≥ 44 px.
 - ✅ Header con botones rápidos de exportar/importar JSON.
-- ✅ Combate: barra de acciones con iconos, log colapsable, panel de ataque destacado.
+- ✅ Combate: barra de acciones con iconos, log colapsable, panel de ataque destacado, animaciones de impacto, tracker vertical, sugerencias contextuales, selector de estrategia enemiga, simulador Monte Carlo, resumen post-combate.
 - ✅ PWA básica: `manifest.json`, `sw.js`, iconos 192/512 y botón "Instalar aplicación".
 - ✅ Biblioteca: detalle en modal, "Añadir como enemigo" y "Añadir a armas".
 - ❌ Tab "Simulador" ELIMINADA (HTML+JS). Helpers conservados en app.js: `dexMod`, `saveDC`, `maxCunningStrikes` (los usa combat.js).

@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0d0e12">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css?v=4">
-  <link rel="stylesheet" href="css/v4.css?v=11">
+  <link rel="stylesheet" href="css/v4.css?v=12">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -560,6 +560,16 @@
 
       <!-- Arena -->
       <div id="c-arena" hidden>
+        <!-- Resumen post-combate -->
+        <div class="card" id="c-summary" hidden>
+          <h2>🏁 Resumen del combate</h2>
+          <div id="c-summary-body"></div>
+          <div class="rest-row">
+            <button class="btn btn-crimson" id="c-summary-save">Guardar PG en ficha</button>
+            <button class="btn" id="c-summary-reset">Nuevo combate</button>
+          </div>
+        </div>
+
         <div class="card">
           <div class="combat-head">
             <h2 id="c-round">RONDA 1</h2>
@@ -645,6 +655,18 @@
         </div>
         <div id="dice-result" class="dice-result"></div>
         <ul id="dice-log" class="combat-log dice-log"></ul>
+      </div>
+
+      <!-- Simulador de encuentro -->
+      <div class="card" id="sim-card">
+        <div class="combat-head">
+          <h2>🎲 Simulador de encuentro</h2>
+        </div>
+        <p class="hint">Simula el combate actual 100 veces con una IA básica para estimar dificultad.</p>
+        <div class="rest-row">
+          <button class="btn btn-crimson" id="c-btn-sim">Simular 100 combates</button>
+        </div>
+        <div id="sim-result" class="sim-result"></div>
       </div>
 
       <!-- Calculadora de daño por turno -->
@@ -747,7 +769,7 @@
   <script src="js/data.js?v=3"></script>
   <script src="js/app.js?v=4"></script>
   <script src="js/combat-data.js?v=3"></script>
-  <script src="js/combat.js?v=4"></script>
+  <script src="js/combat.js?v=5"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>

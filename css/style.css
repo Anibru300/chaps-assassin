@@ -588,6 +588,15 @@ td { padding: 6px 8px; border-bottom: 1px solid #1f222c; vertical-align: middle;
 }
 .hint-inline { font-size: 0.8rem; color: var(--text-dim); }
 #c-queue .enemy-row { border-bottom: 1px dashed #1f222c; }
+.enemy-strategy {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  padding: 3px 6px;
+  font-size: 0.75rem;
+  max-width: 110px;
+}
 
 /* ---------- Tablero de combate (Fase 2) ---------- */
 .board {

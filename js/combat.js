@@ -131,6 +131,7 @@ function spawnEnemy(key) {
   e.conds = [];       // [{id, expire}] expire: nº de SUS turnos restantes (condiciones con duración)
   e.acted = false;    // para Asesinar (1ª ronda)
   e.react = true;
+  e.strategy = e.strategy || "closest";
   return e;
 }
 
@@ -253,6 +254,7 @@ function startCombat() {
   combat.turn = 0;
   combat.p = newCombatPlayer();
   combat.log = [];
+  combat.stats = { dmg: 0, taken: 0, crits: 0, hits: 0, rounds: 0 };
   combat.enemies.forEach((e) => { e.acted = false; e.conds = []; e.hp = e.maxHp; e.react = true; });
   // Colocación inicial: jugador a la izquierda, enemigos a la derecha (~30-35 ft)
   combat.p.pos = { x: 1, y: Math.floor(BOARD.h / 2) };
@@ -313,6 +315,83 @@ function nextTurn() {
   beginTurn();
 }
 
+function cloneCombatState() {
+  return {
+    on: combat.on, round: combat.round, turn: combat.turn, order: structuredClone(combat.order),
+    enemies: structuredClone(combat.enemies), p: combat.p ? structuredClone(combat.p) : null,
+    log: combat.log.slice(), diff: combat.diff
+  };
+}
+
+function restoreCombatState(saved) {
+  combat.on = saved.on; combat.round = saved.round; combat.turn = saved.turn;
+  combat.order = saved.order; combat.enemies = saved.enemies; combat.p = saved.p;
+  combat.log = saved.log; combat.diff = saved.diff;
+}
+
+/** Simula un único combate contra los enemigos actuales. Devuelve resultado. */
+function simulateOne() {
+  const saved = cloneCombatState();
+  const savedHp = state.hpCurrent;
+  combat.quiet = true;
+  combat.enemies = saved.enemies.map((e) => spawnEnemy(e.key)).filter(Boolean);
+  combat.p = null; combat.order = []; combat.log = []; combat.on = false;
+  startCombat();
+  let safety = 0;
+  while (combat.on && safety < 500) {
+    const cur = currentCombatant();
+    if (cur.who === "p") {
+      // IA simple del jugador: atacar al enemigo vivo más cercano
+      const target = combat.enemies.filter((e) => e.hp > 0).sort((a, b) => distOf(a) - distOf(b))[0];
+      if (target) {
+        const w = state.weapons[0];
+        const canSneak = !combat.p.sneak;
+        playerAttack(w, target, { ally: false, strikes: [] });
+      }
+      nextTurn();
+    }
+    safety++;
+  }
+  const result = {
+    victory: combat.enemies.every((e) => e.hp <= 0),
+    rounds: combat.round,
+    hpLeft: combat.p ? combat.p.hp : 0,
+    hpMax: state.hpMax
+  };
+  combat.quiet = false;
+  restoreCombatState(saved);
+  state.hpCurrent = savedHp;
+  return result;
+}
+
+function runMonteCarlo(runs) {
+  runs = runs || 100;
+  const results = [];
+  for (let i = 0; i < runs; i++) results.push(simulateOne());
+  const wins = results.filter((r) => r.victory).length;
+  const avgRounds = results.reduce((a, r) => a + r.rounds, 0) / runs;
+  const avgHp = results.reduce((a, r) => a + r.hpLeft, 0) / runs;
+  return { runs, wins, losses: runs - wins, winPct: Math.round(wins / runs * 100), avgRounds: avgRounds.toFixed(1), avgHp: Math.round(avgHp) };
+}
+
+function renderSummary() {
+  const card = ctEl("c-summary");
+  const body = ctEl("c-summary-body");
+  if (!card || !body) return;
+  if (combat.on) { card.hidden = true; return; }
+  card.hidden = false;
+  const s = combat.stats || { dmg: 0, taken: 0, crits: 0, hits: 0 };
+  const victory = combat.enemies.every((e) => e.hp <= 0);
+  body.innerHTML = `
+    <p class="hint">${victory ? "✅ Victoria" : "💀 Derrota"} · ${combat.round} rondas</p>
+    <div class="summary-grid">
+      <div class="summary-box"><div class="v">${s.dmg}</div><div class="l">Daño infligido</div></div>
+      <div class="summary-box"><div class="v">${s.taken}</div><div class="l">Daño recibido</div></div>
+      <div class="summary-box"><div class="v">${s.hits}</div><div class="l">Impactos</div></div>
+      <div class="summary-box"><div class="v">${s.crits}</div><div class="l">Críticos</div></div>
+    </div>`;
+}
+
 function checkCombatEnd() {
   if (!combat.on) return;
   if (combat.enemies.every((e) => e.hp <= 0)) {
@@ -322,7 +401,10 @@ function checkCombatEnd() {
     combat.on = false;
     cLog(ct("defeat"), "log-dead");
   }
-  if (!combat.on && typeof renderCombat === "function") renderCombat();
+  if (!combat.on) {
+    if (typeof renderCombat === "function") renderCombat();
+    renderSummary();
+  }
 }
 
 /* ================= ATAQUE DEL JUGADOR ================= */
@@ -504,7 +586,7 @@ function playerAttack(w, e, opts) {
     cLog(`🗡 ${ct("mNick")}${p.nickFree ? " (Nick: " + ct("mNickFree") + ")" : ""}`, "log-info");
   }
 
-  if (combat.stats) { combat.stats.dmg += dmg; if (crit) combat.stats.crits++; }
+  if (combat.stats) { combat.stats.dmg += dmg; combat.stats.hits++; if (crit) combat.stats.crits++; }
   if (e.hp <= 0) cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead");
   checkCombatEnd();
   if (typeof renderCombat === "function") renderCombat();
@@ -634,6 +716,7 @@ function enemyAttackRoll(e, atk, isOA) {
     }
   }
   p.hp = Math.max(0, p.hp - dmg);
+  if (combat.stats) combat.stats.taken += dmg;
   fxHitAt(p.pos.x, p.pos.y, dmg, crit);
   flashCell(p.pos.x, p.pos.y, crit ? "flash-crit" : "shake");
   if (p.hidden) p.hidden = false;
@@ -783,8 +866,22 @@ function dragonBreath(e) {
   checkCombatEnd();
 }
 
+function enemyIntent(e) {
+  if (e.hp <= 0) return "";
+  if (e.coward && e.hp < e.maxHp / 4 && combat.diff !== "easy") return `🏃 ${eName(e)} intenta huir`;
+  if (e.role === "caster" && e.spells && e.spells.some((s) => s.usesLeft > 0)) return `🔮 ${eName(e)} prepara un hechizo`;
+  if (e.breath && e.breath.ready && distOf(e) <= 15) return `🐉 ${eName(e)} va a usar aliento`;
+  const inMelee = distOf(e) <= 5;
+  const hasRanged = e.attacks.some((a) => a.range);
+  if (inMelee && hasRanged) return `🏹 ${eName(e)} se aleja y dispara`;
+  if (inMelee) return `⚔ ${eName(e)} ataca cuerpo a cuerpo`;
+  return `⚔ ${eName(e)} se acerca para atacar`;
+}
+
 function enemyTakeTurn(e) {
   if (e.hp <= 0) { enemyEndTurn(e); return; }
+  const intent = enemyIntent(e);
+  if (intent) cLog(intent, "log-info");
   cLog(`🤖 ${eName(e)} ${ct("aiThink")}`, "log-info");
   e.smiteUsed = false;
   // Dragón: recarga de aliento (5-6 en d6)
@@ -942,11 +1039,19 @@ function renderSetup() {
     const div = document.createElement("div");
     div.className = "enemy-row";
     div.innerHTML = `<span><strong>${eName(e)}</strong> — ${e.hp} PG · CA ${e.ac} · ${e.speed} ft</span>
+      <select class="enemy-strategy" data-sq="${i}" title="Estrategia de IA">
+        <option value="closest" ${e.strategy === "closest" ? "selected" : ""}>Cercano</option>
+        <option value="weakest" ${e.strategy === "weakest" ? "selected" : ""}>Más débil</option>
+        <option value="damaged" ${e.strategy === "damaged" ? "selected" : ""}>Más dañado</option>
+        <option value="random" ${e.strategy === "random" ? "selected" : ""}>Aleatorio</option>
+      </select>
       <button class="btn btn-small btn-danger" data-eq="${i}">✕</button>`;
     list.appendChild(div);
   });
   list.querySelectorAll("[data-eq]").forEach((b) =>
     b.addEventListener("click", () => { combat.enemies.splice(+b.dataset.eq, 1); renderSetup(); }));
+  list.querySelectorAll("[data-sq]").forEach((s) =>
+    s.addEventListener("change", () => { combat.enemies[+s.dataset.sq].strategy = s.value; }));
 }
 
 function condBadges(e) {
@@ -1269,5 +1374,32 @@ function initCombat() {
     renderIdentity();
     alert(t("saved"));
   });
+  const saveSummary = ctEl("c-summary-save");
+  const resetSummary = ctEl("c-summary-reset");
+  if (saveSummary) saveSummary.addEventListener("click", () => {
+    if (combat.p) { state.hpCurrent = combat.p.hp; saveState(); renderIdentity(); alert(t("saved")); }
+  });
+  if (resetSummary) resetSummary.addEventListener("click", () => {
+    combat.on = false; combat.log = []; combat.enemies = []; combat.p = null;
+    renderSetup(); renderCombat();
+  });
+  const simBtn = ctEl("c-btn-sim");
+  if (simBtn) {
+    simBtn.addEventListener("click", () => {
+      simBtn.disabled = true;
+      simBtn.textContent = "Simulando…";
+      setTimeout(() => {
+        const r = runMonteCarlo(100);
+        const box = ctEl("sim-result");
+        box.innerHTML = `
+          <div class="sim-box"><div class="v">${r.winPct}%</div><div class="l">Victorias</div></div>
+          <div class="sim-box"><div class="v">${r.avgRounds}</div><div class="l">Rondas medias</div></div>
+          <div class="sim-box"><div class="v">${r.avgHp}</div><div class="l">PG restantes (media)</div></div>
+          <div class="sim-box"><div class="v">${r.losses}</div><div class="l">Derrotas</div></div>`;
+        simBtn.disabled = false;
+        simBtn.textContent = "Simular 100 combates";
+      }, 50);
+    });
+  }
   renderSetup();
 }

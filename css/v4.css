@@ -380,6 +380,37 @@ button, .btn { min-height: 38px; }
 
 #c-log-toggle { margin-left: auto; }
 .combat-log.collapsed { display: none; }
+.sim-result {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.sim-result .sim-box {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.sim-result .sim-box .v { font-size: 1.25rem; font-weight: 700; color: var(--gold); }
+.sim-result .sim-box .l { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-top: 2px; }
+#c-summary { border-left-color: var(--gold); }
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+.summary-box {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.summary-box .v { font-size: 1.25rem; font-weight: 700; color: var(--gold); }
+.summary-box .l { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-top: 2px; }
 
 /* Tablero táctil */
 .cell { min-height: 34px; }
