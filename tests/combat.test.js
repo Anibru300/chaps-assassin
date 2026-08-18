@@ -241,5 +241,29 @@ addAreaEffect({x:5,y:3},1,"fire",{dmg:"1d6",save:"dex",dc:12,trigger:"enter"});
 const fires=combat.map.terrain.filter(t=>t.type==="fire");
 A(fires.length>=3,"efecto de área crea varias casillas de fuego");
 A(fires.every(t=>t.duration>0),"fuego tiene duración");
+
+// --- Two-Weapon Fighting ---
+state.weapons[1]={name:"Espada corta",dice:1,sides:6,bonus:5,props:"finesse, light",mastery:"Vex",weaponId:"shortsword"};
+const wDagger=state.weapons[0];const wShort=state.weapons[1];
+clearMap();
+const twfEnemy=spawnEnemy("goblin");twfEnemy.hp=300;twfEnemy.maxHp=300;twfEnemy.pos={x:1,y:3};
+combat.enemies=[twfEnemy];
+combat.p=newCombatPlayer();combat.p.pos={x:2,y:3};combat.p.action=true;combat.p.ba=true;combat.on=true;combat.round=2;
+playerAttack(wDagger,twfEnemy,{ally:false,strikes:[]});
+A(combat.p.nickReady===true,"daga ligera habilita ataque extra");
+A(combat.p.nickFree===true,"maestría Nick en daga hace el extra gratis");
+A(combat.p.lightMainIdx===0,"registra arma principal");
+const hpBeforeExtra=twfEnemy.hp;
+playerAttack(wShort,twfEnemy,{ally:true,strikes:[],extra:true});
+A(combat.p.nickReady===false,"ataque extra consume la oportunidad");
+A(twfEnemy.hp<hpBeforeExtra,"ataque extra hace daño");
+// Ataque principal con espada corta (Vex): requiere acción adicional para el extra
+combat.p.action=true;combat.p.ba=true;
+const twfEnemy2=spawnEnemy("goblin");twfEnemy2.hp=300;twfEnemy2.maxHp=300;twfEnemy2.pos={x:1,y:3};
+combat.enemies=[twfEnemy2];
+playerAttack(wShort,twfEnemy2,{ally:false,strikes:[]});
+A(combat.p.nickReady===true,"espada corta ligera habilita ataque extra");
+A(combat.p.nickFree===false,"sin Nick el extra cuesta acción adicional");
+A(combat.p.ba===true,"ataque principal no gasta BA");
 `;
 vm.runInContext(src + test, ctx);

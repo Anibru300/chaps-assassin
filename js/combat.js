@@ -26,6 +26,16 @@ function rollDiceExpr(str, doubleDice) {
   return { total: sum(rolls) + d.bonus, rolls, bonus: d.bonus, dice: n, sides: d.sides };
 }
 
+/** Devuelve true si el arma es ligera. */
+function isLightWeapon(w) {
+  if (!w) return false;
+  const cat = w.weaponId ? WEAPON_MASTERY.find((x) => x.id === w.weaponId) : null;
+  return !!(cat && cat.light);
+}
+
+/** Índice del arma en state.weapons (-1 si no se encuentra). */
+function findWeaponIndex(w) { return state.weapons.findIndex((wp) => wp === w); }
+
 /* ================= ESTADO DEL COMBATE ================= */
 const combat = {
   on: false,
@@ -59,6 +69,7 @@ function newCombatPlayer() {
     vexTarget: null,  // Vex: próximo ataque contra este enemigo con ventaja (Fase 5)
     nickReady: false, // Ligera: ataque extra disponible (Fase 5)
     nickFree: false,  // Nick dominado: el ataque extra no gasta acción adicional
+    lightMainIdx: -1, // índice del arma que habilitó el ataque extra
     ac: state.ac,
     pos: { x: 1, y: 3 } // posición en el tablero (Fase 2)
   };
@@ -544,7 +555,7 @@ function beginTurn() {
     const p = combat.p;
     p.action = true; p.ba = true; p.react = true;
     p.move = state.speed; p.sneak = false; p.diseng = false; p.steady = false; p.withdraw = 0;
-    p.vexTarget = null; p.nickReady = false; p.nickFree = false;
+    p.vexTarget = null; p.nickReady = false; p.nickFree = false; p.lightMainIdx = -1;
     combat.enemies.forEach((x) => { x.slow = false; }); // Slow dura hasta el inicio de tu próximo turno
     cLog(`— ${ct("round")} ${combat.round} · ${ct("turnStart")} <strong>${state.name}</strong> —`, "log-info");
     if (!combat.quiet) triggerTerrain(p.pos.x, p.pos.y, "p", "start");
@@ -609,8 +620,12 @@ function simulateOne() {
       const target = combat.enemies.filter((e) => e.hp > 0).sort((a, b) => distOf(a) - distOf(b))[0];
       if (target) {
         const w = state.weapons[0];
-        const canSneak = !combat.p.sneak;
         playerAttack(w, target, { ally: false, strikes: [] });
+        // Ataque extra con otra arma ligera (Two-Weapon Fighting)
+        if (combat.p.nickReady && combat.p.hp > 0 && target.hp > 0) {
+          const extraW = state.weapons.find((wp, i) => i !== combat.p.lightMainIdx && isLightWeapon(wp));
+          if (extraW) playerAttack(extraW, target, { ally: true, strikes: [], extra: true });
+        }
       }
       nextTurn();
     }
@@ -765,7 +780,9 @@ function playerAttack(w, e, opts) {
   // --- Daño ---
   const parts = [];
   let dmg = 0;
-  const wExpr = `${w.dice}d${w.sides}+${w.bonus}`;
+  // Ataque extra de arma ligera: no añade modificador de habilidad al daño
+  const wBonus = opts.extra ? 0 : w.bonus;
+  const wExpr = `${w.dice}d${w.sides}${wBonus ? "+" + wBonus : ""}`;
   const wRes = rollDiceExpr(wExpr, crit);
   parts.push(`${wRes.dice}d${wRes.sides}(${wRes.rolls.join(",")})${fmtMod(wRes.bonus)}`);
   dmg += wRes.total;
@@ -853,11 +870,12 @@ function playerAttack(w, e, opts) {
       }
     }
   }
-  // Ligera: habilita el ataque extra (1/turno)
+  // Ligera: habilita el ataque extra con otra arma ligera (Two-Weapon Fighting)
   if (!opts.extra && cat && cat.light && e.hp >= 0) {
     p.nickReady = true;
-    p.nickFree = mastActive === "nick";
-    cLog(`🗡 ${ct("mNick")}${p.nickFree ? " (Nick: " + ct("mNickFree") + ")" : ""}`, "log-info");
+    p.nickFree = mastActive === "nick"; // Nick dominado: ataque extra gratis
+    p.lightMainIdx = findWeaponIndex(w);
+    cLog(`🗡 ${ct("twfReady")}${p.nickFree ? " (" + ct("mNickFree") + ")" : ""}`, "log-info");
   }
 
   if (combat.stats) { combat.stats.dmg += dmg; combat.stats.hits++; if (crit) combat.stats.crits++; }
@@ -1490,6 +1508,7 @@ function condBadges(e) {
 let moveMode = false;
 let mapEditMode = false;
 let mapEditBrush = "pillar";
+let attackExtraMode = false;
 
 const OBSTACLE_ICON = { pillar: "⬛", crate: "📦", barrel: "🛢", wall: "🧱" };
 const TERRAIN_ICON = { difficult: "🌿", fire: "🔥", ice: "❄️", spikes: "🗡" };
@@ -1629,7 +1648,7 @@ function renderSuggestions() {
   if (meleeFoes.length && !p.diseng && !p.withdraw) tips.push("⚠ Enemigo a 5 ft. <strong>Retirarse</strong> evita ataques de oportunidad.");
   if (!p.hidden && !p.steady && p.ba && meleeFoes.length === 0) tips.push("🌑 <strong>Esconderse</strong> → ataque con ventaja → Furtivo.");
   if (!p.steady && p.ba && p.move > 0 && meleeFoes.length === 0) tips.push("🎯 <strong>Puntería Firme</strong> da ventaja en tu próximo ataque.");
-  if (p.nickReady && p.ba) tips.push("🗡 Arma ligera: puedes hacer un <strong>ataque extra</strong>.");
+  if (p.nickReady && (p.nickFree || p.ba)) tips.push("🗡 Arma ligera: puedes hacer un <strong>ataque extra</strong>.");
   return tips.length ? "💡 " + tips[0] : "";
 }
 
@@ -1702,6 +1721,13 @@ function renderCombat() {
   ctEl("c-btn-dash").disabled = !isPlayerTurn() || !p.ba;
   ctEl("c-btn-disengage").disabled = !isPlayerTurn() || !p.ba;
   ctEl("c-btn-attack").disabled = !isPlayerTurn() || !p.action;
+  const extra = ctEl("c-btn-extra");
+  if (extra) {
+    const canExtra = isPlayerTurn() && p.nickReady && (p.nickFree || p.ba);
+    extra.hidden = !isPlayerTurn() || !p.nickReady;
+    extra.disabled = !canExtra;
+    extra.title = p.nickFree ? ct("twfCostFree") : ct("twfCostBa");
+  }
   ctEl("c-btn-end").disabled = !isPlayerTurn();
   ctEl("c-apply-hp").hidden = combat.on;
   renderBoard();
@@ -1709,17 +1735,30 @@ function renderCombat() {
 }
 
 /* ---------- Panel de ataque ---------- */
-function openAttackPanel() {
+function openAttackPanel(extra) {
+  attackExtraMode = !!extra;
   const panel = ctEl("c-attack-panel");
   panel.hidden = false;
+  const title = ctEl("c-atk-title") || panel.querySelector("h2");
+  if (title) title.textContent = attackExtraMode ? ct("twfTitle") : ct("attackTitle");
+  const p = combat.p;
   const wSel = ctEl("c-atk-weapon");
   wSel.innerHTML = "";
   state.weapons.forEach((w, i) => {
+    if (attackExtraMode) {
+      if (i === (p ? p.lightMainIdx : -1)) return;
+      if (!isLightWeapon(w)) return;
+    }
     const opt = document.createElement("option");
     opt.value = i;
     opt.textContent = `${weaponView(w).name} (${w.dice}d${w.sides}+${w.bonus})`;
     wSel.appendChild(opt);
   });
+  if (!wSel.options.length) {
+    const opt = document.createElement("option");
+    opt.textContent = ct("twfNoWeapon");
+    wSel.appendChild(opt);
+  }
   const tSel = ctEl("c-atk-target");
   tSel.innerHTML = "";
   combat.enemies.forEach((e, i) => {
@@ -1751,13 +1790,16 @@ function openAttackPanel() {
 }
 
 function confirmAttack() {
-  const w = state.weapons[+ctEl("c-atk-weapon").value];
-  const e = combat.enemies[+ctEl("c-atk-target").value];
-  if (!w || !e) return;
+  const wSel = ctEl("c-atk-weapon");
+  const eSel = ctEl("c-atk-target");
+  const w = state.weapons[+wSel.value];
+  const e = combat.enemies[+eSel.value];
+  if (!w || !e) { attackExtraMode = false; return; }
   const strikes = Array.from(ctEl("c-atk-strikes").querySelectorAll("input:checked")).map((c) => c.value);
   const ally = ctEl("c-atk-ally").checked;
   ctEl("c-attack-panel").hidden = true;
-  playerAttack(w, e, { strikes, ally });
+  playerAttack(w, e, { strikes, ally, extra: attackExtraMode });
+  attackExtraMode = false;
 }
 
 /* ---------- Editor de mapa ---------- */
@@ -1896,7 +1938,8 @@ function initCombat() {
       logToggle.setAttribute("aria-expanded", String(!collapsed));
     });
   }
-  ctEl("c-btn-attack").addEventListener("click", openAttackPanel);
+  ctEl("c-btn-attack").addEventListener("click", () => openAttackPanel(false));
+  ctEl("c-btn-extra").addEventListener("click", () => openAttackPanel(true));
   ctEl("c-atk-roll").addEventListener("click", confirmAttack);
   ctEl("c-atk-cancel").addEventListener("click", () => { ctEl("c-attack-panel").hidden = true; });
   ctEl("c-btn-move").addEventListener("click", () => { moveMode = !moveMode; renderBoard(); });
