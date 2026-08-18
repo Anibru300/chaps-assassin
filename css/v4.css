@@ -376,6 +376,17 @@ button, .btn { min-height: 38px; }
 .ca-btn.btn-crimson:hover { background: linear-gradient(180deg, var(--crimson-light), var(--crimson)); }
 
 .attack-panel { border-left-color: var(--crimson); }
+.attack-preview {
+  margin: 0.5rem 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(13,14,18,0.6);
+  font-size: 0.9rem;
+  min-height: 1.4rem;
+}
+.attack-preview.adv { color: var(--green); }
+.attack-preview.dis { color: var(--crimson-light); }
+.attack-preview.flat { color: var(--text-dim); }
 .atk-grid { grid-template-columns: repeat(3, 1fr); }
 
 #c-log-toggle { margin-left: auto; }

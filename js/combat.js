@@ -752,7 +752,8 @@ function playerAttack(w, e, opts) {
   const coverTxtP = cover ? ` (${ct("coverBonus")})` : "";
   const crit = natCrit || (cm.autocrit && !natMiss && total >= effAc);
   const isHit = natCrit || crit || (!natMiss && total >= effAc);
-  const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
+  const advIcon = flat ? "➡" : (adv ? "⬆" : (dis ? "⬇" : "➡"));
+  const rollStr = (rolls.length > 1 ? `${advIcon} d20(${rolls.join(", ")})→${chosen}` : `${advIcon} d20(${chosen})`);
   if (cover) reasons.push(ct("coverBonus"));
 
   if (!opts.extra) p.action = false;
@@ -914,15 +915,16 @@ function playerAttackObstacle(w, obs) {
   const crit = chosen === 20;
   p.action = false; p.steady = false; p.hidden = false;
   fxLine(p.pos, obs);
+  const advIcon = adv ? "⬆ " : "";
   if (chosen === 1 || total < ac) {
-    cLog(`🏹 ${w.name} → obstáculo: d20(${rolls.join(", ")})${fmtMod(atkBonus)} = ${total} vs CA ${ac} → ${ct("missWord")}`, "log-miss");
+    cLog(`🏹 ${w.name} → obstáculo: ${advIcon}d20(${rolls.join(", ")})${fmtMod(atkBonus)} = ${total} vs CA ${ac} → ${ct("missWord")}`, "log-miss");
     if (typeof renderCombat === "function") renderCombat();
     return true;
   }
   const expr = `${w.dice}d${w.sides}+${w.bonus}`;
   const dmg = rollDiceExpr(expr, crit).total;
   damageObstacle(obs, dmg);
-  cLog(`💥 ${w.name} → obstáculo ${obs.type}: ${total} vs CA ${ac} → <strong>${dmg} ${ct("dmgWord")}</strong> (${obs.hp}/${obs.maxHp} PG)`, crit ? "log-crit" : "log-hit");
+  cLog(`💥 ${w.name} → obstáculo ${obs.type}: ${advIcon}${total} vs CA ${ac} → <strong>${dmg} ${ct("dmgWord")}</strong> (${obs.hp}/${obs.maxHp} PG)`, crit ? "log-crit" : "log-hit");
   if (typeof renderCombat === "function") renderCombat();
   return true;
 }
@@ -1026,7 +1028,7 @@ function enemyAttackRoll(e, atk, isOA) {
   const cover = hasCover(p, e);
   const effAc = cover ? tgtAc + 2 : tgtAc;
   const isHit = chosen !== 1 && (chosen === 20 || total >= effAc);
-  const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
+  const rollStr = (rolls.length > 1 ? `⬇ d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`);
   const aName = LANG === "es" ? atk.es : atk.en;
   const coverTxt = cover ? ` (${ct("coverBonus")})` : "";
   fxLine(e.pos, p.pos);
@@ -1735,6 +1737,47 @@ function renderCombat() {
 }
 
 /* ---------- Panel de ataque ---------- */
+function updateAttackPreview() {
+  const preview = ctEl("c-atk-preview");
+  if (!preview) return;
+  const wSel = ctEl("c-atk-weapon");
+  const tSel = ctEl("c-atk-target");
+  const w = state.weapons[+wSel.value];
+  const e = combat.enemies[+tSel.value];
+  if (!w || !e) { preview.textContent = ""; preview.className = "attack-preview"; return; }
+  const cat = w.weaponId ? WEAPON_MASTERY.find((x) => x.id === w.weaponId) : null;
+  const melee = cat ? cat.melee : 5;
+  const range = cat ? cat.range : null;
+  const dist = distOf(e);
+  let mode = null;
+  if (melee && dist <= melee) mode = "melee";
+  else if (range) {
+    const parts = range.split("/").map(Number);
+    if (dist <= parts[1]) mode = "ranged";
+  }
+  const p = combat.p;
+  const reasons = [];
+  let adv = false, dis = false;
+  const cm = condModsVs(e, dist);
+  if (cm.adv) { adv = true; if (hasCond(e, "prone")) reasons.push(ct("proneAdv")); else if (hasCond(e, "blinded")) reasons.push(ct("blindAdv")); }
+  if (cm.dis) { dis = true; }
+  if (p.steady) { adv = true; reasons.push(ct("steadyOn")); }
+  if (p.hidden) { adv = true; reasons.push("🫥 " + ct("hiddenNow")); }
+  if (p.vexTarget === e) { adv = true; reasons.push("Vex"); }
+  if (combat.round === 1 && !e.acted) { adv = true; reasons.push("🗡 " + ct("firstRound")); }
+  if (mode === "ranged") {
+    const parts = range.split("/").map(Number);
+    if (dist > parts[0]) { dis = true; reasons.push(ct("longRangeDis")); }
+    const meleeFoe = combat.enemies.find((x) => x.hp > 0 && distOf(x) <= 5);
+    if (meleeFoe) { dis = true; reasons.push(ct("rangedInMelee")); }
+  }
+  const flat = adv && dis;
+  const label = flat ? ct("flatWord") : (adv ? ct("advWord") : (dis ? ct("disWord") : "Normal"));
+  const icon = flat ? "➡" : (adv ? "⬆" : (dis ? "⬇" : "➡"));
+  preview.className = "attack-preview " + (flat ? "flat" : (adv ? "adv" : (dis ? "dis" : "")));
+  preview.textContent = `${icon} ${label}${reasons.length ? ": " + reasons.join(" · ") : ""}`;
+}
+
 function openAttackPanel(extra) {
   attackExtraMode = !!extra;
   const panel = ctEl("c-attack-panel");
@@ -1768,6 +1811,9 @@ function openAttackPanel(extra) {
     opt.textContent = `${eName(e)} (${distOf(e)} ft · CA ${e.ac})`;
     tSel.appendChild(opt);
   });
+  wSel.addEventListener("change", updateAttackPreview);
+  tSel.addEventListener("change", updateAttackPreview);
+  updateAttackPreview();
   // Golpes Astutos
   const box = ctEl("c-atk-strikes");
   box.innerHTML = "";

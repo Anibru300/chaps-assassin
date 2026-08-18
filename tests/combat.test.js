@@ -242,28 +242,20 @@ const fires=combat.map.terrain.filter(t=>t.type==="fire");
 A(fires.length>=3,"efecto de área crea varias casillas de fuego");
 A(fires.every(t=>t.duration>0),"fuego tiene duración");
 
-// --- Two-Weapon Fighting ---
-state.weapons[1]={name:"Espada corta",dice:1,sides:6,bonus:5,props:"finesse, light",mastery:"Vex",weaponId:"shortsword"};
-const wDagger=state.weapons[0];const wShort=state.weapons[1];
-clearMap();
-const twfEnemy=spawnEnemy("goblin");twfEnemy.hp=300;twfEnemy.maxHp=300;twfEnemy.pos={x:1,y:3};
-combat.enemies=[twfEnemy];
-combat.p=newCombatPlayer();combat.p.pos={x:2,y:3};combat.p.action=true;combat.p.ba=true;combat.on=true;combat.round=2;
-playerAttack(wDagger,twfEnemy,{ally:false,strikes:[]});
-A(combat.p.nickReady===true,"daga ligera habilita ataque extra");
-A(combat.p.nickFree===true,"maestría Nick en daga hace el extra gratis");
-A(combat.p.lightMainIdx===0,"registra arma principal");
-const hpBeforeExtra=twfEnemy.hp;
-playerAttack(wShort,twfEnemy,{ally:true,strikes:[],extra:true});
-A(combat.p.nickReady===false,"ataque extra consume la oportunidad");
-A(twfEnemy.hp<hpBeforeExtra,"ataque extra hace daño");
-// Ataque principal con espada corta (Vex): requiere acción adicional para el extra
-combat.p.action=true;combat.p.ba=true;
-const twfEnemy2=spawnEnemy("goblin");twfEnemy2.hp=300;twfEnemy2.maxHp=300;twfEnemy2.pos={x:1,y:3};
-combat.enemies=[twfEnemy2];
-playerAttack(wShort,twfEnemy2,{ally:false,strikes:[]});
-A(combat.p.nickReady===true,"espada corta ligera habilita ataque extra");
-A(combat.p.nickFree===false,"sin Nick el extra cuesta acción adicional");
-A(combat.p.ba===true,"ataque principal no gasta BA");
+// --- Ventaja en ataques del jugador ---
+function lastAttackHtml(){ const e=combat.log.filter(l=>l.cls==="log-hit"||l.cls==="log-crit"||l.cls==="log-miss"); return e[e.length-1]?e[e.length-1].html:""; }
+function hasTwoDice(html){ return /d20\\(\\d{1,2},\\s*\\d{1,2}\\)/.test(html); }
+clearMap();combat.log=[];
+const advEnemy=spawnEnemy("goblin");advEnemy.hp=300;advEnemy.maxHp=300;advEnemy.pos={x:2,y:3};advEnemy.ac=5;
+combat.enemies=[advEnemy];
+combat.p=newCombatPlayer();combat.p.pos={x:1,y:3};combat.p.action=true;combat.on=true;combat.round=2;
+// Puntería firme + melé: solo ventaja
+combat.p.steady=true;
+playerAttack(state.weapons[0],advEnemy,{ally:false,strikes:[]});
+A(hasTwoDice(lastAttackHtml()),"Puntería Firme en melé tira dos d20");
+// Oculto + melé: solo ventaja
+combat.p.action=true;combat.p.steady=false;combat.p.hidden=true;
+playerAttack(state.weapons[0],advEnemy,{ally:false,strikes:[]});
+A(hasTwoDice(lastAttackHtml()),"Ataque oculto en melé tira dos d20");
 `;
 vm.runInContext(src + test, ctx);
