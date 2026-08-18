@@ -3,7 +3,7 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v1";
+const CACHE_NAME = "chaps-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -22,6 +22,12 @@ const SHELL = [
   "./assets/dragon-gate.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
+  "./assets/tokens/Goblin.jpg",
+  "./assets/tokens/Bandit.jpg",
+  "./assets/tokens/Wolf.jpg",
+  "./assets/tokens/Dire-Wolf.jpg",
+  "./assets/tokens/Wizard.jpg",
+  "./assets/tokens/Red-Dragon.jpg",
   "./manifest.json"
 ];
 

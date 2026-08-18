@@ -214,6 +214,28 @@ function reachableCells(from, steps) {
   return out;
 }
 
+/** ¿Este tipo de obstáculo proporciona cobertura media? */
+function obstacleProvidesCover(type) { return true; } // pilar, caja, barril, muro → +2 CA
+
+/** ¿El objetivo tiene cobertura contra el atacante? */
+function hasCover(target, attacker) {
+  if (!target || !attacker || !target.pos || !attacker.pos) return false;
+  if (distBetween(target.pos, attacker.pos) <= 5) return false;
+  let x0 = attacker.pos.x, y0 = attacker.pos.y, x1 = target.pos.x, y1 = target.pos.y;
+  const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+  while (true) {
+    if (x0 === x1 && y0 === y1) break;
+    const obs = getObstacle(x0, y0);
+    if (obs && obstacleProvidesCover(obs.type)) return true;
+    const e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x0 += sx; }
+    if (e2 < dx) { err += dx; y0 += sy; }
+  }
+  return false;
+}
+
 /** Línea de visión digital: recorre celdas entre a y b; un obstáculo intermedio bloquea. */
 function hasLineOfSight(a, b) {
   if (cellBlocked(a.x, a.y) || cellBlocked(b.x, b.y)) return false;
@@ -348,8 +370,10 @@ function listMapSlots() {
 
 function eName(e) { return LANG === "es" ? e.es : e.en; }
 
-/** Emoji/SVG visual para un enemigo según categoría. */
+/** Imagen/emoji visual para un enemigo según categoría. */
 function enemyToken(e) {
+  const file = TOKEN_MAP[e.key];
+  if (file) return `<img src="assets/tokens/${file}" alt="${eName(e)}" loading="lazy">`;
   if (e.cat === "dragon") return "🐉";
   if (e.cat === "creature") return e.key.includes("wolf") ? "🐺" : (e.key.includes("bear") ? "🐻" : "🦂");
   if (e.role === "caster") return e.cat === "paladin" ? "🛡" : "🧙";
@@ -622,9 +646,13 @@ function playerAttack(w, e, opts) {
   const atkBonus = profBonus(state.level) + dexMod();
   const total = chosen + atkBonus;
   const natCrit = chosen === 20, natMiss = chosen === 1;
-  const crit = natCrit || (cm.autocrit && !natMiss && total >= e.ac);
-  const isHit = natCrit || crit || (!natMiss && total >= e.ac);
+  const cover = hasCover(e, combat.p) && !adv;
+  const effAc = cover ? e.ac + 2 : e.ac;
+  const coverTxtP = cover ? ` (${ct("coverBonus")})` : "";
+  const crit = natCrit || (cm.autocrit && !natMiss && total >= effAc);
+  const isHit = natCrit || crit || (!natMiss && total >= effAc);
   const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
+  if (cover) reasons.push(ct("coverBonus"));
 
   if (!opts.extra) p.action = false;
   p.steady = false;
@@ -643,7 +671,7 @@ function playerAttack(w, e, opts) {
         if (e.hp <= 0) { cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead"); checkCombatEnd(); }
       }
     }
-    cLog(`${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <em>${ct("missWord")}</em>`, "log-miss");
+    cLog(`${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${effAc}${coverTxtP} → <em>${ct("missWord")}</em>`, "log-miss");
     if (typeof renderCombat === "function") renderCombat();
     return true;
   }
@@ -683,7 +711,7 @@ function playerAttack(w, e, opts) {
   e.hp = Math.max(0, e.hp - dmg);
   fxHit(e, dmg, crit);
   flashCell(e.pos.x, e.pos.y, crit ? "flash-crit" : "shake");
-  let html = `⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong><br>` +
+  let html = `⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${effAc}${coverTxtP} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong><br>` +
     `${parts.join(" + ")} = <strong>${dmg} ${ct("dmgWord")}</strong> [${eName(e)}: ${e.hp}/${e.maxHp} PG]`;
   if (reasons.length) html += `<br><em>${reasons.join(" · ")}</em>`;
   cLog(html, crit ? "log-crit" : "log-hit");
@@ -843,14 +871,17 @@ function enemyAttackRoll(e, atk, isOA) {
   else { rolls = [rollDie(20)]; chosen = rolls[0]; }
   const total = chosen + atk.bonus;
   const tgtAc = p.ac != null ? p.ac : state.ac; // proxy en IA vs IA
-  const isHit = chosen !== 1 && (chosen === 20 || total >= tgtAc);
+  const cover = hasCover(p, e);
+  const effAc = cover ? tgtAc + 2 : tgtAc;
+  const isHit = chosen !== 1 && (chosen === 20 || total >= effAc);
   const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
   const aName = LANG === "es" ? atk.es : atk.en;
+  const coverTxt = cover ? ` (${ct("coverBonus")})` : "";
   fxLine(e.pos, p.pos);
   if (!isHit) {
     fxMissAt(p.pos.x, p.pos.y);
     flashCell(p.pos.x, p.pos.y, "flash-miss");
-    cLog(`🛡 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${tgtAc} → <em>${ct("missWord")}</em>`, "log-miss");
+    cLog(`🛡 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${effAc}${coverTxt} → <em>${ct("missWord")}</em>`, "log-miss");
     if (p.hidden) { p.hidden = false; }
     return 0;
   }
@@ -880,7 +911,7 @@ function enemyAttackRoll(e, atk, isOA) {
   fxHitAt(p.pos.x, p.pos.y, dmg, crit);
   flashCell(p.pos.x, p.pos.y, crit ? "flash-crit" : "shake");
   if (p.hidden) p.hidden = false;
-  cLog(`🩸 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${tgtAc} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong> — ${dmg} ${ct("dmgWord")} [${p.proxy ? p.name : state.name}: ${p.hp} PG]`, "log-miss");
+  cLog(`🩸 ${eName(e)} (${aName}): ${rollStr} ${fmtMod(atk.bonus)} = ${total} ${ct("vsAc")} ${effAc}${coverTxt} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong> — ${dmg} ${ct("dmgWord")} [${p.proxy ? p.name : state.name}: ${p.hp} PG]`, "log-miss");
   checkCombatEnd();
   return dmg;
 }
@@ -923,14 +954,16 @@ function findLoSMove(e, ft) {
   return best;
 }
 
-function aiMoveSteps(e, ft, flee, stopAt) {
+function aiMoveSteps(e, ft, mode, stopAt) {
   stopAt = stopAt || 5;
+  if (mode === true) mode = "flee";
+  else if (!mode) mode = "approach";
   const maxSteps = Math.floor(ft / 5);
   if (maxSteps <= 0) return 0;
   const start = e.pos;
   const seen = new Set([start.x + "," + start.y]);
   const queue = [{ pos: start, steps: 0 }];
-  const reachable = [{ pos: start, steps: 0 }];
+  const reachable = [];
   let head = 0;
   while (head < queue.length) {
     const cur = queue[head++];
@@ -951,8 +984,30 @@ function aiMoveSteps(e, ft, flee, stopAt) {
   reachable.forEach((r) => {
     if (r.pos.x === start.x && r.pos.y === start.y) return;
     const d = distBetween(r.pos, target);
-    let score = flee ? -d : d;
-    if (!flee && d <= stopAt) score = -1000 + d;
+    let score = 0;
+    if (mode === "flee") {
+      score = -d;
+      if (hasCover({ pos: r.pos }, combat.p)) score -= 8;
+      const margin = Math.min(r.pos.x, BOARD.w - 1 - r.pos.x, r.pos.y, BOARD.h - 1 - r.pos.y);
+      if (margin === 0) score += 5; // penalizar quedarse en el borde
+    } else if (mode === "cover") {
+      const hasC = hasCover({ pos: r.pos }, combat.p);
+      score = (hasC ? 0 : 100) + d * 0.5;
+      if (d <= stopAt) score -= 20;
+    } else if (mode === "flank") {
+      const ally = combat.enemies.find((a) => a !== e && a.hp > 0 && distBetween(a.pos, target) <= 5);
+      if (ally) {
+        const dxA = ally.pos.x - target.x, dyA = ally.pos.y - target.y;
+        const dxR = r.pos.x - target.x, dyR = r.pos.y - target.y;
+        score = -(dxA * dxR + dyA * dyR);
+      } else {
+        score = d;
+      }
+      if (d <= stopAt) score -= 10;
+    } else {
+      score = d;
+      if (d <= stopAt) score = -1000 + d;
+    }
     if (bestScore === null || score < bestScore) { bestScore = score; best = r; }
   });
   if (!best) return 0;
@@ -1199,13 +1254,18 @@ function enemyTakeTurn(e) {
 
   // Acercarse si nada alcanza
   if (!atk) {
-    const moved = aiMoveSteps(e, move, false);
+    let moveMode = "approach";
+    if ((combat.diff === "hard" || combat.diff === "tactical") && distOf(e) > 5) {
+      const allyInMelee = combat.enemies.some((a) => a !== e && a.hp > 0 && distBetween(a.pos, combat.p.pos) <= 5);
+      moveMode = allyInMelee ? "flank" : "cover";
+    }
+    const moved = aiMoveSteps(e, move, moveMode);
     if (moved > 0) cLog(`👣 ${eName(e)} ${ct("aiMove")} ${moved} ft (${ct("aiTarget")})`, "log-info");
     if (dazed) { cLog(`😵 ${ct("dazedNote")}`, "log-info"); enemyEndTurn(e); return; }
     atk = e.attacks.find((a) => a.melee && distNow() <= a.melee) || e.attacks.find(inRange);
     if (!atk) {
       // Dash: corre el doble
-      const moved2 = aiMoveSteps(e, e.speed, false);
+      const moved2 = aiMoveSteps(e, e.speed, moveMode);
       if (moved2 > 0) cLog(`💨 ${eName(e)} ${ct("aiDash")} (${moved2} ft más)`, "log-info");
       atk = e.attacks.find((a) => a.melee && distNow() <= a.melee);
       if (!atk) { cLog(`⛔ ${eName(e)}: ${ct("aiNoReach")}`, "log-info"); enemyEndTurn(e); return; }
@@ -1317,7 +1377,8 @@ function renderBoard() {
       const e = combat.enemies.find((en) => en.hp > 0 && en.pos.x === x && en.pos.y === y);
       if (e) {
         const isCur = combat.on && !isPlayerTurn() && currentCombatant().who === "e" && combat.enemies[currentCombatant().idx] === e;
-        cell.innerHTML = `<span class="tok tok-e" title="${eName(e)} — ${e.hp}/${e.maxHp} PG · CA ${e.ac}">${enemyToken(e)}</span>`;
+        const covered = combat.p && hasCover(e, combat.p) ? `<span class="cover-badge">${ct("coverIndicator")}</span>` : "";
+        cell.innerHTML = `<span class="tok tok-e" title="${eName(e)} — ${e.hp}/${e.maxHp} PG · CA ${e.ac}">${enemyToken(e)}${covered}</span>`;
         if (isCur) cell.classList.add("cur");
         if (e.conds.length) cell.classList.add("has-cond");
       }

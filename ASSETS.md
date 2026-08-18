@@ -1,29 +1,59 @@
 # Biblioteca de recursos visuales para CHAPS
 
-CHAPS usa emojis e iconos SVG propios para no depender de imágenes externas, pero si quieres darle un aspecto más realista al tablero, estos repositorios son compatibles con una app web estática offline.
+CHAPS puede usar emojis propios o tokens ilustrados descargados. Actualmente tenemos tokens CC0 integrados de **CapsE/FreeTokens**.
 
-## Recomendados
+## Tokens descargados (en uso)
+
+Ubicación: `assets/tokens/`
+
+| Enemigo local | Archivo | Fuente |
+|---------------|---------|--------|
+| Goblin | `Goblin.jpg` | FreeTokens CC0 |
+| Bandido | `Bandit.jpg` | FreeTokens CC0 |
+| Lobo | `Wolf.jpg` | FreeTokens CC0 |
+| Lobo terrible | `Dire-Wolf.jpg` | FreeTokens CC0 |
+| Mago | `Wizard.jpg` | FreeTokens CC0 |
+| Dragoncelo blanco | `Red-Dragon.jpg` | FreeTokens CC0 |
+
+Los demás enemigos del catálogo usan emoji fallback porque FreeTokens no tiene su token exacto.
+
+## Cómo añadir más tokens
+
+1. Busca el nombre en inglés en https://github.com/CapsE/FreeTokens.
+2. Verifica que exista en `thumbnails/` o `images/`.
+3. Descarga con:
+   ```bash
+   curl -L -o chaps-assassin/assets/tokens/Nombre.jpg \
+     https://raw.githubusercontent.com/CapsE/FreeTokens/main/thumbnails/Nombre.jpg
+   ```
+4. Añade el mapeo en `js/combat-data.js`:
+   ```javascript
+   TOKEN_MAP = {
+     // ...
+     knight: "Knight.jpg"
+   };
+   ```
+5. Actualiza `sw.js` para cachear el nuevo asset.
+
+## Repositorios recomendados
 
 ### CapsE/FreeTokens — tokens CC0
 - **URL:** https://github.com/CapsE/FreeTokens
-- **Licencia:** CC0 (dominio público)
+- **Licencia:** CC0 1.0 Universal
 - **Qué tiene:** tokens redondos de monstruos, PNJ y héroes en PNG/SVG con statblocks SRD.
-- **Cómo usarlo:** descarga las imágenes que quieras, colócalas en `assets/tokens/` y luego enlázalas por URL en cada token.
-- **Ideal para:** reemplazar los emojis de enemigos por tokens ilustrados.
+- **Cómo usarlo:** descarga las imágenes que quieras, colócalas en `assets/tokens/` y enlázalas en `TOKEN_MAP`.
 
 ### mbround18/vtt-maps — mapas MIT
 - **URL:** https://github.com/mbround18/vtt-maps
 - **Licencia:** MIT
 - **Qué tiene:** mapas pre-hechos en alta resolución, muchos con previews y fuentes DungeonDraft.
 - **Cómo usarlo:** descarga los previews PNG/JPG y úsalos como fondo del tablero (`#c-board`).
-- **Ideal para:** darle un fondo de mazmorra o taberna al campo de batalla.
 
 ### Azgaar/Fantasy-Map-Generator — mapas de mundo
 - **URL:** https://github.com/Azgaar/Fantasy-Map-Generator
 - **Licencia:** MIT
 - **Qué tiene:** generador procedural de mapas de mundo completos.
 - **Cómo usarlo:** genera un mapa en la web y exporta SVG/PNG.
-- **Ideal para:** pantalla de inicio o sección de campaña, no tanto para battlemaps tácticos.
 
 ## No aptos para app estática offline
 
@@ -38,10 +68,4 @@ CHAPS usa emojis e iconos SVG propios para no depender de imágenes externas, pe
 
 - **CC0:** puedes usar, modificar y redistribuir sin atribución.
 - **MIT:** puedes usar y modificar; conserva el aviso de copyright original si redistribuyes el asset tal cual.
-- No incluyas imágenes oficiales de Wizards of the Coast ni de libros de D&D salvo que estén explícicamente bajo CC-BY-4.0 (SRD).
-
-## Cómo integrar un asset descargado
-
-1. Copia el archivo a `chaps-assassin/assets/` (por ejemplo `assets/tokens/goblin.png`).
-2. En el modal de detalle de la Biblioteca o en el editor de enemigos, asigna la URL relativa al token.
-3. Actualiza `sw.js` si quieres que la PWA cachee el nuevo asset.
+- Los SVG con statblocks SRD de Wizards of the Coast llevan la atribución obligatoria dentro del propio SVG.

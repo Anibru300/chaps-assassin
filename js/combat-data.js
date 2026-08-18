@@ -161,6 +161,16 @@ const ENEMIES = [
     }
 ];
 
+/* ---------- Mapeo de tokens descargados (CapsE/FreeTokens CC0) ---------- */
+const TOKEN_MAP = {
+  goblin: "Goblin.jpg",
+  bandit: "Bandit.jpg",
+  wolf: "Wolf.jpg",
+  direwolf: "Dire-Wolf.jpg",
+  wizard: "Wizard.jpg",
+  wyrmling: "Red-Dragon.jpg"
+};
+
 /* ---------- Textos del motor de combate (ES/EN) ---------- */
 const CT = {
   es: {
@@ -207,6 +217,7 @@ const CT = {
     paraYou: "estás Paralizado: pierdes el turno", paraEnd: "superas la Parálisis",
     smiteLog: "Castigo Divino", breathRecharge: "recupera su aliento", breathNo: "su aliento no se recarga",
     oaPrompt: "¿Ataque de oportunidad con tu arma de melé?", oaYou: "¡Tu ataque de oportunidad!",
+    coverBonus: "cobertura +2 CA", coverIndicator: "🛡",
     catAll: "Todas", catSearchPh: "Buscar enemigo…",
     customTitle: "Enemigo personalizado", customAdd: "+ Crear y añadir",
     cfName: "Nombre", cfHp: "PG", cfAc: "CA", cfBonus: "Bono ataque", cfDmg: "Daño (p. ej. 2d6+3)", cfSpeed: "Velocidad", cfInit: "Iniciativa",
@@ -256,6 +267,7 @@ const CT = {
     paraYou: "you are Paralyzed: you lose the turn", paraEnd: "you shake off the Paralysis",
     smiteLog: "Divine Smite", breathRecharge: "recharges its breath", breathNo: "its breath doesn't recharge",
     oaPrompt: "Opportunity Attack with your melee weapon?", oaYou: "Your Opportunity Attack!",
+    coverBonus: "cover +2 AC", coverIndicator: "🛡",
     catAll: "All", catSearchPh: "Search enemy…",
     customTitle: "Custom enemy", customAdd: "+ Create & add",
     cfName: "Name", cfHp: "HP", cfAc: "AC", cfBonus: "Attack bonus", cfDmg: "Damage (e.g. 2d6+3)", cfSpeed: "Speed", cfInit: "Initiative",

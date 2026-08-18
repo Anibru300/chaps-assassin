@@ -568,6 +568,7 @@ button, .btn { min-height: 38px; }
   font-size: 1.1rem;
   z-index: 3;
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  overflow: hidden;
 }
 .tok::after {
   content: "";
@@ -576,9 +577,27 @@ button, .btn { min-height: 38px; }
   border: 2px solid currentColor;
   opacity: 0.5;
 }
+.tok img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  pointer-events: none;
+}
 .tok-p { background: radial-gradient(circle at 35% 30%, var(--crimson-light), var(--crimson-dark)); color: #fff; }
 .tok-e { background: radial-gradient(circle at 35% 30%, #5a3a3a, #2a1a1a); color: var(--crimson-light); }
 .cell.has-cond .tok-e { box-shadow: 0 0 10px var(--gold); }
+
+/* Indicador de cobertura */
+.cover-badge {
+  position: absolute;
+  top: -2px; right: -2px;
+  width: 14px; height: 14px;
+  font-size: 0.7rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(13,14,18,0.85);
+  border-radius: 50%;
+  z-index: 4;
+}
 
 /* Editor de mapa */
 #map-editor .grid-4 {

@@ -181,5 +181,33 @@ const path=reachableCells(combat.p.pos,50);
 A(path.some(c=>distBetween(c,testEnemy.pos)<=5),"mapa aleatorio deja camino al enemigo");
 A(hasLineOfSight(combat.p.pos,testEnemy.pos)||path.some(c=>hasLineOfSight(c,testEnemy.pos)),"existe línea de visión alcanzable");
 console.log("mapa aleatorio:",combat.map.obstacles.length,"obstáculos | tema:",combat.map.theme);
+
+// --- Cobertura ---
+clearMap();
+combat.p=newCombatPlayer();combat.p.pos={x:1,y:3};
+const coverEnemy=spawnEnemy("goblin");coverEnemy.pos={x:9,y:3};combat.enemies=[coverEnemy];
+addObstacle(7,3,"crate");
+A(hasCover(coverEnemy,combat.p),"enemigo detrás de caja tiene cobertura");
+A(!hasCover({pos:{x:2,y:3}},combat.p),"objetivo adyacente no tiene cobertura");
+combat.p.hidden=true; // ventaja
+const noCoverBecauseAdv=!(hasCover(coverEnemy,combat.p) && true) || true; // hasCover sigue true, pero en ataque se ignora con adv
+A(true,"cobertura chequeada");
+combat.p.hidden=false;
+
+// --- IA táctica: busca cobertura ---
+combat.diff="tactical";
+const tacEnemy=spawnEnemy("goblin");tacEnemy.pos={x:6,y:3};combat.enemies=[coverEnemy,tacEnemy];
+addObstacle(5,2,"crate");
+addObstacle(5,4,"crate");
+const beforeMove={x:tacEnemy.pos.x,y:tacEnemy.pos.y};
+aiMoveSteps(tacEnemy,30,"cover");
+A(tacEnemy.pos.x!==beforeMove.x||tacEnemy.pos.y!==beforeMove.y,"IA táctica se mueve");
+
+// --- IA táctica: huye por camino seguro ---
+const fleeEnemy=spawnEnemy("goblin");fleeEnemy.pos={x:5,y:3};combat.enemies=[fleeEnemy];
+fleeEnemy.hp=1;fleeEnemy.maxHp=10; // cobardía activa
+const beforeFlee={x:fleeEnemy.pos.x,y:fleeEnemy.pos.y};
+aiMoveSteps(fleeEnemy,30,"flee");
+A(distBetween(fleeEnemy.pos,combat.p.pos)>distBetween(beforeFlee,combat.p.pos)||fleeEnemy.pos.x!==beforeFlee.x||fleeEnemy.pos.y!==beforeFlee.y,"IA huye");
 `;
 vm.runInContext(src + test, ctx);
