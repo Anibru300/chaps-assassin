@@ -571,11 +571,20 @@
               </select></label>
             <label class="field"><span>Pincel</span>
               <select id="me-brush">
-                <option value="pillar">⬛ Pilar</option>
-                <option value="crate">📦 Caja</option>
-                <option value="barrel">🛢 Barril</option>
-                <option value="wall">🧱 Muro</option>
-                <option value="erase">🧽 Borrador</option>
+                <optgroup label="Obstáculos">
+                  <option value="pillar">⬛ Pilar</option>
+                  <option value="crate">📦 Caja</option>
+                  <option value="barrel">🛢 Barril</option>
+                  <option value="wall">🧱 Muro</option>
+                </optgroup>
+                <optgroup label="Terreno">
+                  <option value="difficult">🌿 Terreno difícil</option>
+                  <option value="fire">🔥 Fuego (1d6, salv DES CD 12)</option>
+                  <option value="ice">❄️ Hielo (difícil + 1d4 frío)</option>
+                  <option value="spikes">🗡 Pinchos (1d8)</option>
+                  <option value="erase-terrain">🧽 Borrar terreno</option>
+                </optgroup>
+                <option value="erase">🧽 Borrador total</option>
               </select></label>
             <label class="field"><span>Densidad aleatoria</span>
               <input type="range" id="me-density" min="0" max="40" value="20"></label>
@@ -592,7 +601,7 @@
             <button class="btn btn-small" id="me-load">📂 Cargar</button>
             <button class="btn btn-small btn-crimson" id="me-toggle">✏ Activar editor</button>
           </div>
-          <p class="hint">Activa el editor y toca/arrastra sobre el tablero para pintar obstáculos. Los obstáculos bloquean movimiento y línea de visión. Se guardan en este dispositivo.</p>
+          <p class="hint">Activa el editor y toca/arrastra sobre el tablero para pintar obstáculos y terreno. Los obstáculos bloquean movimiento y línea de visión; el terreno difícil cuesta el doble moverse y el peligroso hace daño al entrar. Se guardan en este dispositivo.</p>
           <div id="me-board" class="board"></div>
         </details>
 

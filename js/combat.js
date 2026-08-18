@@ -37,7 +37,7 @@ const combat = {
   log: [],        // [{cls, html}]
   diff: "normal", // easy | normal | hard | tactical (Fase 4)
   confirm: null,  // inyectable (UI: window.confirm); tests lo sustituyen
-  map: { theme: "stone", obstacles: [] } // terreno del tablero
+  map: { theme: "stone", obstacles: [], terrain: [] } // terreno del tablero
 };
 
 /** Golpes Astutos: coste, nivel y característica de salvación. */
@@ -191,25 +191,30 @@ function cellOccupied(x, y) {
   return combat.enemies.some((e) => e.hp > 0 && e.pos.x === x && e.pos.y === y);
 }
 
-/** Celdas alcanzables en N pasos (5 ft c/u) sin atravesar ocupadas (BFS 8 direcciones). */
-function reachableCells(from, steps) {
-  const seen = new Set([from.x + "," + from.y]);
+/** Celdas alcanzables dentro de ft, considerando terreno difícil (doble coste). */
+function reachableCells(from, ft) {
+  const maxFt = ft;
+  const dist = new Map([[from.x + "," + from.y, 0]]);
+  const queue = [{ x: from.x, y: from.y, cost: 0 }];
+  let head = 0;
   const out = [];
-  let frontier = [from];
-  for (let s = 0; s < steps; s++) {
-    const next = [];
-    frontier.forEach((c) => {
-      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-        if (!dx && !dy) continue;
-        const nx = c.x + dx, ny = c.y + dy, k = nx + "," + ny;
-        if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h || seen.has(k)) continue;
-        if (cellOccupied(nx, ny)) continue;
-        seen.add(k);
-        out.push({ x: nx, y: ny });
-        next.push({ x: nx, y: ny });
+  while (head < queue.length) {
+    const cur = queue[head++];
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      const nx = cur.x + dx, ny = cur.y + dy, k = nx + "," + ny;
+      if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h) continue;
+      if (cellOccupied(nx, ny)) continue;
+      const moveCost = isDifficult(nx, ny) ? 10 : 5;
+      const nextCost = cur.cost + moveCost;
+      if (nextCost > maxFt) continue;
+      const existing = dist.get(k);
+      if (existing == null || nextCost < existing) {
+        dist.set(k, nextCost);
+        queue.push({ x: nx, y: ny, cost: nextCost });
+        out.push({ x: nx, y: ny, cost: nextCost });
       }
-    });
-    frontier = next;
+    }
   }
   return out;
 }
@@ -274,20 +279,95 @@ function placeCombatants() {
   });
 }
 
-/** Limpia todos los obstáculos del mapa actual. */
-function clearMap() { combat.map.obstacles = []; }
+/** HP por tipo de obstáculo destructible. */
+const OBSTACLE_HP = { crate: 10, barrel: 8, wall: 25, pillar: 0 };
+
+/** Limpia todos los obstáculos y terreno del mapa actual. */
+function clearMap() { combat.map.obstacles = []; combat.map.terrain = []; }
 
 /** Añade un obstáculo si la celda está libre. */
 function addObstacle(x, y, type) {
   if (cellBlocked(x, y)) return false;
   removeObstacle(x, y);
-  combat.map.obstacles.push({ x, y, type });
+  const hp = OBSTACLE_HP[type] || 0;
+  const obs = { x, y, type };
+  if (hp > 0) { obs.hp = hp; obs.maxHp = hp; obs.destructible = true; }
+  combat.map.obstacles.push(obs);
   return true;
 }
 
 /** Quita un obstáculo de una celda. */
 function removeObstacle(x, y) {
   combat.map.obstacles = combat.map.obstacles.filter((o) => o.x !== x || o.y !== y);
+}
+
+/** Aplica daño a un obstáculo destructible. Devuelve true si se destruyó. */
+function damageObstacle(o, dmg) {
+  if (!o || !o.destructible || o.hp <= 0) return false;
+  o.hp = Math.max(0, o.hp - dmg);
+  cLog(`💥 ${ct("obsDamaged") || "Obstáculo dañado"}: −${dmg} PG (${o.hp}/${o.maxHp})`, "log-hit");
+  if (o.hp <= 0) {
+    cLog(`💥 ${ct("obsDestroyed") || "Obstáculo destruido"}`, "log-crit");
+    removeObstacle(o.x, o.y);
+    return true;
+  }
+  return false;
+}
+
+/* ---------- Terreno ---------- */
+function getTerrain(x, y, type) {
+  return combat.map.terrain.filter((t) => t.x === x && t.y === y && (!type || t.type === type));
+}
+function addTerrain(x, y, type, props) {
+  removeTerrain(x, y, type);
+  combat.map.terrain.push(Object.assign({ x, y, type }, props || {}));
+}
+function removeTerrain(x, y, type) {
+  combat.map.terrain = combat.map.terrain.filter((t) => t.x !== x || t.y !== y || (type && t.type !== type));
+}
+function isDifficult(x, y) {
+  return combat.map.terrain.some((t) => t.x === x && t.y === y && (t.type === "difficult" || t.type === "ice"));
+}
+function triggerTerrain(x, y, who, kind) {
+  const terrains = combat.map.terrain.filter((t) => t.x === x && t.y === y && (!t.trigger || t.trigger === kind || kind === "start"));
+  terrains.forEach((t) => {
+    if (t.type === "difficult") return;
+    let dmg = 0;
+    if (t.dmg) {
+      const res = rollDiceExpr(t.dmg, false);
+      dmg = res.total;
+    }
+    if (t.save && t.dc) {
+      const isPlayer = who === "p";
+      const ok = isPlayer ? playerSave(t.save, t.dc) : enemySave(who, t.save, t.dc);
+      if (ok) {
+        if (t.half) dmg = Math.floor(dmg / 2);
+        else dmg = 0;
+      }
+    }
+    if (dmg > 0) {
+      if (who === "p") {
+        combat.p.hp = Math.max(0, combat.p.hp - dmg);
+        cLog(`🔥 ${ct("terrainDmg") || "Terreno"}: ${state.name} recibe ${dmg} ${ct("dmgWord")} [${combat.p.hp} PG]`, "log-miss");
+      } else {
+        who.hp = Math.max(0, who.hp - dmg);
+        cLog(`🔥 ${ct("terrainDmg") || "Terreno"}: ${eName(who)} recibe ${dmg} ${ct("dmgWord")} [${who.hp}/${who.maxHp} PG]`, "log-miss");
+      }
+    }
+  });
+}
+function tickAreaEffects() {
+  // Reduce duración de efectos de área y elimina los expirados
+  combat.map.terrain.forEach((t) => { if (t.duration > 0) t.duration--; });
+  combat.map.terrain = combat.map.terrain.filter((t) => t.duration == null || t.duration > 0);
+}
+function addAreaEffect(center, radius, type, props) {
+  for (let y = Math.max(0, center.y - radius); y <= Math.min(BOARD.h - 1, center.y + radius); y++)
+    for (let x = Math.max(0, center.x - radius); x <= Math.min(BOARD.w - 1, center.x + radius); x++) {
+      if (distBetween(center, { x, y }) <= radius * 5) {
+        addTerrain(x, y, type, Object.assign({ duration: 3 }, props));
+      }
+    }
 }
 
 /** Genera obstáculos aleatorios respetando zonas de aparición. */
@@ -351,7 +431,7 @@ function ensureConnectivity() {
 /** Persistencia de mapas en localStorage. */
 function saveMapSlot(name) {
   const maps = JSON.parse(localStorage.getItem("chaps-maps-v1") || "[]");
-  const data = { theme: combat.map.theme, obstacles: combat.map.obstacles.slice() };
+  const data = { theme: combat.map.theme, obstacles: combat.map.obstacles.slice(), terrain: combat.map.terrain.slice() };
   const idx = maps.findIndex((m) => m.name === name);
   if (idx >= 0) maps[idx].data = data; else maps.push({ name, data });
   localStorage.setItem("chaps-maps-v1", JSON.stringify(maps));
@@ -362,6 +442,7 @@ function loadMapSlot(name) {
   if (m && m.data) {
     combat.map.theme = m.data.theme || "stone";
     combat.map.obstacles = (m.data.obstacles || []).slice();
+    combat.map.terrain = (m.data.terrain || []).slice();
   }
 }
 function listMapSlots() {
@@ -466,6 +547,7 @@ function beginTurn() {
     p.vexTarget = null; p.nickReady = false; p.nickFree = false;
     combat.enemies.forEach((x) => { x.slow = false; }); // Slow dura hasta el inicio de tu próximo turno
     cLog(`— ${ct("round")} ${combat.round} · ${ct("turnStart")} <strong>${state.name}</strong> —`, "log-info");
+    if (!combat.quiet) triggerTerrain(p.pos.x, p.pos.y, "p", "start");
     // Paralizado: pierde el turno y repite la salvación al final
     const para = getPCond("paralyzed");
     if (para) {
@@ -489,7 +571,10 @@ function nextTurn() {
   checkCombatEnd();
   if (!combat.on) return;
   combat.turn++;
-  if (combat.turn >= combat.order.length) { combat.turn = 0; combat.round++; }
+  if (combat.turn >= combat.order.length) {
+    combat.turn = 0; combat.round++;
+    if (!combat.quiet) tickAreaEffects();
+  }
   beginTurn();
 }
 
@@ -497,14 +582,15 @@ function cloneCombatState() {
   return {
     on: combat.on, round: combat.round, turn: combat.turn, order: structuredClone(combat.order),
     enemies: structuredClone(combat.enemies), p: combat.p ? structuredClone(combat.p) : null,
-    log: combat.log.slice(), diff: combat.diff
+    log: combat.log.slice(), diff: combat.diff,
+    map: structuredClone(combat.map)
   };
 }
 
 function restoreCombatState(saved) {
   combat.on = saved.on; combat.round = saved.round; combat.turn = saved.turn;
   combat.order = saved.order; combat.enemies = saved.enemies; combat.p = saved.p;
-  combat.log = saved.log; combat.diff = saved.diff;
+  combat.log = saved.log; combat.diff = saved.diff; combat.map = saved.map;
 }
 
 /** Simula un único combate contra los enemigos actuales. Devuelve resultado. */
@@ -781,6 +867,48 @@ function playerAttack(w, e, opts) {
   return true;
 }
 
+/** Ataque a un obstáculo destructible. */
+function playerAttackObstacle(w, obs) {
+  const p = combat.p;
+  if (!combat.on || !isPlayerTurn() || !p.action) { cLog("⛔ " + ct("noAction"), "log-miss"); return false; }
+  if (!obs || !obs.destructible) return false;
+  const cat = w.weaponId ? WEAPON_MASTERY.find((x) => x.id === w.weaponId) : null;
+  const melee = cat ? cat.melee : 5;
+  const range = cat ? cat.range : null;
+  const dist = distBetween(p.pos, obs);
+  let mode = null;
+  if (melee && dist <= melee) mode = "melee";
+  else if (range) {
+    const [rn, rl] = range.split("/").map(Number);
+    if (dist <= rl) mode = "ranged";
+  }
+  if (!mode) { cLog(`⛔ ${ct("noRange")} (${dist} ft)`, "log-miss"); return false; }
+  if (mode === "ranged" && !hasLineOfSight(p.pos, obs)) {
+    cLog(`⛔ ${ct("noLoS") || "sin línea de visión"}`, "log-miss");
+    return false;
+  }
+  const ac = obs.type === "wall" ? 15 : 10;
+  const adv = p.steady || p.hidden;
+  let rolls = adv ? [rollDie(20), rollDie(20)] : [rollDie(20)];
+  const chosen = adv ? Math.max(...rolls) : rolls[0];
+  const atkBonus = profBonus(state.level) + dexMod();
+  const total = chosen + atkBonus;
+  const crit = chosen === 20;
+  p.action = false; p.steady = false; p.hidden = false;
+  fxLine(p.pos, obs);
+  if (chosen === 1 || total < ac) {
+    cLog(`🏹 ${w.name} → obstáculo: d20(${rolls.join(", ")})${fmtMod(atkBonus)} = ${total} vs CA ${ac} → ${ct("missWord")}`, "log-miss");
+    if (typeof renderCombat === "function") renderCombat();
+    return true;
+  }
+  const expr = `${w.dice}d${w.sides}+${w.bonus}`;
+  const dmg = rollDiceExpr(expr, crit).total;
+  damageObstacle(obs, dmg);
+  cLog(`💥 ${w.name} → obstáculo ${obs.type}: ${total} vs CA ${ac} → <strong>${dmg} ${ct("dmgWord")}</strong> (${obs.hp}/${obs.maxHp} PG)`, crit ? "log-crit" : "log-hit");
+  if (typeof renderCombat === "function") renderCombat();
+  return true;
+}
+
 /** Push: empuja al enemigo en línea recta alejándolo del jugador. */
 function pushEnemy(e, ft) {
   const steps = Math.floor(ft / 5);
@@ -792,7 +920,10 @@ function pushEnemy(e, ft) {
     e.pos = { x: nx, y: ny };
     moved += 5;
   }
-  if (moved) cLog(`💨 Push: ${eName(e)} ${ct("mPush")} ${moved} ft`, "log-info");
+  if (moved) {
+    cLog(`💨 Push: ${eName(e)} ${ct("mPush")} ${moved} ft`, "log-info");
+    triggerTerrain(e.pos.x, e.pos.y, e, "enter");
+  }
 }
 
 /* ================= MOVIMIENTO DEL JUGADOR ================= */
@@ -806,21 +937,23 @@ function playerMoveTo(x, y) {
   if (x < 0 || y < 0 || x >= BOARD.w || y >= BOARD.h || cellOccupied(x, y)) return false;
   const budget = p.move + p.withdraw;
   const from = { x: p.pos.x, y: p.pos.y };
-  const ft = distBetween(from, { x, y });
+  const reachable = reachableCells(from, budget);
+  const dest = reachable.find((c) => c.x === x && c.y === y);
+  if (!dest) { cLog("⛔ " + ct("noMove"), "log-miss"); return false; }
+  const ft = dest.cost;
   if (ft === 0) return false;
-  if (ft > budget) { cLog("⛔ " + ct("noMove"), "log-miss"); return false; }
 
   // AdO: salir del alcance de melé de un enemigo sin Retirarse/Retirada
   const freeMove = p.diseng || p.withdraw >= ft;
-  combat.enemies.forEach((x) => {
-    if (x.hp <= 0 || !x.react || hasCond(x, "unconscious")) return;
-    const reach = Math.max(...x.attacks.filter((a) => a.melee).map((a) => a.melee), 0);
+  combat.enemies.forEach((en) => {
+    if (en.hp <= 0 || !en.react || hasCond(en, "unconscious")) return;
+    const reach = Math.max(...en.attacks.filter((a) => a.melee).map((a) => a.melee), 0);
     if (!reach) return;
-    if (distBetween(from, x.pos) <= reach && distBetween({ x, y }, x.pos) > reach && !freeMove) {
-      const atk = x.attacks.find((a) => a.melee);
-      x.react = false;
-      cLog(`⚠ ${ct("oaLog")} ${eName(x)}!`, "log-miss");
-      enemyAttackRoll(x, atk, true);
+    if (distBetween(from, en.pos) <= reach && distBetween({ x, y }, en.pos) > reach && !freeMove) {
+      const atk = en.attacks.find((a) => a.melee);
+      en.react = false;
+      cLog(`⚠ ${ct("oaLog")} ${eName(en)}!`, "log-miss");
+      enemyAttackRoll(en, atk, true);
     }
   });
 
@@ -830,6 +963,7 @@ function playerMoveTo(x, y) {
   p.move -= (ft - useWithdraw);
   p.pos = { x, y };
   cLog(`👣 ${state.name} ${ct("aiMove")} ${ft} ft`, "log-info");
+  triggerTerrain(x, y, "p", "enter");
   if (typeof renderCombat === "function") renderCombat();
   return true;
 }
@@ -924,24 +1058,28 @@ function enemyAttackRoll(e, atk, isOA) {
 /** Encuentra una celda alcanzable que tenga línea de visión al jugador. */
 function findLoSMove(e, ft) {
   const start = e.pos;
-  const maxSteps = Math.floor(ft / 5);
-  if (maxSteps <= 0) return null;
-  const seen = new Set([start.x + "," + start.y]);
-  const queue = [{ pos: start, steps: 0 }];
+  if (ft <= 0) return null;
+  const dist = new Map([[start.x + "," + start.y, 0]]);
+  const queue = [{ pos: start, cost: 0 }];
   const reachable = [];
   let head = 0;
   while (head < queue.length) {
     const cur = queue[head++];
-    if (cur.steps >= maxSteps) continue;
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
       if (!dx && !dy) continue;
       const nx = cur.pos.x + dx, ny = cur.pos.y + dy, k = nx + "," + ny;
-      if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h || seen.has(k)) continue;
+      if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h) continue;
       if (cellOccupied(nx, ny)) continue;
-      seen.add(k);
-      const next = { pos: { x: nx, y: ny }, steps: cur.steps + 1 };
-      reachable.push(next);
-      queue.push(next);
+      const moveCost = isDifficult(nx, ny) ? 10 : 5;
+      const nextCost = cur.cost + moveCost;
+      if (nextCost > ft) continue;
+      const existing = dist.get(k);
+      if (existing == null || nextCost < existing) {
+        dist.set(k, nextCost);
+        const next = { pos: { x: nx, y: ny }, cost: nextCost };
+        reachable.push(next);
+        queue.push(next);
+      }
     }
   }
   let best = null, bestScore = null;
@@ -958,25 +1096,29 @@ function aiMoveSteps(e, ft, mode, stopAt) {
   stopAt = stopAt || 5;
   if (mode === true) mode = "flee";
   else if (!mode) mode = "approach";
-  const maxSteps = Math.floor(ft / 5);
-  if (maxSteps <= 0) return 0;
+  if (ft <= 0) return 0;
   const start = e.pos;
-  const seen = new Set([start.x + "," + start.y]);
-  const queue = [{ pos: start, steps: 0 }];
+  const dist = new Map([[start.x + "," + start.y, 0]]);
+  const queue = [{ pos: start, cost: 0 }];
   const reachable = [];
   let head = 0;
   while (head < queue.length) {
     const cur = queue[head++];
-    if (cur.steps >= maxSteps) continue;
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
       if (!dx && !dy) continue;
       const nx = cur.pos.x + dx, ny = cur.pos.y + dy, k = nx + "," + ny;
-      if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h || seen.has(k)) continue;
+      if (nx < 0 || ny < 0 || nx >= BOARD.w || ny >= BOARD.h) continue;
       if (cellOccupied(nx, ny)) continue;
-      seen.add(k);
-      const next = { pos: { x: nx, y: ny }, steps: cur.steps + 1 };
-      reachable.push(next);
-      queue.push(next);
+      const moveCost = isDifficult(nx, ny) ? 10 : 5;
+      const nextCost = cur.cost + moveCost;
+      if (nextCost > ft) continue;
+      const existing = dist.get(k);
+      if (existing == null || nextCost < existing) {
+        dist.set(k, nextCost);
+        const next = { pos: { x: nx, y: ny }, cost: nextCost };
+        reachable.push(next);
+        queue.push(next);
+      }
     }
   }
   const target = combat.p.pos;
@@ -1012,7 +1154,8 @@ function aiMoveSteps(e, ft, mode, stopAt) {
   });
   if (!best) return 0;
   e.pos = best.pos;
-  return best.steps * 5;
+  triggerTerrain(best.pos.x, best.pos.y, e, "enter");
+  return best.cost;
 }
 
 /** Fin de turno del enemigo: salvaciones repetidas y expiración de condiciones. */
@@ -1144,6 +1287,7 @@ function enemyTakeTurn(e) {
   const intent = enemyIntent(e);
   if (intent) cLog(intent, "log-info");
   cLog(`🤖 ${eName(e)} ${ct("aiThink")}`, "log-info");
+  if (!combat.quiet) triggerTerrain(e.pos.x, e.pos.y, e, "start");
   e.smiteUsed = false;
   // Dragón: recarga de aliento (5-6 en d6)
   if (e.breath && !e.breath.ready) {
@@ -1208,7 +1352,8 @@ function enemyTakeTurn(e) {
       if (best) {
         const wasClose = distOf(e) <= 5;
         e.pos = best.pos;
-        cLog(`👣 ${eName(e)} ${ct("aiMove")} ${best.steps * 5} ft (busca línea de visión)`, "log-info");
+        triggerTerrain(best.pos.x, best.pos.y, e, "enter");
+        cLog(`👣 ${eName(e)} ${ct("aiMove")} ${best.cost} ft (busca línea de visión)`, "log-info");
         tryPlayerOA(e, wasClose);
         if (!combat.on) return;
       }
@@ -1347,6 +1492,8 @@ let mapEditMode = false;
 let mapEditBrush = "pillar";
 
 const OBSTACLE_ICON = { pillar: "⬛", crate: "📦", barrel: "🛢", wall: "🧱" };
+const TERRAIN_ICON = { difficult: "🌿", fire: "🔥", ice: "❄️", spikes: "🗡" };
+const TERRAIN_BRUSHES = { difficult: { type: "difficult" }, fire: { type: "fire", dmg: "1d6", save: "dex", dc: 12, trigger: "enter" }, ice: { type: "ice", dmg: "1d4", save: "dex", dc: 10, trigger: "enter" }, spikes: { type: "spikes", dmg: "1d8", trigger: "enter" } };
 
 function renderBoard() {
   const bd = ctEl("c-board");
@@ -1355,8 +1502,7 @@ function renderBoard() {
   bd.className = "board theme-" + (combat.map.theme || "stone");
   const reach = new Set();
   if (moveMode && isPlayerTurn() && p) {
-    const steps = Math.floor((p.move + p.withdraw) / 5);
-    reachableCells(p.pos, steps).forEach((c) => reach.add(c.x + "," + c.y));
+    reachableCells(p.pos, p.move + p.withdraw).forEach((c) => reach.add(c.x + "," + c.y));
   }
   bd.innerHTML = "";
   bd.style.gridTemplateColumns = `repeat(${BOARD.w}, 1fr)`;
@@ -1364,10 +1510,15 @@ function renderBoard() {
     const cell = document.createElement("div");
     cell.id = `cell-${x}-${y}`;
     cell.className = "cell" + ((x + y) % 2 ? " alt" : "");
+    const terr = getTerrain(x, y)[0];
+    if (terr) {
+      cell.classList.add("terrain", "terrain-" + terr.type);
+      if (!cell.innerHTML) cell.innerHTML = `<span class="terrain-icon" title="${terr.type}">${TERRAIN_ICON[terr.type] || "•"}</span>`;
+    }
     const obs = getObstacle(x, y);
     if (obs) {
       cell.classList.add("obs", "obs-" + obs.type);
-      cell.innerHTML = `<span class="obs-icon" title="${obs.type}">${OBSTACLE_ICON[obs.type]}</span>`;
+      cell.innerHTML = `<span class="obs-icon" title="${obs.type}${obs.destructible ? ` ${obs.hp}/${obs.maxHp} PG` : ""}">${OBSTACLE_ICON[obs.type]}</span>`;
     }
     if (reach.has(x + "," + y)) cell.classList.add("reach");
     if (p && p.pos.x === x && p.pos.y === y) {
@@ -1386,17 +1537,15 @@ function renderBoard() {
     if (reach.has(x + "," + y)) {
       cell.addEventListener("click", () => { moveMode = false; playerMoveTo(x, y); });
     }
-    if (mapEditMode) {
+    if (obs && obs.destructible && !moveMode && isPlayerTurn() && combat.p && combat.p.action) {
       cell.addEventListener("click", () => {
-        if (mapEditBrush === "erase") removeObstacle(x, y); else addObstacle(x, y, mapEditBrush);
-        renderBoard();
+        const w = state.weapons[0];
+        if (w) playerAttackObstacle(w, obs);
       });
-      cell.addEventListener("mouseenter", (ev) => {
-        if (ev.buttons === 1) {
-          if (mapEditBrush === "erase") removeObstacle(x, y); else addObstacle(x, y, mapEditBrush);
-          renderBoard();
-        }
-      });
+    }
+    if (mapEditMode) {
+      cell.addEventListener("click", () => { applyMapBrush(x, y); renderBoard(); });
+      cell.addEventListener("mouseenter", (ev) => { if (ev.buttons === 1) { applyMapBrush(x, y); renderBoard(); } });
     }
     bd.appendChild(cell);
   }
@@ -1612,6 +1761,13 @@ function confirmAttack() {
 }
 
 /* ---------- Editor de mapa ---------- */
+function applyMapBrush(x, y) {
+  if (mapEditBrush === "erase") { removeObstacle(x, y); removeTerrain(x, y); }
+  else if (mapEditBrush === "erase-terrain") removeTerrain(x, y);
+  else if (TERRAIN_BRUSHES[mapEditBrush]) addTerrain(x, y, TERRAIN_BRUSHES[mapEditBrush].type, TERRAIN_BRUSHES[mapEditBrush]);
+  else addObstacle(x, y, mapEditBrush);
+}
+
 function renderEditorBoard() {
   const bd = ctEl("me-board");
   if (!bd) return;
@@ -1622,21 +1778,18 @@ function renderEditorBoard() {
     const cell = document.createElement("div");
     cell.id = `me-cell-${x}-${y}`;
     cell.className = "cell" + ((x + y) % 2 ? " alt" : "");
+    const terr = getTerrain(x, y)[0];
+    if (terr) {
+      cell.classList.add("terrain", "terrain-" + terr.type);
+      cell.innerHTML = `<span class="terrain-icon" title="${terr.type}">${TERRAIN_ICON[terr.type] || "•"}</span>`;
+    }
     const obs = getObstacle(x, y);
     if (obs) {
       cell.classList.add("obs", "obs-" + obs.type);
-      cell.innerHTML = `<span class="obs-icon" title="${obs.type}">${OBSTACLE_ICON[obs.type]}</span>`;
+      cell.innerHTML = `<span class="obs-icon" title="${obs.type}${obs.destructible ? ` ${obs.hp}/${obs.maxHp} PG` : ""}">${OBSTACLE_ICON[obs.type]}</span>`;
     }
-    cell.addEventListener("click", () => {
-      if (mapEditBrush === "erase") removeObstacle(x, y); else addObstacle(x, y, mapEditBrush);
-      renderEditorBoard(); renderBoard();
-    });
-    cell.addEventListener("mouseenter", (ev) => {
-      if (ev.buttons === 1) {
-        if (mapEditBrush === "erase") removeObstacle(x, y); else addObstacle(x, y, mapEditBrush);
-        renderEditorBoard(); renderBoard();
-      }
-    });
+    cell.addEventListener("click", () => { applyMapBrush(x, y); renderEditorBoard(); renderBoard(); });
+    cell.addEventListener("mouseenter", (ev) => { if (ev.buttons === 1) { applyMapBrush(x, y); renderEditorBoard(); renderBoard(); } });
     bd.appendChild(cell);
   }
 }

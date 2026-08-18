@@ -3,7 +3,7 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v2";
+const CACHE_NAME = "chaps-v3";
 const SHELL = [
   "./",
   "./index.html",

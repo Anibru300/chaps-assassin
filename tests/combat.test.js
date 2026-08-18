@@ -121,7 +121,7 @@ while(combat.on&&guard++<200){
       // acercarse hasta melé usando el tablero
       let g2=0;
       while(distOf(tgt)>5&&g2++<10){
-        const cells=reachableCells(combat.p.pos,Math.floor((combat.p.move+combat.p.withdraw)/5));
+        const cells=reachableCells(combat.p.pos,combat.p.move+combat.p.withdraw);
         if(!cells.length)break;
         cells.sort((a,b)=>distBetween(a,tgt.pos)-distBetween(b,tgt.pos));
         if(!playerMoveTo(cells[0].x,cells[0].y))break;
@@ -145,7 +145,7 @@ while(combat.on&&guard++<200){
     if(tgt){
       let g2=0;
       while(distOf(tgt)>5&&g2++<10){
-        const cells=reachableCells(combat.p.pos,Math.floor((combat.p.move+combat.p.withdraw)/5));
+        const cells=reachableCells(combat.p.pos,combat.p.move+combat.p.withdraw);
         if(!cells.length)break;
         cells.sort((a,b)=>distBetween(a,tgt.pos)-distBetween(b,tgt.pos));
         if(!playerMoveTo(cells[0].x,cells[0].y))break;
@@ -209,5 +209,37 @@ fleeEnemy.hp=1;fleeEnemy.maxHp=10; // cobardía activa
 const beforeFlee={x:fleeEnemy.pos.x,y:fleeEnemy.pos.y};
 aiMoveSteps(fleeEnemy,30,"flee");
 A(distBetween(fleeEnemy.pos,combat.p.pos)>distBetween(beforeFlee,combat.p.pos)||fleeEnemy.pos.x!==beforeFlee.x||fleeEnemy.pos.y!==beforeFlee.y,"IA huye");
+
+// --- Obstáculos destruibles ---
+clearMap();
+addObstacle(5,3,"crate");
+const obs=getObstacle(5,3);
+A(obs&&obs.destructible&&obs.hp>0,"caja es destructible con PG");
+damageObstacle(obs,20);
+A(getObstacle(5,3)===null,"caja destruida desaparece");
+
+// --- Terreno difícil ---
+clearMap();
+combat.p=newCombatPlayer();combat.p.pos={x:1,y:3};
+addTerrain(2,3,"difficult");
+const r5=reachableCells(combat.p.pos,5);
+A(!r5.some(c=>c.x===2&&c.y===3),"terreno difícil cuesta 10 ft");
+const r10=reachableCells(combat.p.pos,10);
+A(r10.some(c=>c.x===2&&c.y===3),"con 10 ft se puede entrar en terreno difícil");
+
+// --- Terreno peligroso ---
+clearMap();
+const hazEnemy=spawnEnemy("goblin");hazEnemy.pos={x:1,y:3};combat.enemies=[hazEnemy];
+addTerrain(2,3,"spikes",{dmg:"1d8",trigger:"enter"});
+const hpBefore=hazEnemy.hp;
+for(let i=0;i<10;i++){hazEnemy.hp=hazEnemy.maxHp;triggerTerrain(2,3,hazEnemy,"enter");if(hazEnemy.hp<hpBefore)break;}
+A(hazEnemy.hp<hazEnemy.maxHp,"terreno peligroso hace daño al entrar");
+
+// --- Efecto de área persistente ---
+clearMap();
+addAreaEffect({x:5,y:3},1,"fire",{dmg:"1d6",save:"dex",dc:12,trigger:"enter"});
+const fires=combat.map.terrain.filter(t=>t.type==="fire");
+A(fires.length>=3,"efecto de área crea varias casillas de fuego");
+A(fires.every(t=>t.duration>0),"fuego tiene duración");
 `;
 vm.runInContext(src + test, ctx);
