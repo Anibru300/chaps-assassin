@@ -3,7 +3,7 @@
    La contraseña NUNCA se guarda en texto plano: solo hash SHA-256.
    ============================================================ */
 (function () {
-  const EXPECTED = "13d07947ff1d032dbe82cf7a868c19517604fe1e7facfb83e40b29d655748901"; // SHA-256 de "usuario:contraseña"
+  const EXPECTED = "ef71a1e3edf1b769265645bebdad57862fd314a7896e5507212bbdfd8b67393d"; // SHA-256 de "usuario:contraseña"
   const KEY = "chaps-auth-v1";
 
   function sha256(str) {
