@@ -142,6 +142,7 @@ test("sincronización entre computadora/celular y panel sin superposición", {
       await pc.evaluate(() => window.scrollTo(0, 0));
       for (const page of [pc, phone]) await page.locator("#cloud-choice").evaluate((element) => { element.hidden = false; });
       const panel = await pc.locator("#cloud-panel").boundingBox();
+      assert.equal(await pc.locator("#cloud-panel").evaluate((element) => getComputedStyle(element).counterIncrement), "none");
       const sidebar = await pc.locator("#sheet-sidebar").boundingBox();
       assert.ok(panel.x >= sidebar.x + sidebar.width, "sidebar no invade panel");
       for (const page of [pc, phone]) {

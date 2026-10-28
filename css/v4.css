@@ -328,7 +328,7 @@ button, .btn { min-height: 38px; }
 #btn-header-export, #btn-header-import { min-width: 38px; }
 
 /* ----- Desktop: sidebar visible ----- */
-#cloud-panel { counter-increment: none; }
+#tab-sheet > #cloud-panel { counter-increment: none; }
 #cloud-panel > h2::before { display: none; }
 #cloud-account, #cloud-status { overflow-wrap: anywhere; }
 #cloud-panel .rest-row > .btn { max-width: 100%; white-space: normal; }

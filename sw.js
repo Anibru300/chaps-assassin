@@ -3,12 +3,12 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v7-live-sync";
+const CACHE_NAME = "chaps-v8-live-sync";
 const SHELL = [
   "./",
   "./index.html",
   "./css/style.css?v=4",
-  "./css/v4.css?v=16",
+  "./css/v4.css?v=17",
   "./js/auth.js?v=4",
   "./js/data.js?v=3",
   "./js/app.js?v=6",
