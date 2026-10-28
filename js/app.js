@@ -92,7 +92,47 @@ function loadState() {
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   flashSaved();
+  if (window.CHAPS_CLOUD) window.CHAPS_CLOUD.changed();
 }
+
+// Puente para sincronización; el motor y la ficha conservan su estado actual.
+window.CHAPS_STORE = {
+  snapshot: () => structuredClone(state),
+  hasLocal: () => localStorage.getItem(STORAGE_KEY) !== null,
+  validate(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data) ||
+        typeof data.name !== "string" || !Number.isInteger(data.level) ||
+        data.level < 1 || data.level > 20 || data.v !== STATE_VERSION) {
+      throw new Error("Ficha de nube incompatible; conserva copia local.");
+    }
+    // Exigir forma completa de un export actual antes de reemplazar la ficha.
+    const check = (value, model) => {
+      if (Array.isArray(model)) return Array.isArray(value);
+      if (model === null) return value == null || ["number", "string"].includes(typeof value);
+      if (typeof model === "object") return value && typeof value === "object" &&
+        !Array.isArray(value) && Object.keys(model).every((key) => check(value[key], model[key]));
+      return typeof value === typeof model && (typeof value !== "number" || Number.isFinite(value));
+    };
+    if (!check(data, DEFAULT_STATE)) throw new Error("Ficha de nube incompleta; conserva copia local.");
+    const lists = {
+      weapons: { name: "", dice: 1, sides: 6, bonus: 0, props: "", mastery: "" },
+      inventory: DEFAULT_STATE.inventory[0],
+      feats: { name: "", desc: "" }, journal: { date: "", title: "", text: "" },
+      languages: "", proficiencies: "", masteryChoices: ""
+    };
+    if (Object.entries(lists).some(([key, model]) => !data[key].every((item) => check(item, model)))) {
+      throw new Error("Ficha de nube contiene entradas incompatibles; conserva copia local.");
+    }
+  },
+  replace(data) {
+    this.validate(data);
+    const previous = localStorage.getItem(STORAGE_KEY);
+    if (previous) localStorage.setItem("chaps-state-before-cloud-v1", previous);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    state = structuredClone(data); // Ya validada: conservar exactamente payload y campos opcionales.
+    renderAll();
+  }
+};
 
 let saveTimer = null;
 function flashSaved() {
@@ -458,9 +498,9 @@ function longRest() {
   saveState();
   renderIdentity();
   // Recordatorio: tras un descanso largo puedes cambiar las armas de Maestría.
-  $("#mastery-card").classList.remove("mastery-remind");
-  void $("#mastery-card").offsetWidth; // reinicia la animación
-  $("#mastery-card").classList.add("mastery-remind");
+  $("#section-mastery").classList.remove("mastery-remind");
+  void $("#section-mastery").offsetWidth; // reinicia la animación
+  $("#section-mastery").classList.add("mastery-remind");
 }
 
 /* ---------- Maestría de armas ---------- */
@@ -1051,6 +1091,7 @@ function importJson(file) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       state = loadState();
       renderAll();
+      saveState(); // La importación también debe sincronizarse.
       alert(t("imported"));
     } catch (e) {
       alert(t("importError"));

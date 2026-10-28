@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/characters/{characterId} {
+      function owner() {
+        return request.auth != null && request.auth.uid == userId && characterId == 'chaps';
+      }
+      function valid() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['schema', 'revision', 'payload', 'updatedAt'])
+          && data.keys().hasOnly(['schema', 'revision', 'payload', 'updatedAt'])
+          && data.schema == 1 && data.revision is int
+          && data.payload is string && data.payload.size() < 700000
+          && data.updatedAt == request.time;
+      }
+      allow read: if owner();
+      allow create: if owner() && valid() && request.resource.data.revision == 1;
+      allow update: if owner() && valid()
+        && request.resource.data.revision == resource.data.revision + 1;
+    }
+  }
+}

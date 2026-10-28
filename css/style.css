@@ -532,7 +532,7 @@ td { padding: 6px 8px; border-bottom: 1px solid #1f222c; vertical-align: middle;
 .cs-option input:disabled + span { color: #555; }
 
 /* Recordatorio de cambio de maestría tras descanso largo */
-#mastery-card.mastery-remind {
+#section-mastery.mastery-remind {
   animation: masteryPulse 1.6s ease-in-out 4;
   border-left-color: var(--gold);
 }

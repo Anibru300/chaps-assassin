@@ -75,6 +75,11 @@
     return parts.join(", ") || "—";
   }
 
+  function firstNum(value) {
+    const match = String(value == null ? "" : value).match(/\d+/);
+    return match ? parseInt(match[0], 10) : "";
+  }
+
   const RARITY_ES = {
     "common": "Común", "uncommon": "Poco común", "rare": "Raro",
     "very rare": "Muy raro", "legendary": "Legendario", "artifact": "Artefacto",
@@ -380,8 +385,8 @@
   function openDetail(it) {
     const html = detailHtml(currentCat, it);
     const buttons = actionButtons(currentCat, it);
-    if (typeof window.LIB_MODAL !== "undefined") {
-      window.LIB_MODAL.show(it.name, html, buttons);
+    if (typeof LIB_MODAL !== "undefined") {
+      LIB_MODAL.show(it.name, html, buttons);
       // Enlazar acciones del modal
       const modalBody = document.getElementById("lib-modal");
       if (!modalBody) return;
@@ -390,7 +395,7 @@
         enemyBtn.addEventListener("click", () => {
           const data = normalizeCreatureForCombat(it);
           window.addEnemyFromLibrary(data);
-          window.LIB_MODAL.hide();
+          LIB_MODAL.hide();
           // Cambiar a pestaña combate
           const combatTab = document.querySelector('.tab-btn[data-tab="combat"]');
           if (combatTab) combatTab.click();
@@ -399,9 +404,9 @@
       const weaponBtn = modalBody.querySelector(".lib-add-weapon");
       if (weaponBtn && typeof window.addWeaponFromCatalog === "function") {
         weaponBtn.addEventListener("click", () => {
-          const w = window.WEAPON_MASTERY.find((x) => x.es === it.name || x.en === it.name);
+          const w = WEAPON_MASTERY.find((x) => x.es === it.name || x.en === it.name);
           if (w) window.addWeaponFromCatalog(w.id);
-          window.LIB_MODAL.hide();
+          LIB_MODAL.hide();
         });
       }
     } else {

@@ -3,20 +3,22 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v5";
+const CACHE_NAME = "chaps-v6-firebase";
 const SHELL = [
   "./",
   "./index.html",
-  "./css/style.css",
-  "./css/v4.css",
-  "./js/auth.js",
-  "./js/data.js",
-  "./js/app.js",
-  "./js/combat-data.js",
-  "./js/combat.js",
-  "./js/simulador.js",
-  "./js/biblioteca.js",
-  "./js/combat-extra.js",
+  "./css/style.css?v=4",
+  "./css/v4.css?v=15",
+  "./js/auth.js?v=4",
+  "./js/data.js?v=3",
+  "./js/app.js?v=5",
+  "./js/combat-data.js?v=4",
+  "./js/combat.js?v=8",
+  "./js/simulador.js?v=4",
+  "./js/biblioteca.js?v=4",
+  "./js/combat-extra.js?v=5",
+  "./js/cloud-core.js?v=1",
+  "./js/firebase-sync.js?v=1",
   "./assets/chaps-portrait.jpg",
   "./assets/dragon-bg.png",
   "./assets/dragon-gate.svg",
@@ -30,10 +32,16 @@ const SHELL = [
   "./assets/tokens/Red-Dragon.jpg",
   "./manifest.json"
 ];
+const FIREBASE_SDK = ["firebase-app", "firebase-auth", "firebase-firestore"]
+  .map((name) => "https://www.gstatic.com/firebasejs/13.1.0/" + name + ".js");
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await cache.addAll(SHELL);
+      // CDN opcional: un fallo no impide instalar la ficha local.
+      await Promise.allSettled(FIREBASE_SDK.map((url) => cache.add(url)));
+    }).then(() => self.skipWaiting())
   );
 });
 
@@ -48,6 +56,18 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const { request } = e;
   const url = new URL(request.url);
+
+  // Conservar SDK ya descargado para abrir la ficha instalada sin red.
+  if (url.origin === "https://www.gstatic.com" && url.pathname.startsWith("/firebasejs/") && request.method === "GET") {
+    e.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+      if (response.ok) {
+        const copy = response.clone();
+        e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)));
+      }
+      return response;
+    })));
+    return;
+  }
 
   // API externa: siempre red, con fallback offline si existe en caché
   if (url.origin !== self.location.origin) {

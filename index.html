@@ -35,6 +35,7 @@
           <input type="password" id="login-pass" autocomplete="current-password" required></label>
         <p id="login-error" class="login-error"></p>
         <button type="submit" class="btn btn-crimson btn-big lg-btn">Entrar</button>
+        <button type="button" class="btn btn-big" id="login-google">Entrar con Google</button>
         <p class="lg-hint">Solo quien porta la daga puede pasar</p>
       </form>
     </div>
@@ -67,6 +68,25 @@
   </header>
 
   <main>
+
+    <div class="card" id="cloud-panel">
+      <h2>Personaje en nube</h2>
+      <p class="hint" id="cloud-account"></p>
+      <p class="hint" id="cloud-status" role="status" aria-live="polite">Copia local · conecta Google para sincronizar.</p>
+      <div class="rest-row">
+        <button type="button" class="btn btn-small" id="cloud-connect">Conectar Google</button>
+        <button type="button" class="btn btn-small" id="cloud-disconnect" hidden>Desconectar Google</button>
+        <button type="button" class="btn btn-small" id="cloud-retry" hidden>Reintentar sincronización</button>
+        <button type="button" class="btn btn-small" id="cloud-backup">Descargar respaldo anterior</button>
+      </div>
+      <div id="cloud-choice" hidden>
+        <p class="hint">Primera conexión o versiones diferentes: revisa ficha visible antes de elegir.</p>
+        <div class="rest-row">
+          <button type="button" class="btn btn-small btn-crimson" id="cloud-use-local">Usar ficha de este dispositivo</button>
+          <button type="button" class="btn btn-small" id="cloud-use-remote">Usar ficha de nube</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ============ TAB 1: FICHA ============ -->
     <section id="tab-sheet" class="tab-panel active">
@@ -817,13 +837,15 @@
   </footer>
 
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
-  <script src="js/auth.js?v=3"></script>
+  <script src="js/auth.js?v=4"></script>
   <script src="js/data.js?v=3"></script>
-  <script src="js/app.js?v=4"></script>
+  <script src="js/app.js?v=5"></script>
   <script src="js/combat-data.js?v=4"></script>
   <script src="js/combat.js?v=8"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>
+  <script src="js/cloud-core.js?v=1"></script>
+  <script src="js/firebase-sync.js?v=1"></script>
 </body>
 </html>

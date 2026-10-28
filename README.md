@@ -36,6 +36,13 @@ Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defect
 
 ## Cómo usarla
 
+### Sincronizar entre teléfono y computadoras
+
+Conexión Google + Firestore preparada para el proyecto `chaps-58e61`. Consulta
+[FIREBASE.md](FIREBASE.md) para activar acceso, publicar reglas privadas y migrar
+la ficha actual. Requiere HTTPS o localhost. Conserva guardado local y JSON;
+antes de reemplazar una ficha local por nube guarda respaldo descargable.
+
 ### En local
 No necesita servidor ni instalación: **haz doble clic en `index.html`** y se abre en tu navegador. Funciona sin conexión (la Biblioteca necesita internet solo la primera vez que abres cada categoría).
 
@@ -60,7 +67,7 @@ Si usas **PCGen 6.09.08** (instalado en `C:\Users\Carlos\Desktop\D&D\PCGen\PcGen
 
 ## Tecnología
 
-HTML + CSS + JavaScript puro. Sin frameworks, sin build, sin CDNs: funciona offline y con el protocolo `file://`. La Biblioteca consume la API pública de **Open5e** (SRD 5.2 © Wizards of the Coast, licencia CC-BY-4.0; condiciones y objetos mágicos del SRD 5.1).
+HTML + CSS + JavaScript puro. Sin frameworks ni build. Ficha local disponible offline y mediante `file://`; sincronización usa Firebase modular por CDN y requiere HTTPS o localhost. La Biblioteca consume la API pública de **Open5e** (SRD 5.2 © Wizards of the Coast, licencia CC-BY-4.0; condiciones y objetos mágicos del SRD 5.1).
 
 ---
 

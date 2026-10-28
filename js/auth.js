@@ -19,6 +19,8 @@
     document.body.classList.remove("locked");
   }
 
+  window.CHAPS_AUTH = { open };
+
   document.addEventListener("DOMContentLoaded", () => {
     if (sessionStorage.getItem(KEY) === "1") { open(); return; }
     document.body.classList.add("locked");
