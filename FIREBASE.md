@@ -33,9 +33,9 @@ No se ha desplegado ni modificado configuración remota desde esta sesión.
 
 ## Migrar personaje sin perder datos
 
-1. En dispositivo que tiene ficha correcta, **exportar JSON** como respaldo.
+1. Abrir primero dispositivo que tiene ficha correcta.
 2. Abrir versión actualizada e iniciar sesión con Google.
-3. Revisar ficha visible. Si es necesario, importar JSON correcto primero.
+3. Revisar ficha visible antes de vincular cuenta por primera vez.
 4. Vinculación automática: si nube está vacía y existe ficha guardada localmente,
    se sube esa ficha. Si existe personaje en nube, se descarga con respaldo previo.
    Navegador nuevo sin ficha ni nube espera primer cambio para crear personaje.
@@ -43,9 +43,9 @@ No se ha desplegado ni modificado configuración remota desde esta sesión.
 6. En teléfono u otra computadora, abrir misma URL e iniciar sesión con misma
    cuenta Google. Si no había ficha local, descargará automáticamente.
 7. Si ya había datos locales sin vinculación, se enlaza nube automáticamente.
-   Primera copia reemplazada se conserva en `chaps-state-before-cloud-v1`; puede
-   descargarse mediante **Descargar respaldo anterior** e importarse como JSON.
-   Actualizaciones posteriores no sobrescriben ese respaldo original.
+   Primera copia reemplazada se conserva internamente en `chaps-state-before-cloud-v1`.
+   Actualizaciones posteriores no sobrescriben ese respaldo original. Controles
+   JSON retirados de interfaz: sincronización es automática.
 
 ## Comportamiento
 
@@ -84,7 +84,7 @@ de escritorio/móvil (Playwright instalado aparte):
 
 ```powershell
 $env:CHAPS_PLAYWRIGHT = "RUTA/AL/PAQUETE/playwright"
-node --test tests/browser-sync.test.js
+node --test tests/browser-sync.test.js tests/navigation.test.js
 ```
 
 `tests/firestore-rules.test.js` comprueba reglas con emulador (sin producción).

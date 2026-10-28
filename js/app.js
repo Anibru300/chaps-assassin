@@ -1238,12 +1238,6 @@ function initSheetEvents() {
     renderInventory();
   });
 
-  $("#btn-export").addEventListener("click", exportJson);
-  $("#btn-import").addEventListener("click", () => $("#import-file").click());
-  $("#import-file").addEventListener("change", (e) => {
-    if (e.target.files[0]) importJson(e.target.files[0]);
-    e.target.value = "";
-  });
   $("#btn-reset").addEventListener("click", () => {
     if (confirm(t("resetConfirm"))) {
       state = structuredClone(DEFAULT_STATE);
@@ -1397,51 +1391,102 @@ function initSheetSidebar() {
   const overlay = $("#sheet-overlay");
   const sidebar = $("#sheet-sidebar");
   const links = $$('.sheet-nav a');
-  if (!toggle || !overlay || !sidebar) return;
+  const close = $("#sheet-nav-close");
+  const search = $("#sheet-nav-search");
+  if (!toggle || !overlay || !sidebar || !close || !search) return;
+  const desktop = window.matchMedia("(min-width: 1024px)");
+  const header = $(".app-header");
+  const targets = links.map((link) => $(link.getAttribute("href"))).filter(Boolean);
+  let previousFocus = null, frame = null;
 
-  function openNav() { document.body.classList.add("sheet-nav-open"); }
-  function closeNav() { document.body.classList.remove("sheet-nav-open"); }
+  function currentSection() {
+    frame = null;
+    if (!$("#tab-sheet").classList.contains("active")) return;
+    const edge = (header?.getBoundingClientRect().bottom || 0) + 28;
+    let current = targets[0];
+    for (const target of targets) {
+      if (target.getBoundingClientRect().top <= edge) current = target;
+      else break;
+    }
+    links.forEach((link) => {
+      const active = link.getAttribute("href") === "#" + current?.id;
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+  }
+  function scheduleCurrent() {
+    if (frame === null) frame = requestAnimationFrame(currentSection);
+  }
+  function headerSize() {
+    document.documentElement.style.setProperty("--app-header-height", (header?.getBoundingClientRect().height || 0) + "px");
+    scheduleCurrent();
+  }
+  function filterLinks() {
+    const query = search.value.trim().toLocaleLowerCase("es");
+    links.forEach((link) => { link.hidden = !link.textContent.toLocaleLowerCase("es").includes(query); });
+  }
+  function navState(open) {
+    const modal = !desktop.matches && open;
+    document.body.classList.toggle("sheet-nav-open", modal);
+    toggle.setAttribute("aria-expanded", String(modal));
+    sidebar.inert = !desktop.matches && !modal;
+    sidebar.setAttribute("aria-hidden", String(sidebar.inert));
+    if (modal) { sidebar.setAttribute("role", "dialog"); sidebar.setAttribute("aria-modal", "true"); }
+    else { sidebar.removeAttribute("role"); sidebar.removeAttribute("aria-modal"); }
+  }
+  function openNav() {
+    if (desktop.matches) return;
+    previousFocus = document.activeElement;
+    search.value = "";
+    filterLinks();
+    navState(true);
+    search.focus({ preventScroll: true });
+  }
+  function closeNav(restoreFocus = true) {
+    const wasOpen = document.body.classList.contains("sheet-nav-open");
+    navState(false);
+    if (wasOpen && restoreFocus) previousFocus?.focus({ preventScroll: true });
+  }
   toggle.addEventListener("click", () => {
     if (document.body.classList.contains("sheet-nav-open")) closeNav(); else openNav();
   });
-  overlay.addEventListener("click", closeNav);
+  close.addEventListener("click", () => closeNav());
+  overlay.addEventListener("click", () => closeNav());
+  search.addEventListener("input", filterLinks);
+  document.addEventListener("keydown", (event) => {
+    if (!document.body.classList.contains("sheet-nav-open")) return;
+    if (event.key === "Escape") { event.preventDefault(); closeNav(); }
+    if (event.key === "Tab") {
+      const focusable = Array.from(sidebar.querySelectorAll('a[href], input, button')).filter((element) => element.offsetParent !== null);
+      const first = focusable[0], last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  });
 
   links.forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
       const target = document.querySelector(a.getAttribute("href"));
       if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-        closeNav();
+        closeNav(false);
+        search.value = "";
+        filterLinks();
+        target.setAttribute("tabindex", "-1");
+        target.focus({ preventScroll: true });
+        target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
       }
     });
   });
 
-  // Resaltar sección visible
-  const cards = $$('#tab-sheet > .card[id^="section-"]');
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        links.forEach((l) => l.classList.toggle("active", l.getAttribute("href") === "#" + entry.target.id));
-      }
-    });
-  }, { rootMargin: "-20% 0px -70% 0px", threshold: 0 });
-  cards.forEach((c) => observer.observe(c));
-}
-
-/* ---------- Export/Import desde header ---------- */
-function initHeaderPersistence() {
-  const exportBtn = $("#btn-header-export");
-  const importBtn = $("#btn-header-import");
-  const importFile = $("#header-import-file");
-  if (exportBtn) exportBtn.addEventListener("click", exportJson);
-  if (importBtn && importFile) {
-    importBtn.addEventListener("click", () => importFile.click());
-    importFile.addEventListener("change", (e) => {
-      if (e.target.files[0]) importJson(e.target.files[0]);
-      e.target.value = "";
-    });
-  }
+  $$(".tab-btn").forEach((button) => button.addEventListener("click", () => { closeNav(false); scheduleCurrent(); }));
+  desktop.addEventListener("change", () => { closeNav(false); headerSize(); });
+  window.addEventListener("scroll", scheduleCurrent, { passive: true });
+  window.addEventListener("resize", headerSize, { passive: true });
+  if (typeof ResizeObserver !== "undefined" && header) new ResizeObserver(headerSize).observe(header);
+  navState(false);
+  headerSize();
 }
 
 /* ---------- Modal de biblioteca ---------- */
@@ -1507,7 +1552,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initPcgen();
   initMasteryEvents();
   initSheetSidebar();
-  initHeaderPersistence();
   initLibraryModal();
   initPWA();
   if (typeof initCombat === "function") initCombat(); // motor de combate (Fase 1)

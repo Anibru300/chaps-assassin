@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0d0e12">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css?v=4">
-  <link rel="stylesheet" href="css/v4.css?v=17">
+  <link rel="stylesheet" href="css/v4.css?v=18">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -53,9 +53,6 @@
       </div>
       <div class="header-controls">
         <span id="save-indicator" class="save-indicator"></span>
-        <button id="btn-header-export" class="btn btn-small" title="Exportar JSON">⬇</button>
-        <button id="btn-header-import" class="btn btn-small" title="Importar JSON">⬆</button>
-        <input type="file" id="header-import-file" accept=".json,application/json" hidden>
         <button id="lang-toggle" class="btn btn-small" title="ES / EN">EN</button>
       </div>
     </div>
@@ -71,10 +68,15 @@
 
     <!-- ============ TAB 1: FICHA ============ -->
     <section id="tab-sheet" class="tab-panel active">
-      <aside class="sheet-sidebar" id="sheet-sidebar">
+      <aside class="sheet-sidebar" id="sheet-sidebar" aria-label="Secciones de ficha">
         <div class="sheet-sidebar-inner">
-          <h3>Secciones</h3>
-          <nav class="sheet-nav">
+          <div class="sheet-nav-heading">
+            <h3 id="sheet-nav-title">Secciones de ficha</h3>
+            <button type="button" class="btn btn-small" id="sheet-nav-close" aria-label="Cerrar menú de secciones">✕</button>
+          </div>
+          <input type="search" id="sheet-nav-search" placeholder="Buscar sección…" aria-label="Buscar sección" autocomplete="off">
+          <nav class="sheet-nav" aria-label="Ir a sección">
+            <a href="#cloud-panel">Sincronización</a>
             <a href="#section-identity">Identidad</a>
             <a href="#section-abilities">Características</a>
             <a href="#section-skills">Habilidades</a>
@@ -92,11 +94,11 @@
             <a href="#section-personality">Personalidad</a>
             <a href="#section-backstory">Historia</a>
             <a href="#section-pcgen">PCGen</a>
-            <a href="#section-persist">Persistencia</a>
+            <a href="#section-persist">Ajustes</a>
           </nav>
         </div>
       </aside>
-      <button type="button" class="sheet-nav-toggle" id="sheet-nav-toggle" aria-label="Secciones">☰</button>
+      <button type="button" class="sheet-nav-toggle" id="sheet-nav-toggle" aria-controls="sheet-sidebar" aria-expanded="false">☰ Secciones</button>
       <div class="sheet-overlay" id="sheet-overlay"></div>
 
       <div class="card" id="cloud-panel">
@@ -107,7 +109,6 @@
           <button type="button" class="btn btn-small" id="cloud-connect">Conectar Google</button>
           <button type="button" class="btn btn-small" id="cloud-disconnect" hidden>Desconectar Google</button>
           <button type="button" class="btn btn-small" id="cloud-retry" hidden>Reintentar sincronización</button>
-          <button type="button" class="btn btn-small" id="cloud-backup">Descargar respaldo anterior</button>
         </div>
         <div id="cloud-choice" hidden>
           <p class="hint">Conflicto real o cambio de cuenta: revisa ficha visible antes de elegir.</p>
@@ -499,9 +500,6 @@
 
       <!-- Persistencia -->
       <div class="card persistence-card" id="section-persist">
-        <button class="btn" id="btn-export" data-i18n="exportJson">Exportar JSON</button>
-        <button class="btn" id="btn-import" data-i18n="importJson">Importar JSON</button>
-        <input type="file" id="import-file" accept=".json,application/json" hidden>
         <button class="btn btn-danger" id="btn-reset" data-i18n="resetSheet">Restablecer ficha</button>
       </div>
     </section>
@@ -839,13 +837,13 @@
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/auth.js?v=4"></script>
   <script src="js/data.js?v=3"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/app.js?v=7"></script>
   <script src="js/combat-data.js?v=4"></script>
   <script src="js/combat.js?v=8"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>
   <script src="js/cloud-core.js?v=2"></script>
-  <script src="js/firebase-sync.js?v=2"></script>
+  <script src="js/firebase-sync.js?v=3"></script>
 </body>
 </html>

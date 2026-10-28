@@ -12,7 +12,7 @@ Plataforma web estática de **entrenamiento y gestión de personaje** para **CHA
   - **Progresión por nivel**: tabla interactiva con los rasgos del Pícaro Asesino de nivel 1 a 20 (reglas 2024), con casillas que se marcan solas según el nivel (y se pueden cambiar a mano) y un campo de texto en los niveles de mejora para anotar la dote o subida de característica elegida.
   - **Maestría de armas (2024)**: elige las 2 armas dominadas (con su propiedad de maestría visible) y un glosario desplegable de las 8 propiedades (Vex, Nick, Slow, Sap, Topple, Push, Graze, Cleave). Tras un descanso largo la tarjeta se ilumina para recordarte que puedes cambiar la elección.
   - **Diario de aventuras**: entradas con fecha, título y texto; las más recientes primero.
-  - Todo se **guarda automáticamente en el navegador** (localStorage) y se puede **exportar/importar en JSON** (incluye todas las secciones).
+  - Todo se **guarda automáticamente en el navegador** (localStorage) y se sincroniza entre dispositivos con misma cuenta Google. Interfaz sin controles JSON.
 - **Combate** — Simulador de combate turno a turno: iniciativa con ventaja (Asesinar), ataques con ventaja/desventaja, críticos que duplican dados, Ataque Furtivo 6d6 (una vez por turno), Golpes Astutos con CD de salvación y coste en dados (incluidos los **Golpes Tortuosos** de nivel 14), nota automática de **Armas Envenenadas** a nivel 13+, acciones adicionales, recordatorios de reacciones, referencia de condiciones y registro de daño detallado. **Nuevo**: animaciones de impacto (daño flotante, línea de ataque, shake/flash), tracker de iniciativa vertical con HP, sugerencias contextuales, estrategia de IA por enemigo, simulador Monte Carlo y resumen post-combate.
   - **🎲 Dados rápidos**: tirador de d4 a d100 con cantidad, modificador, ventaja/desventaja en d20 y registro de las últimas 30 tiradas.
   - **📊 Calculadora de daño (DPR 2024)**: probabilidad de impacto y de crítico, daño medio por ataque y daño total por turno con varios ataques, Furtivo (con sus dados según tu nivel) y ventaja. Se **precarga desde la ficha** (bono de ataque = competencia + DES) y compara opciones contra la CA del enemigo.
@@ -29,10 +29,10 @@ Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defect
 
 ## Diseño mobile-first
 
-- En **escritorio** la pestaña **Ficha** muestra un **sidebar izquierdo** con todas las secciones; pulsa una para ir directamente.
-- En **móvil** el sidebar se oculte y aparece un **botón flotante ☰** para abrir el índice de secciones.
+- En **escritorio** la pestaña **Ficha** muestra menú lateral con buscador, sección activa y enlaces bajo cabecera.
+- En **móvil y tablet** aparece botón flotante **☰ Secciones**: abre menú táctil con búsqueda, cierre y desplazamiento independiente. Admite Escape y navegación por teclado.
 - Tablas, grids, botones y checkboxes están adaptados para uso táctil: inputs de 16 px (evita zoom en iOS), botones de al menos 44 × 44 px y tablas con scroll horizontal cuando no caben.
-- Exportar e importar JSON están ahora en la **cabecera** para encontrarlos rápido en cualquier dispositivo.
+- Controles de exportación/importación JSON retirados; guardado y sincronización automáticos.
 
 ## Cómo usarla
 
@@ -40,8 +40,8 @@ Interfaz **bilingüe ES/EN** con botón de cambio de idioma (español por defect
 
 Conexión Google + Firestore preparada para el proyecto `chaps-58e61`. Consulta
 [FIREBASE.md](FIREBASE.md) para activar acceso, publicar reglas privadas y migrar
-la ficha actual. Requiere HTTPS o localhost. Conserva guardado local y JSON;
-antes de reemplazar una ficha local por nube guarda respaldo descargable.
+la ficha actual. Requiere HTTPS o localhost. Conserva guardado y respaldo local;
+antes de reemplazar una ficha local por nube guarda respaldo interno automático.
 
 ### En local
 No necesita servidor ni instalación: **haz doble clic en `index.html`** y se abre en tu navegador. Funciona sin conexión (la Biblioteca necesita internet solo la primera vez que abres cada categoría).

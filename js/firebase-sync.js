@@ -16,7 +16,7 @@
     local: "Copia local · conecta Google para sincronizar.",
     loading: "Consultando personaje en nube…",
     empty: "Sincronización automática activa · próximo cambio creará personaje en nube.",
-    choose: "Dos versiones incompatibles: elige ficha que conservar. Respaldo local disponible.",
+    choose: "Dos versiones incompatibles: elige ficha que conservar. Copia anterior conservada.",
     pending: "Cambios guardados en dispositivo · pendientes de subir.",
     saving: "Guardando personaje en nube…",
     synced: "Personaje sincronizado · actualizaciones automáticas entre dispositivos."
@@ -170,14 +170,6 @@
     });
     el("cloud-use-remote").addEventListener("click", () => {
       if (confirm("¿Descargar personaje de nube y reemplazar ficha visible? Se guardará respaldo local.")) cloud.useCloud();
-    });
-    el("cloud-backup").addEventListener("click", () => {
-      const previous = localStorage.getItem("chaps-state-before-cloud-v1");
-      if (!previous) { alert("Todavía no existe respaldo anterior a descarga."); return; }
-      const url = URL.createObjectURL(new Blob([previous], { type: "application/json" }));
-      const link = document.createElement("a");
-      link.href = url; link.download = "chaps-antes-de-sincronizar.json"; link.click();
-      URL.revokeObjectURL(url);
     });
     window.addEventListener("online", () => { if (user) recover(); else boot().catch((error) => showStatus({ mode: "error", error })); });
     window.addEventListener("focus", recover);

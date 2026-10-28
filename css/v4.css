@@ -220,19 +220,29 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
    Sidebar de secciones en la ficha (desktop)
    ============================================================ */
 #tab-sheet { position: relative; }
+#tab-sheet > .card { scroll-margin-top: calc(var(--app-header-height, 120px) + 16px); }
+#tab-sheet > .card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .sheet-sidebar {
   display: none;
   position: fixed;
   left: 0; top: 0; bottom: 0;
-  width: 200px;
-  padding: 92px 10px 20px 14px;
+  width: min(320px, calc(100vw - 56px));
+  padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
   background: rgba(13, 14, 18, 0.98);
   border-right: 1px solid var(--border);
-  z-index: 40;
-  overflow-y: auto;
+  z-index: 80;
+  overflow: hidden;
 }
+.sheet-sidebar-inner { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.sheet-nav-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
+#sheet-nav-search {
+  width: 100%; min-height: 44px; margin: 6px 0 12px; flex-shrink: 0;
+  padding: 10px 12px; font-size: 16px; color: var(--text);
+  background: var(--bg-card-alt); border: 1px solid var(--border); border-radius: 8px;
+}
+#sheet-nav-search:focus { outline: 2px solid var(--gold); outline-offset: -2px; }
 .sheet-sidebar-inner h3 {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -242,28 +252,43 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 10px;
 }
 .sheet-nav a {
-  display: block;
-  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  flex-shrink: 0;
+  padding: 10px;
   border-radius: 6px;
   color: var(--text-dim);
   font-size: 0.82rem;
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
+.sheet-nav a[hidden] { display: none; }
+.sheet-nav a:focus-visible, #sheet-nav-close:focus-visible, .sheet-nav-toggle:focus-visible {
+  outline: 2px solid var(--gold); outline-offset: -2px;
+}
 .sheet-nav a:hover, .sheet-nav a.active {
   background: rgba(179, 18, 46, 0.15);
   color: var(--text);
 }
 .sheet-nav-toggle {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: fixed;
-  left: 14px; bottom: 18px;
-  z-index: 55;
-  width: 50px; height: 50px;
-  border-radius: 50%;
-  font-size: 1.3rem;
+  left: max(14px, env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 85;
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 28px;
+  font-size: 0.95rem;
+  font-weight: 700;
   background: var(--crimson);
   border-color: var(--crimson-light);
   color: #fff;
@@ -273,8 +298,11 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
   display: none;
   position: fixed; inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  z-index: 45;
+  z-index: 70;
+  touch-action: none;
 }
+body.sheet-nav-open { overflow: hidden; }
+body.sheet-nav-open .sheet-nav-toggle { visibility: hidden; }
 body.sheet-nav-open .sheet-sidebar { display: block; }
 body.sheet-nav-open .sheet-overlay { display: block; }
 
@@ -325,7 +353,6 @@ body.sheet-nav-open .sheet-overlay { display: block; }
 .skill-row { min-height: 38px; }
 .skill-row input[type="checkbox"] { width: 20px; height: 20px; }
 button, .btn { min-height: 38px; }
-#btn-header-export, #btn-header-import { min-width: 38px; }
 
 /* ----- Desktop: sidebar visible ----- */
 #tab-sheet > #cloud-panel { counter-increment: none; }
@@ -334,7 +361,8 @@ button, .btn { min-height: 38px; }
 #cloud-panel .rest-row > .btn { max-width: 100%; white-space: normal; }
 
 @media (min-width: 1024px) {
-  .sheet-sidebar { display: block; }
+  .sheet-sidebar { display: block; top: var(--app-header-height, 120px); width: 200px; padding: 16px 10px 20px 14px; z-index: 40; }
+  .sheet-nav-toggle, #sheet-nav-close { display: none; }
   #tab-sheet { padding-left: 210px; }
   main { max-width: none; padding-left: 16px; }
 }
@@ -502,7 +530,6 @@ button, .btn { min-height: 38px; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .ability-grid { grid-template-columns: repeat(3, 1fr); }
   .keystat-grid .field input, .hp-grid .field input { font-size: 1.15rem; }
-  .sheet-nav-toggle { display: block; }
 }
 
 @media (max-width: 600px) {
