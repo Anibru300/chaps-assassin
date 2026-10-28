@@ -3,22 +3,22 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v6-firebase";
+const CACHE_NAME = "chaps-v7-live-sync";
 const SHELL = [
   "./",
   "./index.html",
   "./css/style.css?v=4",
-  "./css/v4.css?v=15",
+  "./css/v4.css?v=16",
   "./js/auth.js?v=4",
   "./js/data.js?v=3",
-  "./js/app.js?v=5",
+  "./js/app.js?v=6",
   "./js/combat-data.js?v=4",
   "./js/combat.js?v=8",
   "./js/simulador.js?v=4",
   "./js/biblioteca.js?v=4",
   "./js/combat-extra.js?v=5",
-  "./js/cloud-core.js?v=1",
-  "./js/firebase-sync.js?v=1",
+  "./js/cloud-core.js?v=2",
+  "./js/firebase-sync.js?v=2",
   "./assets/chaps-portrait.jpg",
   "./assets/dragon-bg.png",
   "./assets/dragon-gate.svg",
@@ -56,6 +56,17 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const { request } = e;
   const url = new URL(request.url);
+
+  // Navegación online siempre actualizada; copia instalada solo como fallback offline.
+  if (request.mode === "navigate" && url.origin === self.location.origin) {
+    e.respondWith(fetch(request).then((response) => {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const copy = response.clone();
+      e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy)));
+      return response;
+    }).catch(() => caches.match("./index.html")));
+    return;
+  }
 
   // Conservar SDK ya descargado para abrir la ficha instalada sin red.
   if (url.origin === "https://www.gstatic.com" && url.pathname.startsWith("/firebasejs/") && request.method === "GET") {

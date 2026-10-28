@@ -36,29 +36,35 @@ No se ha desplegado ni modificado configuración remota desde esta sesión.
 1. En dispositivo que tiene ficha correcta, **exportar JSON** como respaldo.
 2. Abrir versión actualizada e iniciar sesión con Google.
 3. Revisar ficha visible. Si es necesario, importar JSON correcto primero.
-4. En **Personaje en nube**, elegir **Usar ficha de este dispositivo** y confirmar.
-5. Esperar mensaje **Personaje sincronizado con nube**.
+4. Vinculación automática: si nube está vacía y existe ficha guardada localmente,
+   se sube esa ficha. Si existe personaje en nube, se descarga con respaldo previo.
+   Navegador nuevo sin ficha ni nube espera primer cambio para crear personaje.
+5. Esperar mensaje **Personaje sincronizado · actualizaciones automáticas entre dispositivos**.
 6. En teléfono u otra computadora, abrir misma URL e iniciar sesión con misma
    cuenta Google. Si no había ficha local, descargará automáticamente.
-7. Si ya había datos locales, elegir **Usar ficha de nube**. Antes de reemplazar,
-   se guarda último respaldo en `chaps-state-before-cloud-v1`; puede descargarse
-   mediante **Descargar respaldo anterior** y luego importarse como JSON.
+7. Si ya había datos locales sin vinculación, se enlaza nube automáticamente.
+   Primera copia reemplazada se conserva en `chaps-state-before-cloud-v1`; puede
+   descargarse mediante **Descargar respaldo anterior** e importarse como JSON.
+   Actualizaciones posteriores no sobrescriben ese respaldo original.
 
 ## Comportamiento
 
 - Sincroniza ficha completa exportable: atributos, PG, inventario, monedas,
   dotes, diario, historia, etc. No sincroniza combate en curso, idioma ni caché SRD.
-- Guarda primero en navegador; espera 1.5 segundos sin nuevas ediciones antes
+- Guarda primero en navegador; espera 0.5 segundos sin nuevas ediciones antes
   de subir, reduciendo escrituras.
 - Cambios remotos llegan mediante escucha Firestore. Las actualizaciones se
-  comprueban con revisión atómica; conflictos requieren elegir copia.
+  comprueban con revisión atómica. Ediciones simultáneas de campos distintos se
+  combinan automáticamente; valores incompatibles del mismo campo requieren elegir.
 - Sin internet conserva datos pendientes y reintenta al reconectar/recargar.
   Primera conexión Google y primera descarga del SDK necesitan internet.
+- Al volver a teléfono/pestaña vuelve a consultar nube. Una escucha terminada se
+  recupera con reintentos; consulta de respaldo cada 20 segundos mientras esté visible.
 - Cambiar de cuenta no sube automáticamente datos de cuenta anterior.
 - Desconectar Google detiene sincronización, pero conserva copia local: en
   computadora compartida esa copia sigue accesible mediante acceso local.
-- Reemplazo explícito por ficha local conserva copia visible; reemplazo por
-  nube conserva un respaldo anterior descargable (solo último reemplazo).
+- Reemplazo explícito por ficha local conserva copia visible; primera descarga
+  de nube conserva respaldo original descargable.
 - Reglas limitan documento a payload de menos de 700,000 caracteres; personajes
   con diarios muy extensos podrían requerir dividir datos en futura versión.
 
@@ -72,6 +78,14 @@ node --test tests/functional.test.js tests/cloud.test.js
 Pruebas de sincronización utilizan almacenamiento remoto simulado. No requieren
 cuenta ni modifican personaje real. Validación Google/dispositivos reales requiere
 Google habilitado, reglas publicadas y dominio autorizado.
+
+Prueba de dos navegadores aislados, con transporte Firebase simulado y perfiles
+de escritorio/móvil (Playwright instalado aparte):
+
+```powershell
+$env:CHAPS_PLAYWRIGHT = "RUTA/AL/PAQUETE/playwright"
+node --test tests/browser-sync.test.js
+```
 
 `tests/firestore-rules.test.js` comprueba reglas con emulador (sin producción).
 Necesita Firebase CLI, Java 21+ y paquetes de desarrollo `firebase` y

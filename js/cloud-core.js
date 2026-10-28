@@ -13,8 +13,24 @@ globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus }) {
   const meta = () => {
     try { return JSON.parse(storage.getItem(KEY)) || {}; } catch (_) { return {}; }
   };
-  const remember = (revision, dirty) => storage.setItem(KEY, JSON.stringify({ uid, revision, dirty }));
+  const remember = (revision, dirty, base = null) => storage.setItem(KEY, JSON.stringify({ uid, revision, dirty, base }));
   const revision = (doc) => doc ? doc.revision : 0;
+  // Combinar campos independientes; nunca decidir automáticamente entre dos valores del mismo campo.
+  function merge(base, local, incoming) {
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    if (same(local, base) || same(local, incoming)) return incoming;
+    if (same(incoming, base)) return local;
+    const object = (value) => value && typeof value === "object" && !Array.isArray(value);
+    if (object(base) && object(local) && object(incoming)) {
+      const result = Object.create(null);
+      for (const key of new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(incoming)])) {
+        const value = merge(base[key], local[key], incoming[key]);
+        if (value !== undefined) result[key] = value;
+      }
+      return result;
+    }
+    throw Object.assign(new Error("Mismo campo editado en dos dispositivos."), { code: "chaps/conflict" });
+  }
   function validate(doc) {
     if (doc === null) return;
     if (doc.schema !== 1 || !Number.isInteger(doc.revision) || doc.revision < 1 || typeof doc.payload !== "string") {
@@ -32,8 +48,8 @@ globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus }) {
     return queue;
   }
   function accept(doc) {
-    store.replace(JSON.parse(doc.payload));
-    remember(doc.revision, false);
+    if (JSON.stringify(store.snapshot()) !== doc.payload) store.replace(JSON.parse(doc.payload));
+    remember(doc.revision, false, doc.payload);
     ready = true;
     emit("synced");
   }
@@ -44,19 +60,37 @@ globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus }) {
     if (doc && saved.uid === uid && doc.revision < saved.revision) return;
     known = doc;
     if (saved.uid !== uid) {
-      ready = false;
-      if (doc && !store.hasLocal()) accept(doc);
-      else emit("choose");
+      if (saved.uid) { ready = false; emit("choose"); }
+      else if (doc) accept(doc); // Primera vinculación: nube autoritativa, respaldo antes de reemplazar.
+      else {
+        ready = true;
+        remember(0, store.hasLocal());
+        emit(store.hasLocal() ? "pending" : "empty");
+      }
+    } else if (!doc && saved.revision === 0) {
+      ready = true;
+      emit(saved.dirty ? "pending" : "empty");
     } else if (!doc || saved.revision !== doc.revision) {
       ready = false;
       if (doc && !saved.dirty) accept(doc);
-      else emit("choose");
+      else if (doc && saved.base) {
+        let combined;
+        try { combined = merge(JSON.parse(saved.base), store.snapshot(), JSON.parse(doc.payload)); }
+        catch (error) { if (error.code !== "chaps/conflict") throw error; emit("choose"); return; }
+        store.validate(combined);
+        const payload = JSON.stringify(combined);
+        if (payload !== JSON.stringify(store.snapshot())) store.replace(combined);
+        const dirty = payload !== doc.payload;
+        remember(doc.revision, dirty, doc.payload);
+        ready = true;
+        emit(dirty ? "pending" : "synced");
+      } else emit("choose");
     } else {
       ready = true;
       if (saved.dirty) emit("pending");
       else {
         if (JSON.stringify(store.snapshot()) !== doc.payload) accept(doc);
-        else emit("synced");
+        else { remember(doc.revision, false, doc.payload); emit("synced"); }
       }
     }
   }
@@ -70,7 +104,7 @@ globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus }) {
       if (session !== generation) return;
       known = doc;
       const dirty = edits !== editVersion;
-      remember(doc.revision, dirty);
+      remember(doc.revision, dirty, doc.payload);
       ready = true;
       emit(dirty ? "pending" : "synced");
     } catch (error) {
@@ -80,7 +114,7 @@ globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus }) {
         known = await remote.read(uid);
         if (session !== generation) return;
         validate(known);
-        emit("choose");
+        reconcile(known);
       } else throw error;
     }
   }
@@ -112,7 +146,7 @@ globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus }) {
         const doc = await remote.read(uid);
         if (session !== generation) return;
         // Edición durante descarga: nunca reemplazarla automáticamente.
-        if (edits !== started) {
+        if (edits !== started && meta().uid !== uid) {
           validate(doc); known = doc; ready = false; emit("choose"); return;
         }
         reconcile(doc);

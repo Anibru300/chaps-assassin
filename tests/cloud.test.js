@@ -35,18 +35,17 @@ function setup({ doc = null, local = sheet("LOCAL"), hasLocal = true, saved, rea
   return {
     api, writes, backups, remote, store,
     edit(name) { current = sheet(name); hasLocal = true; api.changed(); },
+    editData(data) { current = structuredClone(data); hasLocal = true; api.changed(); },
     changeRemote(doc) { remoteDoc = doc; },
     get local() { return current; },
     get doc() { return remoteDoc; },
     get meta() { return JSON.parse(memory.get("chaps-cloud-meta-v1") || "{}"); }
   };
 }
-test("primera conexión requiere elección; no sube valores iniciales automáticamente", async () => {
+test("primera conexión migra automáticamente ficha guardada", async () => {
   const s = setup();
   await s.api.connect("carlos");
-  assert.equal(s.api.status.mode, "choose");
-  assert.equal(s.writes.length, 0);
-  await s.api.useLocal();
+  assert.equal(s.api.status.mode, "synced");
   assert.equal(s.writes.length, 1);
   assert.equal(s.writes[0].uid, "carlos");
   assert.equal(s.doc.revision, 1);
@@ -59,14 +58,21 @@ test("otro dispositivo sin ficha local descarga nube sin sobrescribirla", async 
   assert.equal(s.meta.revision, 3);
   assert.equal(s.writes.length, 0);
 });
-test("ficha local existente requiere elegir y conserva respaldo al descargar", async () => {
+test("teléfono con ficha local previa se vincula automáticamente y conserva respaldo", async () => {
   const s = setup({ doc: cloudDoc("REMOTO") });
   await s.api.connect("carlos");
-  assert.equal(s.api.status.mode, "choose");
-  assert.equal(s.local.name, "LOCAL");
-  await s.api.useCloud();
+  assert.equal(s.api.status.mode, "synced");
   assert.equal(s.local.name, "REMOTO");
   assert.equal(s.backups[0].name, "LOCAL");
+});
+test("dispositivo nuevo no sube ficha por defecto; primer cambio crea nube", async () => {
+  const s = setup({ hasLocal: false });
+  await s.api.connect("carlos");
+  assert.equal(s.api.status.mode, "empty");
+  assert.equal(s.writes.length, 0);
+  s.edit("PERSONAJE NUEVO");
+  await s.api.flush();
+  assert.equal(s.writes.length, 1);
 });
 test("ediciones posteriores se suben con revisión y sin bucle de guardado", async () => {
   const s = setup({ doc: cloudDoc("LOCAL"), saved: { uid: "carlos", revision: 1, dirty: false } });
@@ -120,6 +126,33 @@ test("novedades remotas se descargan automáticamente cuando no hay cambios loca
   await s.api.receive(cloudDoc("TELEFONO", 2));
   assert.equal(s.local.name, "TELEFONO");
   assert.equal(s.meta.revision, 2);
+});
+test("campos distintos editados simultáneamente se combinan y siguen sincronizando", async () => {
+  const base = { name: "CHAPS", level: 12, hp: 80, notes: "" };
+  const first = { schema: 1, revision: 1, payload: JSON.stringify(base) };
+  const s = setup({ local: base, doc: first, saved: { uid: "carlos", revision: 1, dirty: false } });
+  await s.api.connect("carlos");
+  s.editData({ ...base, hp: 70 });
+  s.changeRemote({ ...first, revision: 2, payload: JSON.stringify({ ...base, notes: "desde celular" }) });
+  await s.api.flush(); // Transacción detecta versión nueva y combina con base confirmada.
+  assert.equal(s.api.status.mode, "pending");
+  assert.equal(s.local.hp, 70);
+  assert.equal(s.local.notes, "desde celular");
+  await s.api.flush();
+  assert.equal(s.api.status.mode, "synced");
+  assert.equal(s.doc.revision, 3);
+  assert.equal(JSON.parse(s.doc.payload).hp, 70);
+});
+test("escucha combina remoto con cambios pendientes sin perder datos anidados", async () => {
+  const base = { name: "CHAPS", level: 12, currency: { gp: 100, sp: 10 } };
+  const doc = { schema: 1, revision: 1, payload: JSON.stringify(base) };
+  const s = setup({ local: base, doc, saved: { uid: "carlos", revision: 1, dirty: false } });
+  await s.api.connect("carlos");
+  s.editData({ ...base, currency: { gp: 90, sp: 10 } });
+  await s.api.receive({ ...doc, revision: 2, payload: JSON.stringify({ ...base, currency: { gp: 100, sp: 20 } }) });
+  assert.equal(s.local.currency.gp, 90);
+  assert.equal(s.local.currency.sp, 20);
+  assert.equal(s.api.status.mode, "pending");
 });
 test("evento remoto antiguo no revierte escritura ya confirmada", async () => {
   const s = setup({ doc: cloudDoc("LOCAL"), saved: { uid: "carlos", revision: 1, dirty: false } });
@@ -207,10 +240,12 @@ test("puente valida ficha real, guarda respaldo y notifica guardado local", () =
   assert.equal(store.snapshot().name, "NUBE");
   assert.equal(JSON.stringify(store.snapshot()), JSON.stringify(data));
   assert.equal(JSON.parse(memory.get("chaps-state-before-cloud-v1")).name, "CHAPS");
+  store.replace({ ...data, name: "OTRA ACTUALIZACION" });
+  assert.equal(JSON.parse(memory.get("chaps-state-before-cloud-v1")).name, "CHAPS");
   assert.equal(notifications, 1); // Descargar no vuelve a subir.
   data.weapons = [null];
   assert.throws(() => store.replace(data));
-  assert.equal(store.snapshot().name, "NUBE");
+  assert.equal(store.snapshot().name, "OTRA ACTUALIZACION");
 });
 
 test("inicialización funciona cuando sesión local ya retiró puerta de acceso", async () => {
@@ -220,7 +255,7 @@ test("inicialización funciona cuando sesión local ya retiró puerta de acceso"
     const ctx = vm.createContext({
       console, location: { protocol }, navigator: { onLine: true },
       localStorage: { getItem: () => null, setItem() {} },
-      setTimeout, clearTimeout,
+      setTimeout, clearTimeout, setInterval: () => 0,
       document: {
         addEventListener: (event, callback) => { init = callback; },
         getElementById: (id) => {

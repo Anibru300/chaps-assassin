@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0d0e12">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css?v=4">
-  <link rel="stylesheet" href="css/v4.css?v=15">
+  <link rel="stylesheet" href="css/v4.css?v=16">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -69,25 +69,6 @@
 
   <main>
 
-    <div class="card" id="cloud-panel">
-      <h2>Personaje en nube</h2>
-      <p class="hint" id="cloud-account"></p>
-      <p class="hint" id="cloud-status" role="status" aria-live="polite">Copia local · conecta Google para sincronizar.</p>
-      <div class="rest-row">
-        <button type="button" class="btn btn-small" id="cloud-connect">Conectar Google</button>
-        <button type="button" class="btn btn-small" id="cloud-disconnect" hidden>Desconectar Google</button>
-        <button type="button" class="btn btn-small" id="cloud-retry" hidden>Reintentar sincronización</button>
-        <button type="button" class="btn btn-small" id="cloud-backup">Descargar respaldo anterior</button>
-      </div>
-      <div id="cloud-choice" hidden>
-        <p class="hint">Primera conexión o versiones diferentes: revisa ficha visible antes de elegir.</p>
-        <div class="rest-row">
-          <button type="button" class="btn btn-small btn-crimson" id="cloud-use-local">Usar ficha de este dispositivo</button>
-          <button type="button" class="btn btn-small" id="cloud-use-remote">Usar ficha de nube</button>
-        </div>
-      </div>
-    </div>
-
     <!-- ============ TAB 1: FICHA ============ -->
     <section id="tab-sheet" class="tab-panel active">
       <aside class="sheet-sidebar" id="sheet-sidebar">
@@ -117,6 +98,25 @@
       </aside>
       <button type="button" class="sheet-nav-toggle" id="sheet-nav-toggle" aria-label="Secciones">☰</button>
       <div class="sheet-overlay" id="sheet-overlay"></div>
+
+      <div class="card" id="cloud-panel">
+        <h2>Personaje en nube</h2>
+        <p class="hint" id="cloud-account"></p>
+        <p class="hint" id="cloud-status" role="status" aria-live="polite">Copia local · conecta Google para sincronizar.</p>
+        <div class="rest-row">
+          <button type="button" class="btn btn-small" id="cloud-connect">Conectar Google</button>
+          <button type="button" class="btn btn-small" id="cloud-disconnect" hidden>Desconectar Google</button>
+          <button type="button" class="btn btn-small" id="cloud-retry" hidden>Reintentar sincronización</button>
+          <button type="button" class="btn btn-small" id="cloud-backup">Descargar respaldo anterior</button>
+        </div>
+        <div id="cloud-choice" hidden>
+          <p class="hint">Conflicto real o cambio de cuenta: revisa ficha visible antes de elegir.</p>
+          <div class="rest-row">
+            <button type="button" class="btn btn-small btn-crimson" id="cloud-use-local">Usar ficha de este dispositivo</button>
+            <button type="button" class="btn btn-small" id="cloud-use-remote">Usar ficha de nube</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Identidad y stats principales -->
       <div class="card" id="section-identity">
@@ -839,13 +839,13 @@
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/auth.js?v=4"></script>
   <script src="js/data.js?v=3"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/app.js?v=6"></script>
   <script src="js/combat-data.js?v=4"></script>
   <script src="js/combat.js?v=8"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>
-  <script src="js/cloud-core.js?v=1"></script>
-  <script src="js/firebase-sync.js?v=1"></script>
+  <script src="js/cloud-core.js?v=2"></script>
+  <script src="js/firebase-sync.js?v=2"></script>
 </body>
 </html>

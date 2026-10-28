@@ -127,7 +127,9 @@ window.CHAPS_STORE = {
   replace(data) {
     this.validate(data);
     const previous = localStorage.getItem(STORAGE_KEY);
-    if (previous) localStorage.setItem("chaps-state-before-cloud-v1", previous);
+    if (previous && !localStorage.getItem("chaps-state-before-cloud-v1")) {
+      localStorage.setItem("chaps-state-before-cloud-v1", previous);
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     state = structuredClone(data); // Ya validada: conservar exactamente payload y campos opcionales.
     renderAll();
@@ -688,7 +690,7 @@ function renderFlavor() {
   FLAVOR_FIELDS.forEach(([sel, path]) => {
     const el = $(sel);
     el.value = path.reduce((o, k) => (o ? o[k] : ""), state) || "";
-    el.onchange = () => {
+    el.oninput = () => {
       if (path.length === 1) state[path[0]] = el.value;
       else state[path[0]][path[1]] = el.value;
       saveState();
@@ -1103,19 +1105,24 @@ function importJson(file) {
 function initSheetEvents() {
   // Campos simples: estado -> input y viceversa.
   const bind = (id, key, numeric) => {
-    $(id).addEventListener("change", (e) => {
-      state[key] = numeric ? (parseInt(e.target.value, 10) || 0) : e.target.value;
+    const update = (e) => {
+      if (numeric && (e.target.value === "" || e.target.validity?.valid === false)) return;
+      const value = numeric ? (parseInt(e.target.value, 10) || 0) : e.target.value;
+      if (state[key] === value) return;
+      state[key] = value;
       saveState();
       if (key === "level" || key === "hpMax") renderIdentity();
       if (key === "level") { renderAbilities(); renderSkills(); renderTools(); renderWeapons(); renderCombos(); renderProgression(); }
-    });
+    };
+    $(id).addEventListener("input", update);
+    $(id).addEventListener("change", update);
   };
   bind("#f-name", "name", false);
   // Campos de identidad (objeto anidado state.identity)
   [["#f-charClass", "charClass"], ["#f-subclass", "subclass"], ["#f-species", "species"],
    ["#f-background", "background"], ["#f-alignment", "alignment"], ["#f-playerName", "playerName"],
    ["#f-campaign", "campaign"]].forEach(([id, key]) => {
-    $(id).addEventListener("change", (e) => { state.identity[key] = e.target.value; saveState(); });
+    $(id).addEventListener("input", (e) => { state.identity[key] = e.target.value; saveState(); });
   });
   bind("#f-level", "level", true);
   bind("#f-speed", "speed", true);
@@ -1469,7 +1476,7 @@ function initLibraryModal() { LIB_MODAL.init(); }
 /* ---------- PWA: Service Worker + instalación ---------- */
 function initPWA() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch((err) => console.warn("SW error", err));
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch((err) => console.warn("SW error", err));
   }
   let deferredPrompt = null;
   const installBtn = $("#btn-install");

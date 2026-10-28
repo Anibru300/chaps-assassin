@@ -9,15 +9,17 @@
     messagingSenderId: "825128918868",
     appId: "1:825128918868:web:f59faf7f486ba949b272c1"
   };
-  let sdk, auth, db, user, unsubscribe, timer, booting;
+  let sdk, auth, db, user, unsubscribe, timer, booting, retryTimer;
+  let recovering = false, retryDelay = 1000;
   const el = (id) => document.getElementById(id);
   const messages = {
     local: "Copia local · conecta Google para sincronizar.",
     loading: "Consultando personaje en nube…",
-    choose: "Elige qué ficha conservar. Antes de descargar, se guarda respaldo local.",
+    empty: "Sincronización automática activa · próximo cambio creará personaje en nube.",
+    choose: "Dos versiones incompatibles: elige ficha que conservar. Respaldo local disponible.",
     pending: "Cambios guardados en dispositivo · pendientes de subir.",
     saving: "Guardando personaje en nube…",
-    synced: "Personaje sincronizado con nube."
+    synced: "Personaje sincronizado · actualizaciones automáticas entre dispositivos."
   };
   function errorText(error) {
     const code = error?.code || "";
@@ -40,6 +42,15 @@
     el("cloud-disconnect").hidden = !user;
     el("cloud-retry").hidden = !user;
     if (status.mode === "pending" && navigator.onLine) schedule();
+    if (status.mode === "error" && user && navigator.onLine &&
+        !["permission-denied", "unauthenticated"].includes(status.error?.code)) {
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(recover, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 30000);
+    } else if (status.mode === "synced" || status.mode === "empty") {
+      clearTimeout(retryTimer);
+      retryDelay = 1000;
+    }
   }
   const cloud = CHAPS_CLOUD_CORE({
     store: window.CHAPS_STORE,
@@ -67,13 +78,37 @@
   });
   function schedule() {
     clearTimeout(timer);
-    timer = setTimeout(() => cloud.flush(), 1500);
+    timer = setTimeout(() => cloud.flush(), 500);
   }
   window.CHAPS_CLOUD = {
     changed() { cloud.changed(); },
     // Permite recuperar manualmente copia anterior desde exportación JSON.
     core: cloud
   };
+
+  function listen(uid) {
+    if (unsubscribe) unsubscribe();
+    unsubscribe = sdk.onSnapshot(sdk.doc(db, "users", uid, "characters", "chaps"),
+      { includeMetadataChanges: true }, (snapshot) => {
+        if (user?.uid !== uid) return;
+        if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) {
+          cloud.receive(snapshot.exists() ? snapshot.data() : null);
+        }
+      }, (error) => {
+        if (user?.uid !== uid) return;
+        unsubscribe = null; // Escucha terminal: recuperarla en reintento/resume.
+        showStatus({ mode: "error", error });
+      });
+  }
+  async function recover() {
+    if (!user || recovering || document.visibilityState === "hidden" || !navigator.onLine) return;
+    const uid = user.uid;
+    recovering = true;
+    try {
+      await cloud.refresh();
+      if (user?.uid === uid && !unsubscribe) listen(uid);
+    } finally { recovering = false; }
+  }
 
   async function boot() {
     if (booting) return booting;
@@ -90,6 +125,7 @@
         if (unsubscribe) unsubscribe();
         unsubscribe = null;
         clearTimeout(timer);
+        clearTimeout(retryTimer);
         user = nextUser;
         cloud.disconnect();
         if (!user) return;
@@ -97,13 +133,7 @@
         window.CHAPS_AUTH.open();
         await cloud.connect(uid);
         if (user?.uid !== uid) return;
-        unsubscribe = sdk.onSnapshot(sdk.doc(db, "users", uid, "characters", "chaps"),
-          { includeMetadataChanges: true }, (snapshot) => {
-            if (user?.uid !== uid) return;
-            if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) {
-              cloud.receive(snapshot.exists() ? snapshot.data() : null);
-            }
-          }, (error) => showStatus({ mode: "error", error }));
+        listen(uid);
       }, (error) => showStatus({ mode: "error", error }));
     })().catch((error) => { booting = null; throw error; });
     return booting;
@@ -134,7 +164,7 @@
       try { await sdk.signOut(auth); }
       catch (error) { showStatus({ mode: "error", error }); }
     });
-    el("cloud-retry").addEventListener("click", () => cloud.refresh());
+    el("cloud-retry").addEventListener("click", recover);
     el("cloud-use-local").addEventListener("click", () => {
       if (confirm("¿Usar ficha de este dispositivo como personaje en nube? Reemplazará versión remota si existe.")) cloud.useLocal();
     });
@@ -149,7 +179,15 @@
       link.href = url; link.download = "chaps-antes-de-sincronizar.json"; link.click();
       URL.revokeObjectURL(url);
     });
-    window.addEventListener("online", () => { if (user) cloud.refresh(); else boot().catch((error) => showStatus({ mode: "error", error })); });
+    window.addEventListener("online", () => { if (user) recover(); else boot().catch((error) => showStatus({ mode: "error", error })); });
+    window.addEventListener("focus", recover);
+    window.addEventListener("pageshow", recover);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") cloud.flush();
+      else recover();
+    });
+    // Respaldo para conexiones móviles que quedan suspendidas sin evento online.
+    setInterval(recover, 20000);
     window.addEventListener("offline", () => { if (user) el("cloud-status").textContent = "Sin conexión · cambios conservados en dispositivo."; });
     window.addEventListener("beforeunload", (event) => {
       if (cloud.status.mode === "pending" || cloud.status.mode === "saving") {
