@@ -85,7 +85,7 @@ test("descanso largo conserva recuperación, guardado y recordatorio de maestrí
   const saved = JSON.parse(storage.get("chaps-state-v1"));
   assert.equal(saved.hpCurrent, saved.hpMax);
   assert.equal(saved.hpTemp, 0);
-  assert.equal(saved.hitDiceSpent, 2);
+  assert.equal(saved.hitDiceSpent, 0);
   assert.equal(saved.deathSuccess, 0);
   assert.equal(saved.deathFail, 0);
   assert.equal(saved.inspiration, true);

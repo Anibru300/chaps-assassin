@@ -33,7 +33,7 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     const assets = await page.evaluate(async () => {
-      const cache = await caches.open("chaps-v15-character-icon");
+      const cache = await caches.open("chaps-v16-sheet-audit-fixes");
       return (await cache.keys()).map(request => new URL(request.url).pathname);
     });
     for (const asset of ["/js/profile-store.js", "/js/account-auth.js", "/js/features.js", "/css/features.css", "/js/combat-tools.js", "/css/combat-visuals.css", "/js/combat-help.js", "/css/combat-layout.css", "/js/combat-rolls.js"]) {
@@ -67,6 +67,19 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.locator("#table-note-add").click();
     await page.reload();
     assert.equal(await page.evaluate(() => state.journal.length), 2);
+    await page.locator('.tab-btn[data-tab="table"]').click();
+    await page.evaluate(() => { state.hpCurrent = 1; state.hitDiceSpent = 0; saveState(); renderIdentity(); });
+    await page.locator('#table-short-rest').click();
+    await page.locator('#short-rest-spend').click();
+    assert.equal(await page.evaluate(() => state.hitDiceSpent), 1);
+    assert.ok(await page.evaluate(() => state.hpCurrent > 1));
+    await page.locator('#short-rest-close').click();
+    await page.reload();
+    assert.equal(await page.evaluate(() => state.hitDiceSpent), 1);
+    await page.locator('.tab-btn[data-tab="table"]').click();
+    await page.locator('#table-long-rest').click();
+    assert.equal(await page.evaluate(() => state.hitDiceSpent), 0);
+    assert.equal(await page.evaluate(() => state.hpCurrent === state.hpMax), true);
     await page.locator('.tab-btn[data-tab="combat"]').click();
     await page.evaluate(() => {
       combat.enemies = [spawnEnemy("orc")]; const old = rollDie; rollDie = () => 10;

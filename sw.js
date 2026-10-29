@@ -3,18 +3,18 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v15-character-icon";
+const CACHE_NAME = "chaps-v16-sheet-audit-fixes";
 const SHELL = [
   "./",
   "./index.html",
-  "./css/style.css?v=4",
+  "./css/style.css?v=5",
   "./css/v4.css?v=18",
   "./css/features.css?v=2",
   "./css/combat-visuals.css?v=2",
   "./css/combat-layout.css?v=2",
   "./js/auth.js?v=5",
-  "./js/data.js?v=6",
-  "./js/app.js?v=9",
+  "./js/data.js?v=7",
+  "./js/app.js?v=10",
   "./js/combat-data.js?v=4",
   "./js/combat.js?v=12",
   "./js/combat-tools.js?v=3",

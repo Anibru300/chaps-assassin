@@ -2,6 +2,18 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
+## Actualización: 2026-10-29 — v16: correcciones de auditoría de ficha
+
+- Usuario autorizó corregir, comprobar y desplegar seis fallos confirmados.
+- Descanso corto abre diálogo accesible para gastar d8 de uno en uno: CON, mínimo 1 PG, límite PG máximos, bloqueo sin dados o con 0 PG. Cerrar sin gastar conserva recursos.
+- Descanso largo recupera todos los dados 2024; no comienza con 0 PG.
+- DES actualiza ataque mostrado y combos; competencia/pericia actualiza pasiva. PX actualiza todos los derivados de nivel. Ajustes manuales conservados.
+- Características rechazan vacíos, decimales y valores fuera de 1–30.
+- Caché `chaps-v16-sheet-audit-fixes`; app v10, data v7, CSS v5.
+- Pruebas nuevas `tests/sheet.test.js` con 360/1440px; PWA prueba descansos offline. Ver bitácora de raíz para validación y publicación final.
+- Validación: 82 pruebas, 80 pasan, 0 fallan, 2 omitidas por falta de emuladores Firebase. Motor pasa; sintaxis y diff correctos.
+- No modificar datos personales dudosos del archivo local como si fueran ficha sincronizada actual.
+
 ## Actualización: 2026-10-29 — v15: icono CHAPS
 
 - Retrato CHAPS adaptado con imagegen; iconos Android 192/512, maskable 512, iPhone 180 y favicon 48.

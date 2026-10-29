@@ -8,7 +8,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/chaps-apple-touch-180.png">
   <meta name="theme-color" content="#0d0e12">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
   <link rel="stylesheet" href="css/v4.css?v=18">
   <link rel="stylesheet" href="css/features.css?v=2">
   <link rel="stylesheet" href="css/combat-visuals.css?v=2">
@@ -940,6 +940,17 @@
   </main>
 
   <!-- Modal de detalle de Biblioteca -->
+  <dialog id="short-rest-dialog" aria-labelledby="short-rest-title">
+    <h2 id="short-rest-title" data-i18n="shortRest">Descanso corto</h2>
+    <p data-i18n="shortRestHelp">Tras descansar 1 hora, gasta dados de golpe uno por uno para curarte. Cada dado cura 1d8 + CON (mínimo 1 PG).</p>
+    <p id="short-rest-summary"></p>
+    <p id="short-rest-warning" role="status"></p>
+    <p id="short-rest-result" role="status"></p>
+    <div class="rest-row">
+      <button type="button" class="btn" id="short-rest-spend" data-i18n="spendRestDie">Gastar 1d8 y curar</button>
+      <button type="button" class="btn" id="short-rest-close" data-i18n="finishRest">Terminar descanso</button>
+    </div>
+  </dialog>
   <div id="lib-modal" class="modal" hidden>
     <div class="modal-backdrop"></div>
     <div class="modal-card">
@@ -960,8 +971,8 @@
 
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/auth.js?v=5"></script>
-  <script src="js/data.js?v=6"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/data.js?v=7"></script>
+  <script src="js/app.js?v=10"></script>
   <script src="js/combat-data.js?v=4"></script>
   <script src="js/combat.js?v=12"></script>
   <script src="js/combat-tools.js?v=3"></script>

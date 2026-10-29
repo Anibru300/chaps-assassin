@@ -260,13 +260,20 @@ function renderAbilities() {
   });
   grid.querySelectorAll("input[data-ab]").forEach((inp) => {
     inp.addEventListener("change", () => {
-      state.abilities[inp.dataset.ab] = parseInt(inp.value, 10) || 10;
+      const score = Number(inp.value);
+      if (!Number.isInteger(score) || score < 1 || score > 30) {
+        inp.value = state.abilities[inp.dataset.ab];
+        return;
+      }
+      state.abilities[inp.dataset.ab] = score;
       saveState();
       renderAbilities();
       renderSkills();      // los mods de habilidades dependen de las características
       renderTools();
       renderInventory();   // la capacidad de carga depende de FUE
       renderPassivePerception();
+      renderWeapons();
+      renderCombos();
     });
   });
   grid.querySelectorAll("input[data-save]").forEach((cb) => {
@@ -336,6 +343,7 @@ function renderSkills() {
       if (cb.dataset.kind === "e" && cb.checked) store[key].p = true; // pericia implica competencia
       saveState();
       renderSkills();
+      renderPassivePerception();
     });
   });
 }
@@ -496,21 +504,39 @@ function applyCoinConversion() {
 
 /* ---------- Descansos ---------- */
 function shortRest() {
-  // Recupera 1 dado de golpe gastado por descanso (simplificación amistosa).
-  if (state.hitDiceSpent > 0) state.hitDiceSpent--;
+  const dialog = $("#short-rest-dialog");
+  $("#short-rest-result").textContent = "";
+  renderShortRest();
+  if (!dialog.open) dialog.showModal();
+}
+
+function renderShortRest() {
+  $("#short-rest-summary").textContent = `${state.hpCurrent}/${state.hpMax} PG · ${Math.max(0, state.level - state.hitDiceSpent)}/${state.level}d8`;
+  $("#short-rest-spend").disabled = state.hpCurrent < 1 || state.hpCurrent >= state.hpMax || state.hitDiceSpent >= state.level;
+  $("#short-rest-warning").textContent = state.hpCurrent < 1 ? t("restNeedsHp") : "";
+}
+
+function spendRestHitDie() {
+  if (state.hpCurrent < 1 || state.hpCurrent >= state.hpMax || state.hitDiceSpent >= state.level) return;
+  const die = rollDie(8);
+  const modifier = abilityMod(state.abilities.con);
+  const healed = Math.min(state.hpMax - state.hpCurrent, Math.max(1, die + modifier));
+  state.hitDiceSpent++;
+  state.hpCurrent += healed;
   state.deathSuccess = 0;
   state.deathFail = 0;
   saveState();
-  renderHitDice();
-  renderDeathPips();
+  renderIdentity();
+  $("#short-rest-result").textContent = `d8(${die}) ${fmtMod(modifier)} → +${healed} PG`;
+  renderShortRest();
 }
 
 function longRest() {
+  if (state.hpCurrent < 1) { window.alert(t("restNeedsHp")); return; }
   state.hpCurrent = state.hpMax;
   state.hpTemp = 0;
-  // Recupera la mitad de los dados de golpe totales (mín. 1), regla 2024.
-  const recovered = Math.max(1, Math.floor(state.level / 2));
-  state.hitDiceSpent = Math.max(0, state.hitDiceSpent - recovered);
+  // 2024: recupera todos los dados gastados.
+  state.hitDiceSpent = 0;
   state.deathSuccess = 0;
   state.deathFail = 0;
   state.inspiration = true; // 2024: se gana Inspiración Heroica tras un descanso largo
@@ -734,8 +760,8 @@ function renderXp() {
   if (state.level !== lv) {
     state.level = lv;
     saveState();
-    renderIdentity();
-    renderProgression();
+    renderAll();
+    return;
   }
   const fill = $("#xp-bar-fill");
   const label = $("#xp-bar-label");
@@ -1134,7 +1160,7 @@ function initSheetEvents() {
       state[key] = value;
       saveState();
       if (key === "level" || key === "hpMax") renderIdentity();
-      if (key === "level") { renderAbilities(); renderSkills(); renderTools(); renderWeapons(); renderCombos(); renderProgression(); }
+      if (key === "level") { renderAbilities(); renderSkills(); renderTools(); renderWeapons(); renderCombos(); renderProgression(); renderPassivePerception(); }
     };
     $(id).addEventListener("input", update);
     $(id).addEventListener("change", update);
@@ -1165,6 +1191,8 @@ function initSheetEvents() {
   });
 
   $("#btn-short-rest").addEventListener("click", shortRest);
+  $("#short-rest-spend").addEventListener("click", spendRestHitDie);
+  $("#short-rest-close").addEventListener("click", () => $("#short-rest-dialog").close());
   $("#btn-long-rest").addEventListener("click", longRest);
 
   // --- Experiencia ---
