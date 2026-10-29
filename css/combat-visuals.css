@@ -1,0 +1,52 @@
+/* Profundidad y efectos: solo presentación, sin cambiar reglas de combate. */
+#c-board { isolation: isolate; max-width: 960px; margin: 8px auto; border-color: #80705a; box-shadow: inset 0 0 30px #0008, 0 12px 28px #0007; background: #13151a; }
+#c-board .cell { position: relative; min-width: 0; min-height: 0; border: 1px solid var(--floor-edge); background-image: linear-gradient(145deg, #ffffff08, #00000018), repeating-linear-gradient(12deg, transparent 0 9px, #ffffff03 10px 11px); }
+.battlefield-viewport { overflow: auto; max-width: 100%; }
+.battlefield-viewport.board-zoomed #c-board { min-width: 660px; max-width: none; }
+.token-face { width: 100%; height: 100%; display: grid; place-items: center; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 35% 25%, #4d4542, #171921); }
+#c-board.theme-wood .cell { background-image: repeating-linear-gradient(92deg, #0002 0 1px, transparent 2px 8px), linear-gradient(0deg, #0003, transparent 60%); }
+#c-board.theme-grass .cell { background-image: radial-gradient(ellipse at 25% 30%, #6f923921, transparent 65%), repeating-linear-gradient(115deg, transparent 0 5px, #9bc45c0d 6px 7px); }
+#c-board.theme-mosaic .cell { background-image: linear-gradient(45deg, transparent 46%, #b8b0e41c 48% 52%, transparent 54%); }
+#c-board .tok { box-sizing: border-box; padding: 3px; background: conic-gradient(var(--hp-color, #64c390) var(--hp, 100%), #262936 0); box-shadow: 0 4px 5px #000b, 0 0 0 1px #000; border: 0; font-size: clamp(14px, 2vw, 27px); }
+#c-board .tok::after { inset: 3px; border: 1px solid #ffffff35; box-shadow: inset 0 2px 3px #ffffff24; opacity: 1; pointer-events: none; }
+#c-board .tok img { object-position: center 25%; }
+#c-board .tok-e { cursor: pointer; }
+#c-board .tok:focus-visible { outline: 3px solid #ffdc7c; outline-offset: 3px; }
+.token-hp { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 5; padding: 0 3px; border-radius: 3px; background: #11131bea; color: #f6f0da; font-size: clamp(7px, 1.1vw, 11px); line-height: 1.25; font-weight: 700; pointer-events: none; white-space: nowrap; }
+.token-condition { position: absolute; top: 0; right: 1px; z-index: 5; color: #f5d075; text-shadow: 0 1px 3px #000; font-size: 12px; pointer-events: none; }
+#c-board .cur { box-shadow: inset 0 0 0 2px #7de1ac, inset 0 0 15px #68d89c30; }
+#c-board .targeted { outline: 2px solid #eab54c; outline-offset: -3px; background-color: #665029 !important; }
+#c-board .condition-poisoned .tok { box-shadow: 0 0 10px #86c547aa, 0 4px 5px #000b; }
+#c-board .condition-prone .tok img { transform: rotate(65deg); }
+#c-board .condition-blinded .tok img { filter: brightness(.5); }
+#c-board .condition-paralyzed .tok, #c-board .condition-unconscious .tok { filter: saturate(.25); }
+#c-board .concealed .tok { opacity: .5; }
+#c-board .fallen .tok { filter: grayscale(1) brightness(.5); opacity: .65; }
+#c-board .fallen::after { content: "×"; position: absolute; z-index: 6; color: #eee; font-size: clamp(18px, 3vw, 34px); text-shadow: 0 2px 4px #000; pointer-events: none; }
+#c-board .obs { animation: none; box-shadow: inset 2px 2px 4px #ffffff12, 3px 4px 3px #0008; }
+#c-board .obs-wall { border-top: 3px solid #767780; }
+#c-board .obs-pillar { border-radius: 30%; border-top: 3px solid #73737d; }
+#c-board .obs-crate { border: 2px solid #916333; }
+#c-board .terrain-fire { animation: battlefield-fire 1.8s ease-in-out infinite alternate; }
+#c-board .terrain-ice { background-image: linear-gradient(125deg, transparent 35%, #e0f6ff33 46%, transparent 55%); }
+.enemy-row { display: flex; align-items: center; gap: 12px; }
+.enemy-row .enemy-info { flex: 1; min-width: 0; }
+.enemy-portrait { width: 46px; height: 46px; border: 2px solid #a47b42; border-radius: 50%; overflow: hidden; flex: 0 0 46px; display: grid; place-items: center; background: #26232a; box-shadow: 0 3px 8px #0006; }
+.enemy-portrait img { width: 100%; height: 100%; object-fit: cover; }
+.enemy-row.targeted { border-color: #eab54c; }
+.enemy-row.dead .enemy-portrait { filter: grayscale(1); }
+.board-fx { pointer-events: none; }
+.board-fx.miss { font-size: .7rem; letter-spacing: .04em; color: #dae1eb; }
+.board-fx.condition-fx { color: #bef09d; font-size: .75rem; white-space: nowrap; }
+.board-fx.impact-wave { width: 32px; height: 32px; border: 2px solid #e8b379; border-radius: 50%; background: radial-gradient(circle, #ffdb9744, transparent 65%); animation: impact-wave .5s ease-out forwards; }
+.board-fx.critical-wave { border-color: #ffe18a; width: 55px; height: 55px; box-shadow: 0 0 16px #f9c35f80; }
+.fx-line { animation: battle-trail .45s ease-out forwards; transform: rotate(var(--attack-angle)); height: 3px; background: linear-gradient(90deg, transparent, #ffe5a5 80%, #fff); box-shadow: 0 0 5px #e9b96370; }
+.fx-line.ranged-trail::after { content: ""; position: absolute; right: 0; top: -3px; width: 8px; height: 8px; border-top: 2px solid #ffe3a0; border-right: 2px solid #ffe3a0; transform: rotate(45deg); }
+.fx-line.melee-trail { height: 5px; border-radius: 50%; background: linear-gradient(90deg, transparent, #fff8, #fff); }
+.battlefield-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text-dim); font-size: .78rem; }
+@keyframes impact-wave { from { opacity: 1; transform: translate(-50%, -50%) scale(.35); } to { opacity: 0; transform: translate(-50%, -50%) scale(1.8); } }
+@keyframes battle-trail { from { opacity: 1; transform: rotate(var(--attack-angle)) scaleX(.2); } to { opacity: 0; transform: rotate(var(--attack-angle)) scaleX(1); } }
+@keyframes battlefield-fire { from { box-shadow: inset 0 0 5px #dc5a1e60; } to { box-shadow: inset 0 0 13px #f2a23e90; } }
+@media (prefers-reduced-motion: reduce) {
+  #c-board *, #c-board *::before, #c-board *::after { animation: none !important; transition: none !important; }
+}

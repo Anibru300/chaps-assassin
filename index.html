@@ -10,7 +10,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css?v=4">
   <link rel="stylesheet" href="css/v4.css?v=18">
-  <link rel="stylesheet" href="css/features.css?v=1">
+  <link rel="stylesheet" href="css/features.css?v=2">
+  <link rel="stylesheet" href="css/combat-visuals.css?v=1">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -60,6 +61,7 @@
       <div class="header-controls">
         <span id="save-indicator" class="save-indicator"></span>
         <button id="lang-toggle" class="btn btn-small" title="ES / EN">EN</button>
+        <button type="button" class="btn btn-small" id="cloud-disconnect" hidden>Cerrar sesión</button>
       </div>
     </div>
     <nav class="tabs">
@@ -87,7 +89,6 @@
             <a href="#section-characters">Personajes</a>
             <a href="#section-account">Cuenta y acceso</a>
             <a href="#section-history">Historial</a>
-            <a href="#section-session">Notas de partida</a>
             <a href="#section-identity">Identidad</a>
             <a href="#section-abilities">Características</a>
             <a href="#section-skills">Habilidades</a>
@@ -118,7 +119,6 @@
         <p class="hint" id="cloud-status" role="status" aria-live="polite">Copia local · conecta Google para sincronizar.</p>
         <div class="rest-row">
           <button type="button" class="btn btn-small" id="cloud-connect">Conectar Google</button>
-          <button type="button" class="btn btn-small" id="cloud-disconnect" hidden>Desconectar Google</button>
           <button type="button" class="btn btn-small" id="cloud-retry" hidden>Reintentar sincronización</button>
         </div>
         <div id="cloud-choice" hidden>
@@ -158,22 +158,10 @@
 
       <div class="card" id="section-history">
         <h2>Historial de versiones</h2>
-        <p class="hint">Últimas 50 versiones sincronizadas por personaje. Restaurar crea nueva versión y conserva anterior.</p>
+        <p class="hint">Versiones guardadas por fecha y últimos 50 cambios automáticos. Guarda versión de hoy al final de ficha. Restaurar conserva versiones guardadas.</p>
         <button class="btn" id="history-load" type="button">Cargar historial</button>
         <p class="hint" id="history-status" role="status"></p>
         <div id="history-list" class="version-list"></div>
-      </div>
-
-      <div class="card" id="section-session">
-        <h2>Notas de partida</h2>
-        <div class="grid grid-2">
-          <label class="field"><span>Última sesión</span><input type="date" data-session-field="lastPlayed"></label>
-          <label class="field"><span>Ubicación actual</span><input type="text" data-session-field="location" placeholder="¿Dónde nos quedamos?"></label>
-          <label class="field"><span>Resumen de última sesión</span><textarea data-session-field="recap" rows="4"></textarea></label>
-          <label class="field"><span>Próximos pasos y pendientes</span><textarea data-session-field="nextGoal" rows="4"></textarea></label>
-        </div>
-        <div class="rest-row"><button class="btn btn-crimson" id="session-note-add" type="button">+ Nota de partida</button><input class="feature-search" type="search" id="session-note-search" placeholder="Buscar notas…" aria-label="Buscar notas de partida"><label><input type="checkbox" id="session-note-archived"> Mostrar archivadas</label></div>
-        <div id="session-note-list"></div>
       </div>
 
       <!-- Identidad y stats principales -->
@@ -558,6 +546,8 @@
       <!-- Persistencia -->
       <div class="card persistence-card" id="section-persist">
         <button class="btn btn-danger" id="btn-reset" data-i18n="resetSheet">Restablecer ficha</button>
+        <button class="btn btn-crimson" id="save-day-version" type="button">Guardar versión de hoy</button>
+        <p class="hint" id="save-version-status" role="status">Conserva ficha de hoy en Historial de versiones.</p>
       </div>
     </section>
 
@@ -584,7 +574,7 @@
       <div class="card">
         <h2>¿Dónde nos quedamos?</h2><p id="table-session-summary"></p>
         <label class="field"><span>Observación rápida de partida</span><textarea id="table-observation" rows="3"></textarea></label>
-        <div class="rest-row"><button type="button" class="btn btn-crimson" id="table-note-add">Guardar observación</button><button type="button" class="btn" id="table-open-notes">Ver notas de partida</button></div>
+        <div class="rest-row"><button type="button" class="btn btn-crimson" id="table-note-add">Guardar en diario</button><button type="button" class="btn" id="table-open-notes">Ver diario de aventuras</button></div>
         <p id="table-note-status" class="hint" role="status"></p>
       </div>
     </section>
@@ -735,9 +725,11 @@
         <div class="card">
           <div class="combat-head">
             <h2 data-i18n="ctBoard">Campo de batalla</h2>
+            <button class="btn btn-small" id="c-board-zoom" type="button" aria-pressed="false">Ampliar tablero</button>
             <button class="btn btn-small" id="c-btn-move" data-i18n="ctMove">Mover</button>
           </div>
-          <div id="c-board" class="board"></div>
+          <div class="battlefield-viewport" id="c-board-viewport"><div id="c-board" class="board"></div></div>
+          <div class="battlefield-legend"><span>◉ Aro: vida restante</span><span>✦ Condición activa</span><span>× Fuera de combate</span><span>Pulsa ficha enemiga para elegir objetivo</span></div>
           <p class="hint" data-i18n="ctBoardHint"></p>
         </div>
 
@@ -921,17 +913,17 @@
 
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/auth.js?v=5"></script>
-  <script src="js/data.js?v=4"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/data.js?v=5"></script>
+  <script src="js/app.js?v=9"></script>
   <script src="js/combat-data.js?v=4"></script>
-  <script src="js/combat.js?v=8"></script>
+  <script src="js/combat.js?v=9"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>
-  <script src="js/cloud-core.js?v=3"></script>
+  <script src="js/cloud-core.js?v=4"></script>
   <script src="js/profile-store.js?v=1"></script>
   <script src="js/account-auth.js?v=1"></script>
-  <script src="js/features.js?v=1"></script>
-  <script src="js/firebase-sync.js?v=4"></script>
+  <script src="js/features.js?v=2"></script>
+  <script src="js/firebase-sync.js?v=5"></script>
 </body>
 </html>

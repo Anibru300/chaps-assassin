@@ -474,7 +474,7 @@ function enemyToken(e) {
 }
 
 /** Emoji/SVG visual para el jugador. */
-function playerToken() { return "🗡"; }
+function playerToken() { return '<img src="assets/chaps-portrait.jpg" alt="" loading="lazy">'; }
 
 function cLog(html, cls) {
   if (combat.quiet) return; // simulación masiva: sin registro (Fase 6)
@@ -489,6 +489,7 @@ function addCond(e, id, expire) {
     e.conds.push({ id, expire: expire || 0 });
     const cdef = CONDITIONS.find((c) => c.id === id);
     cLog(`💠 ${eName(e)}: ${ct("condApplied")} — <strong>${cdef ? (LANG === "es" ? cdef.nameEs : cdef.nameEn) : id}</strong>`, "log-info");
+    if (e.pos) boardFx("condition-fx", e.pos.x, e.pos.y, cdef ? (LANG === "es" ? cdef.nameEs : cdef.nameEn) : id);
   }
 }
 
@@ -1521,6 +1522,8 @@ function renderBoard() {
   if (!bd) return;
   const p = combat.p;
   bd.className = "board theme-" + (combat.map.theme || "stone");
+  const oldTokens = new Map([...bd.querySelectorAll("[data-combatant]")].map(node => [node.dataset.combatant, { rect: node.getBoundingClientRect(), x: node.dataset.x, y: node.dataset.y }]));
+  const effects = [...bd.querySelectorAll(".board-fx, .fx-line")];
   const reach = new Set();
   if (moveMode && isPlayerTurn() && p) {
     reachableCells(p.pos, p.move + p.withdraw).forEach((c) => reach.add(c.x + "," + c.y));
@@ -1543,14 +1546,31 @@ function renderBoard() {
     }
     if (reach.has(x + "," + y)) cell.classList.add("reach");
     if (p && p.pos.x === x && p.pos.y === y) {
-      cell.innerHTML = `<span class="tok tok-p" title="${state.name}">${playerToken()}</span>`;
+      cell.innerHTML = `<span class="tok tok-p">${playerToken()}</span>`;
+      decorateBoardToken(cell, p, "p", state.name, state.hpMax, x, y);
       if (isPlayerTurn()) cell.classList.add("cur");
     } else {
-      const e = combat.enemies.find((en) => en.hp > 0 && en.pos.x === x && en.pos.y === y);
+      const e = combat.enemies.find((en) => en.hp > 0 && en.pos.x === x && en.pos.y === y) || combat.enemies.find(en => en.pos.x === x && en.pos.y === y);
       if (e) {
         const isCur = combat.on && !isPlayerTurn() && currentCombatant().who === "e" && combat.enemies[currentCombatant().idx] === e;
         const covered = combat.p && hasCover(e, combat.p) ? `<span class="cover-badge">${ct("coverIndicator")}</span>` : "";
-        cell.innerHTML = `<span class="tok tok-e" title="${eName(e)} — ${e.hp}/${e.maxHp} PG · CA ${e.ac}">${enemyToken(e)}${covered}</span>`;
+        cell.innerHTML = `<span class="tok tok-e"><span class="token-face">${enemyToken(e)}${covered}</span></span>`;
+        const index = combat.enemies.indexOf(e);
+        decorateBoardToken(cell, e, "e" + index, eName(e), e.maxHp, x, y);
+        if (e.hp > 0 && !mapEditMode) {
+          const token = cell.querySelector(".tok");
+          token.tabIndex = 0; token.setAttribute("role", "button");
+          const select = () => {
+            const target = ctEl("c-atk-target");
+            if (target && isPlayerTurn() && ctEl("c-attack-panel")?.hidden) openAttackPanel(false);
+            if (target && [...target.options].some(option => option.value === String(index))) {
+              target.value = String(index); updateAttackPreview(); renderCombat();
+            }
+          };
+          token.addEventListener("click", event => { event.stopPropagation(); select(); });
+          token.addEventListener("keydown", event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); select(); } });
+          cell.classList.toggle("targeted", ctEl("c-atk-target")?.value === String(index));
+        }
         if (isCur) cell.classList.add("cur");
         if (e.conds.length) cell.classList.add("has-cond");
       }
@@ -1570,10 +1590,41 @@ function renderBoard() {
     }
     bd.appendChild(cell);
   }
+  effects.forEach(effect => bd.appendChild(effect));
+  if (!combat.quiet && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    for (const token of bd.querySelectorAll("[data-combatant]")) {
+      const previous = oldTokens.get(token.dataset.combatant);
+      if (!previous || (previous.x === token.dataset.x && previous.y === token.dataset.y)) continue;
+      const rect = token.getBoundingClientRect();
+      const adjacent = Math.max(Math.abs(Number(previous.x) - Number(token.dataset.x)), Math.abs(Number(previous.y) - Number(token.dataset.y))) <= 1;
+      token.animate?.(adjacent ? [{ transform: `translate(${previous.rect.left - rect.left}px, ${previous.rect.top - rect.top}px)` }, { transform: "translate(0, 0)" }] : [{ opacity: .2 }, { opacity: 1 }], { duration: 280, easing: "ease-out" });
+    }
+  }
   const mv = ctEl("c-btn-move");
   if (mv) {
     mv.disabled = !isPlayerTurn() || (p.move + p.withdraw) < 5;
     mv.classList.toggle("btn-crimson", moveMode);
+  }
+}
+
+function decorateBoardToken(cell, creature, id, name, maxHp, x, y) {
+  const token = cell.querySelector(".tok");
+  const pct = Math.max(0, Math.min(100, creature.hp / Math.max(1, maxHp) * 100));
+  token.dataset.combatant = id; token.dataset.x = x; token.dataset.y = y;
+  token.style.setProperty("--hp", pct + "%");
+  token.style.setProperty("--hp-color", pct > 50 ? "#64c390" : pct > 25 ? "#e7b85c" : "#ed5963");
+  const labels = (creature.conds || []).map(condition => {
+    const def = CONDITIONS.find(value => value.id === condition.id);
+    cell.classList.add("condition-" + condition.id);
+    return def ? (LANG === "es" ? def.nameEs : def.nameEn) : condition.id;
+  });
+  const description = `${name} · ${creature.hp}/${maxHp} PG${labels.length ? " · " + labels.join(", ") : ""}`;
+  token.title = description; token.setAttribute("aria-label", description);
+  cell.classList.toggle("fallen", creature.hp <= 0);
+  cell.classList.toggle("concealed", !!creature.hidden);
+  const hp = document.createElement("span"); hp.className = "token-hp"; hp.textContent = creature.hp + "/" + maxHp; hp.setAttribute("aria-hidden", "true"); cell.appendChild(hp);
+  if (labels.length) {
+    const badge = document.createElement("span"); badge.className = "token-condition"; badge.textContent = "✦"; badge.title = labels.join(", "); cell.appendChild(badge);
   }
 }
 
@@ -1587,6 +1638,7 @@ function cellCenter(x, y) {
 }
 
 function boardFx(type, x, y, text) {
+  if (combat.quiet) return;
   const bd = ctEl("c-board");
   if (!bd) return;
   const pos = cellCenter(x, y);
@@ -1602,6 +1654,7 @@ function boardFx(type, x, y, text) {
 
 function fxHitAt(x, y, dmg, crit) {
   boardFx(crit ? "crit" : "hit", x, y, dmg ? "−" + dmg : "");
+  boardFx("impact-wave" + (crit ? " critical-wave" : ""), x, y);
 }
 
 function fxHit(e, dmg, crit) {
@@ -1609,7 +1662,7 @@ function fxHit(e, dmg, crit) {
 }
 
 function fxMissAt(x, y) {
-  boardFx("miss", x, y, "×");
+  boardFx("miss", x, y, LANG === "es" ? "FALLO" : "MISS");
 }
 
 function fxMiss(e) {
@@ -1617,6 +1670,7 @@ function fxMiss(e) {
 }
 
 function flashCell(x, y, cls) {
+  if (combat.quiet) return;
   const cell = ctEl(`cell-${x}-${y}`);
   if (!cell) return;
   cell.classList.add(cls);
@@ -1624,12 +1678,13 @@ function flashCell(x, y, cls) {
 }
 
 function fxLine(from, to) {
+  if (combat.quiet) return;
   const bd = ctEl("c-board");
   if (!bd) return;
   const a = cellCenter(from.x, from.y), b = cellCenter(to.x, to.y);
   if (!a || !b) return;
   const line = document.createElement("div");
-  line.className = "fx-line";
+  line.className = "fx-line " + (distBetween(from, to) > 5 ? "ranged-trail" : "melee-trail");
   const dx = b.x - a.x, dy = b.y - a.y;
   const len = Math.hypot(dx, dy);
   const ang = Math.atan2(dy, dx);
@@ -1637,6 +1692,7 @@ function fxLine(from, to) {
   line.style.left = a.x + "px";
   line.style.top = a.y + "px";
   line.style.transform = `rotate(${ang}rad)`;
+  line.style.setProperty("--attack-angle", ang + "rad");
   bd.appendChild(line);
   setTimeout(() => line.remove(), 500);
 }
@@ -1706,10 +1762,10 @@ function renderCombat() {
   eList.innerHTML = "";
   combat.enemies.forEach((e, i) => {
     const div = document.createElement("div");
-    div.className = "enemy-row" + (e.hp <= 0 ? " dead" : "");
+    div.className = "enemy-row" + (e.hp <= 0 ? " dead" : "") + (ctEl("c-atk-target")?.value === String(i) ? " targeted" : "");
     const pct = Math.max(0, (e.hp / e.maxHp) * 100);
     div.innerHTML = `
-      <div class="enemy-info">
+      <span class="enemy-portrait" aria-hidden="true">${enemyToken(e)}</span><div class="enemy-info">
         <strong>${eName(e)}</strong> ${condBadges(e)}
         <div class="enemy-bar"><div class="enemy-bar-fill" style="width:${pct}%"></div></div>
         <span class="hint-inline">${e.hp}/${e.maxHp} PG · CA ${e.ac} · ${ct("distFt")}: ${distOf(e)} ft</span>
@@ -1811,8 +1867,8 @@ function openAttackPanel(extra) {
     opt.textContent = `${eName(e)} (${distOf(e)} ft · CA ${e.ac})`;
     tSel.appendChild(opt);
   });
-  wSel.addEventListener("change", updateAttackPreview);
-  tSel.addEventListener("change", updateAttackPreview);
+  wSel.onchange = updateAttackPreview;
+  tSel.onchange = () => { updateAttackPreview(); renderCombat(); };
   updateAttackPreview();
   // Golpes Astutos
   const box = ctEl("c-atk-strikes");
@@ -1989,6 +2045,11 @@ function initCombat() {
   ctEl("c-atk-roll").addEventListener("click", confirmAttack);
   ctEl("c-atk-cancel").addEventListener("click", () => { ctEl("c-attack-panel").hidden = true; });
   ctEl("c-btn-move").addEventListener("click", () => { moveMode = !moveMode; renderBoard(); });
+  ctEl("c-board-zoom")?.addEventListener("click", () => {
+    const zoomed = ctEl("c-board-viewport").classList.toggle("board-zoomed");
+    ctEl("c-board-zoom").setAttribute("aria-pressed", String(zoomed));
+    ctEl("c-board-zoom").textContent = zoomed ? "Reducir tablero" : "Ampliar tablero";
+  });
   ctEl("c-btn-steady").addEventListener("click", () => playerBonus("steady"));
   ctEl("c-btn-hide").addEventListener("click", () => playerBonus("hide"));
   ctEl("c-btn-dash").addEventListener("click", () => playerBonus("dash"));

@@ -2,7 +2,23 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
-## Última actualización: 2026-10-29 — implementación terminada; publicación pendiente
+## Última actualización: 2026-10-29 — v11: versiones diarias y tablero visual
+
+- Usuario confirmó reglas publicadas; versión anterior `91d95f3` se publicó con
+  workflow Pages exitoso. GitHub shell no tiene red; usar conexión GitHub disponible.
+- Nueva actualización: Cerrar sesión arriba derecha; apartado Notas de partida
+  retirado. Notas anteriores siguen editables en Diario; observaciones Mesa van allí.
+- Guardar versión de hoy al final de ficha: checkpoint atómico, marcadores privados
+  `savedVersions` en payload; conserva snapshots manuales más allá de 50 cambios.
+  Historial agrupa por fecha, hora y origen. Restaurar conserva marcadores; duplicar los limpia.
+- Tablero: retrato, aros PG, estados, caídos, seleccionar objetivo por ficha, zoom;
+  efectos sobreviven render, líneas mantienen ángulo, texturas y movimiento reducido.
+- Nuevo CSS `css/combat-visuals.css`; caché `chaps-v11-daily-versions-battlefield`.
+- Pruebas: 32 unitarias/funcionales, sincronización con checkpoint y logout,
+  navegación seis tamaños, PWA y pruebas visuales en 390/1440. Combate conserva 59 checks.
+- No cambian reglas Firebase. Ver bitácora vigente para commit/publicación final.
+
+### Registro anterior (sustituido por v11 y bitácora vigente)
 
 **Estado vigente:** [BITACORA-2026-10-29.md](../BITACORA-2026-10-29.md).
 

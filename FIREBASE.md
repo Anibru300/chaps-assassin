@@ -44,10 +44,14 @@ Después de completar despliegue, publicar commit probado en `main`.
   nivel 1; duplicar copia ficha completa. Máximo 20 personajes en interfaz.
 - Cada cuenta/personaje tiene ficha local, respaldo y metadatos independientes.
   Cambios offline permanecen pendientes al alternar. Combate activo bloquea cambio.
-- Historial conserva hasta 50 versiones previas. Restaurar genera revisión nueva;
-  versión reemplazada queda recuperable. Resolver conflictos antes de restaurar.
+- Historial conserva últimos 50 cambios automáticos y versiones manuales marcadas
+  desde **Guardar versión de hoy**, al final de ficha. Agrupa por fecha y hora.
+  Versiones manuales no caducan al superar 50 cambios; restaurar conserva marcadores.
+  Guardado manual requiere conexión y sincronización resuelta. No requiere reglas nuevas.
+  Marcadores viajan en payload privado; duplicar personaje no copia marcadores ajenos.
 - Mesa comparte PG, inspiración y descansos con ficha. Condiciones manuales no
-  modifican simulador de combate. Notas y resumen se sincronizan por personaje.
+  modifican simulador de combate. Observaciones van a Diario de aventuras existente;
+  notas anteriores permanecen editables dentro del mismo diario.
 - Motor sigue especializado en Pícaro Asesino; no construye otras clases.
 
 ## Migrar personaje sin perder datos
@@ -103,7 +107,7 @@ de escritorio/móvil (Playwright instalado aparte):
 
 ```powershell
 $env:CHAPS_PLAYWRIGHT = "RUTA/AL/PAQUETE/playwright"
-node --test tests/browser-sync.test.js tests/navigation.test.js tests/pwa.test.js
+node --test tests/browser-sync.test.js tests/navigation.test.js tests/pwa.test.js tests/battlefield.test.js
 ```
 
 `tests/firestore-rules.test.js` comprueba reglas con emulador (sin producción).

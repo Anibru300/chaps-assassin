@@ -51,6 +51,28 @@ test("primera conexión migra automáticamente ficha guardada", async () => {
   assert.equal(s.doc.revision, 1);
   assert.equal(s.meta.dirty, false);
 });
+test("checkpoint guarda estado sincronizado con marcador de revisión", async () => {
+  const s = setup();
+  await s.api.connect("carlos");
+  s.edit("DIA GUARDADO");
+  await s.api.checkpoint((data, revision) => ({ ...data, savedVersions: { ["r" + revision]: { savedAt: 1234 } } }));
+  assert.equal(s.api.status.mode, "synced");
+  assert.equal(s.local.name, "DIA GUARDADO");
+  assert.equal(s.local.savedVersions.r2.savedAt, 1234);
+  assert.equal(s.doc.revision, 3);
+});
+
+test("checkpoint con conflicto no marca versión guardada", async () => {
+  const s = setup();
+  await s.api.connect("carlos");
+  s.edit("CAMBIO LOCAL");
+  s.changeRemote(cloudDoc("OTRO", 5));
+  await s.api.refresh();
+  let prepared = false;
+  await s.api.checkpoint(data => { prepared = true; return data; });
+  assert.equal(prepared, false);
+});
+
 test("otro dispositivo sin ficha local descarga nube sin sobrescribirla", async () => {
   const s = setup({ hasLocal: false, doc: cloudDoc("REMOTO", 3) });
   await s.api.connect("carlos");

@@ -83,7 +83,7 @@
             tx.set(sdk.doc(db, "users", uid, "characters", characterId, "versions", "r" + revision), {
               schema: 1, revision, payload: old.payload, createdAt: sdk.serverTimestamp()
             });
-            if (revision > 50) tx.delete(sdk.doc(db, "users", uid, "characters", characterId, "versions", "r" + (revision - 50)));
+            if (revision > 50 && !JSON.parse(payload).savedVersions?.["r" + (revision - 50)]) tx.delete(sdk.doc(db, "users", uid, "characters", characterId, "versions", "r" + (revision - 50)));
           }
           const value = { schema: 1, revision: revision + 1, payload, updatedAt: sdk.serverTimestamp() };
           tx.set(ref, value);
@@ -118,14 +118,35 @@
       if (!name.trim() || name.length > 80) throw new Error("Nombre de personaje no válido.");
       if (profiles.catalog(user.uid).length >= 20) throw new Error("Límite: 20 personajes por cuenta.");
       const data = copy ? window.CHAPS_STORE.snapshot() : freshCharacter();
+      data.savedVersions = {};
       data.name = name.trim();
       await selectCharacter("c_" + crypto.randomUUID(), data);
     },
     async history() {
       requireUser();
-      const id = profiles.current.id;
-      const rows = await sdk.getDocs(sdk.query(sdk.collection(db, "users", user.uid, "characters", id, "versions"), sdk.orderBy("revision", "desc"), sdk.limit(50)));
-      return rows.docs.map((row) => ({ id: row.id, ...row.data(), date: row.data().createdAt?.toDate?.().toLocaleString("es-MX") || "" }));
+      const uid = user.uid, id = profiles.current.id, pins = window.CHAPS_STORE.snapshot().savedVersions || {};
+      const rows = await sdk.getDocs(sdk.query(sdk.collection(db, "users", uid, "characters", id, "versions"), sdk.orderBy("revision", "desc"), sdk.limit(50)));
+      const all = new Map(rows.docs.map(row => [row.id, row.data()]));
+      await Promise.all(Object.keys(pins).filter(key => !all.has(key)).map(async key => {
+        const row = await sdk.getDocFromServer(sdk.doc(db, "users", uid, "characters", id, "versions", key));
+        if (row.exists()) all.set(key, row.data());
+      }));
+      return [...all].map(([key, data]) => ({ id: key, ...data, manual: !!pins[key], timestamp: pins[key]?.savedAt ?? data.createdAt?.toMillis?.() ?? (typeof data.createdAt === "number" ? data.createdAt : 0) })).sort((a, b) => b.timestamp - a.timestamp || b.revision - a.revision);
+    },
+    async saveVersion() {
+      requireUser();
+      if (!navigator.onLine) throw new Error("Conecta internet para guardar versión en historial. Ficha sigue guardada en dispositivo.");
+      const token = sessionToken, current = cloud, savedAt = Date.now();
+      let versionId;
+      saveState();
+      await current.checkpoint((data, revision) => {
+        versionId = "r" + revision;
+        data.savedVersions = { ...data.savedVersions, [versionId]: { savedAt } };
+        return data;
+      });
+      if (token !== sessionToken) throw new Error("Personaje cambió durante guardado.");
+      if (current.status.mode !== "synced") throw new Error("Versión todavía sin confirmar. Revisa conexión y sincronización.");
+      return { id: versionId, savedAt };
     },
     async restore(versionId) {
       requireUser();
@@ -137,6 +158,7 @@
       const row = await sdk.getDocFromServer(sdk.doc(db, "users", uid, "characters", id, "versions", versionId));
       if (token !== sessionToken || !row.exists()) throw new Error("Versión no disponible para personaje activo.");
       const data = JSON.parse(row.data().payload);
+      data.savedVersions = { ...data.savedVersions, ...window.CHAPS_STORE.snapshot().savedVersions };
       window.CHAPS_STORE.validate(data); window.CHAPS_STORE.replace(data); saveState(); await cloud.flush();
     }
   };
@@ -261,7 +283,12 @@
     el("cloud-connect").addEventListener("click", connect);
     el("login-google")?.addEventListener("click", connect);
     el("cloud-disconnect").addEventListener("click", async () => {
-      try { await sdk.signOut(auth); }
+      try {
+        const current = cloud;
+        await current.flush();
+        if (["pending", "saving", "choose", "error"].includes(current.status.mode) && !confirm("Hay cambios pendientes conservados en dispositivo. ¿Cerrar sesión de todos modos?")) return;
+        await sdk.signOut(auth);
+      }
       catch (error) { showStatus({ mode: "error", error }); }
     });
     el("cloud-retry").addEventListener("click", recover);

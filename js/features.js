@@ -3,8 +3,8 @@
   "use strict";
   const el = (id) => document.getElementById(id);
   const profiles = CHAPS_PROFILE_STORE({ storage: localStorage, store: window.CHAPS_STORE });
-  const sessionDefault = { lastPlayed: "", location: "", recap: "", nextGoal: "" };
   let renderedCharacter = "";
+  let savingVersion = false;
   const key = () => JSON.stringify(profiles.current);
   const message = (id, text) => { if (el(id)) el(id).textContent = text; };
   const error = (value) => window.CHAPS_CLOUD?.errorText(value) || value.message;
@@ -43,6 +43,7 @@
     }
     if (el("character-create")) el("character-create").disabled = !user;
     if (el("character-copy")) el("character-copy").disabled = !user;
+    if (el("save-day-version")) el("save-day-version").disabled = !user || savingVersion;
   }
   function renderMesa() {
     if (!el("table-name")) return;
@@ -59,48 +60,8 @@
     setValue(el("table-temp"), state.hpTemp);
     el("table-inspiration").checked = state.inspiration;
     for (const input of el("table-conditions").querySelectorAll("input")) input.checked = !!state.tableConditions?.[input.value];
-    const session = { ...sessionDefault, ...state.session };
-    message("table-session-summary", [session.lastPlayed, session.location, session.recap, session.nextGoal && "Pendiente: " + session.nextGoal].filter(Boolean).join("\n\n") || "Añade resumen y pendientes en Notas de partida.");
-  }
-  function filterNotes() {
-    const query = (el("session-note-search")?.value || "").toLocaleLowerCase("es");
-    const archived = el("session-note-archived")?.checked;
-    for (const node of el("session-note-list")?.children || []) {
-      const note = state.sessionNotes?.[node.dataset.noteId];
-      node.hidden = !note || (!archived && note.archived) || !`${note.date} ${note.title} ${note.text}`.toLocaleLowerCase("es").includes(query);
-    }
-  }
-  function renderNotes() {
-    if (!el("session-note-list")) return;
-    document.querySelectorAll("[data-session-field]").forEach((input) => setValue(input, state.session?.[input.dataset.sessionField] || ""));
-    const container = el("session-note-list"), notes = state.sessionNotes || {};
-    for (const node of [...container.children]) if (!notes[node.dataset.noteId]) node.remove();
-    for (const [id, note] of Object.entries(notes).sort((a, b) => b[1].createdAt - a[1].createdAt)) {
-      let node = [...container.children].find((entry) => entry.dataset.noteId === id);
-      if (!node) {
-        node = document.createElement("article"); node.className = "session-note"; node.dataset.noteId = id;
-        node.innerHTML = '<div class="grid grid-2"><label class="field"><span>Título</span><input data-note-field="title" type="text"></label><label class="field"><span>Fecha</span><input data-note-field="date" type="date"></label></div><label class="field"><span>Observaciones de partida</span><textarea data-note-field="text" rows="4"></textarea></label><button type="button" class="btn btn-small" data-note-archive></button>';
-        node.querySelectorAll("[data-note-field]").forEach((input) => input.addEventListener("input", () => {
-          if (!state.sessionNotes?.[id]) return;
-          state.sessionNotes[id][input.dataset.noteField] = input.value; saveState(); filterNotes();
-        }));
-        node.querySelector("[data-note-archive]").addEventListener("click", () => {
-          if (!state.sessionNotes?.[id]) return;
-          state.sessionNotes[id].archived = !state.sessionNotes[id].archived; saveState(); renderNotes();
-        });
-        container.appendChild(node);
-      }
-      node.querySelectorAll("[data-note-field]").forEach((input) => setValue(input, note[input.dataset.noteField]));
-      node.querySelector("[data-note-archive]").textContent = note.archived ? "Recuperar nota" : "Archivar nota";
-    }
-    filterNotes();
-  }
-  function addNote(text = "") {
-    state.sessionNotes ||= {};
-    const id = crypto.randomUUID();
-    state.sessionNotes[id] = { title: "Sesión " + localDate(), date: localDate(), text, createdAt: Date.now(), archived: false };
-    saveState(); renderNotes();
-    return id;
+    const entry = state.journal?.[0];
+    message("table-session-summary", entry ? [entry.date, entry.title, entry.text].filter(Boolean).join("\n\n") : "Añade entradas en Diario de aventuras.");
   }
   function showSection(id) {
     document.querySelector('.tab-btn[data-tab="sheet"]').click();
@@ -121,11 +82,19 @@
       const versions = await window.CHAPS_CLOUD.history();
       if (selected !== key()) return;
       el("history-list").replaceChildren();
+      const groups = new Map();
       for (const version of versions) {
         const data = JSON.parse(version.payload);
+        const date = version.timestamp ? new Date(version.timestamp) : null;
+        const day = date ? date.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }) : "Fecha no disponible";
+        if (!groups.has(day)) {
+          const group = document.createElement("section"); group.className = "version-day";
+          const heading = document.createElement("h3"); heading.textContent = "Versiones del " + day;
+          group.appendChild(heading); el("history-list").appendChild(group); groups.set(day, group);
+        }
         const row = document.createElement("div"); row.className = "version-row";
         const label = document.createElement("span");
-        label.textContent = `v${version.revision} · ${version.date || "Fecha no disponible"} · ${data.name} · N${data.level} · PG ${data.hpCurrent}/${data.hpMax}`;
+        label.textContent = `${version.manual ? "Guardada" : "Automática"} · ${date ? date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : ""} · ${data.name} · N${data.level} · PG ${data.hpCurrent}/${data.hpMax}`;
         const button = document.createElement("button"); button.type = "button"; button.className = "btn btn-small"; button.textContent = "Restaurar";
         button.addEventListener("click", async () => {
           if (selected !== key() || !confirm(`¿Restaurar versión ${version.revision} de ${data.name}? Estado actual quedará en historial al sincronizar.`)) return;
@@ -134,7 +103,7 @@
           catch (value) { message("history-status", error(value)); }
           finally { button.disabled = false; }
         });
-        row.append(label, button); el("history-list").appendChild(row);
+        row.append(label, button); groups.get(day).appendChild(row);
       }
       message("history-status", versions.length ? `${versions.length} versiones disponibles.` : "Historial comenzará con próximo cambio sincronizado.");
     } catch (value) { if (selected === key()) message("history-status", error(value)); }
@@ -154,11 +123,11 @@
       if (!el("section-characters")) return;
       if (renderedCharacter !== key()) {
         renderedCharacter = key();
-        el("session-note-list").replaceChildren(); el("history-list").replaceChildren();
+        el("history-list").replaceChildren(); message("save-version-status", "Conserva ficha de hoy en Historial de versiones.");
         el("table-roll-log").replaceChildren(); message("table-roll", "Prepara tu primera tirada.");
         message("history-status", "");
       }
-      renderPickers(); renderAccount(); renderMesa(); renderNotes();
+      renderPickers(); renderAccount(); renderMesa();
     },
     showSection
   };
@@ -182,12 +151,17 @@
       catch (value) { message("account-status", error(value)); }
     });
     el("history-load").addEventListener("click", loadHistory);
-    document.querySelectorAll("[data-session-field]").forEach((input) => input.addEventListener("input", () => {
-      state.session = { ...sessionDefault, ...state.session, [input.dataset.sessionField]: input.value }; saveState();
-    }));
-    el("session-note-add").addEventListener("click", () => { const id = addNote(); [...el("session-note-list").children].find((node) => node.dataset.noteId === id).querySelector("textarea").focus(); });
-    el("session-note-search").addEventListener("input", filterNotes);
-    el("session-note-archived").addEventListener("change", filterNotes);
+    el("save-day-version").addEventListener("click", async () => {
+      const selected = key(), button = el("save-day-version");
+      savingVersion = true; button.disabled = true; message("save-version-status", "Guardando versión…");
+      try {
+        const result = await window.CHAPS_CLOUD.saveVersion();
+        if (selected !== key()) return;
+        message("save-version-status", "Versión guardada del " + new Date(result.savedAt).toLocaleString("es-MX") + ". Disponible en Historial de versiones.");
+        await loadHistory();
+      } catch (value) { if (selected === key()) message("save-version-status", error(value)); }
+      finally { savingVersion = false; renderAccount(); }
+    });
     for (const [id, field] of [["table-hp", "hpCurrent"], ["table-temp", "hpTemp"]]) el(id).addEventListener("input", () => {
       if (el(id).value === "" || !el(id).validity.valid) return;
       state[field] = Math.max(0, Math.floor(Number(el(id).value))); saveState(); renderIdentity();
@@ -216,9 +190,10 @@
     el("table-sneak").addEventListener("click", () => roll(sneakDiceCount(state.level), 6, "Furtivo"));
     el("table-note-add").addEventListener("click", () => {
       const text = el("table-observation").value.trim(); if (!text) return;
-      addNote(text); el("table-observation").value = ""; message("table-note-status", "Observación guardada en notas de partida.");
+      state.journal.unshift({ date: localDate(), title: "Observación de partida", text });
+      saveState(); renderJournal(); el("table-observation").value = ""; message("table-note-status", "Observación guardada en Diario de aventuras.");
     });
-    el("table-open-notes").addEventListener("click", () => showSection("section-session"));
+    el("table-open-notes").addEventListener("click", () => showSection("section-journal"));
     window.CHAPS_FEATURES.render();
   });
 })();

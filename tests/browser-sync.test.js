@@ -55,13 +55,14 @@ test("sincronización entre computadora/celular y panel sin superposición", {
     const sdk = {
       "firebase-app.js": "export const initializeApp = config => config;",
       "firebase-auth.js": `const user={uid:'same-user',email:'ing.carlosurbina300@example.com',providerData:[{providerId:'google.com'}]};
-        export const getAuth=()=>({currentUser:user}); export class GoogleAuthProvider {}
-        export function onAuthStateChanged(auth, cb) { queueMicrotask(()=>cb(user)); }
-        export async function signInWithPopup() {} export async function signOut() {}`,
+        const auth={currentUser:user}; let listener;
+        export const getAuth=()=>auth; export class GoogleAuthProvider {}
+        export function onAuthStateChanged(auth, cb) { listener=cb; queueMicrotask(()=>cb(user)); }
+        export async function signInWithPopup() {} export async function signOut() {auth.currentUser=null;await listener(null);}`,
       "firebase-firestore.js": `export const getFirestore=()=>({}); export const doc=(db,...parts)=>parts.join('/');
         export const collection=doc; export const query=(path,...filters)=>({path,filters});
         export const orderBy=(field,direction)=>({field,direction}); export const limit=count=>({count});
-        export const serverTimestamp=()=>0;
+        export const serverTimestamp=()=>Date.now();
         const snapshot=data=>({exists:()=>data!==null,data:()=>data,metadata:{fromCache:false,hasPendingWrites:false}});
         export async function getDocFromServer(ref) {
           const response=await fetch('/__cloud?path='+encodeURIComponent(ref)); return snapshot(await response.json());
@@ -167,10 +168,10 @@ test("sincronización entre computadora/celular y panel sin superposición", {
       assert.match(await pc.locator("#table-roll").textContent(), /d20:/);
       await pc.locator("#table-observation").fill("Encontramos puerta secreta");
       await pc.locator("#table-note-add").click();
-      await phone.waitForFunction(() => Object.values(state.sessionNotes).some(note => note.text === "Encontramos puerta secreta"));
+      await phone.waitForFunction(() => state.journal.some(note => note.text === "Encontramos puerta secreta"));
       await pc.locator("#table-open-notes").click();
-      await pc.locator('[data-session-field="location"]').fill("Palanthas");
-      await phone.waitForFunction(() => state.session.location === "Palanthas");
+      await pc.locator("#journal-list textarea").first().fill("Palanthas: puerta secreta");
+      await phone.waitForFunction(() => state.journal[0].text === "Palanthas: puerta secreta");
     });
     await t.test("historial restaura versión previa creando revisión nueva", async () => {
       await pc.waitForFunction(() => CHAPS_CLOUD.core.status.mode === "synced");
@@ -186,6 +187,28 @@ test("sincronización entre computadora/celular y panel sin superposición", {
       await pc.locator("#history-load").click();
       await pc.waitForFunction(() => document.querySelectorAll("#history-list button").length > 0);
     });
+    await t.test("guardar versión de hoy conserva snapshot más allá de 50 cambios y restauraciones", async () => {
+      assert.equal(await pc.locator("#section-session").count(), 0);
+      await pc.locator("#f-notes").fill("Versión manual del día");
+      await pc.locator("#save-day-version").click();
+      await pc.waitForFunction(() => document.querySelector("#save-version-status").textContent.startsWith("Versión guardada del"));
+      const id = await pc.evaluate(() => Object.keys(state.savedVersions)[0]);
+      assert.ok(id);
+      await pc.evaluate(async () => {
+        for (let index=0; index<55; index++) { state.notes="Cambio automático "+index; saveState(); await CHAPS_CLOUD.core.flush(); }
+      });
+      const versions = await pc.evaluate(() => CHAPS_CLOUD.history());
+      const manual = versions.find(row => row.id === id);
+      assert.ok(manual?.manual);
+      assert.equal(JSON.parse(manual.payload).notes, "Versión manual del día");
+      await pc.evaluate(id => CHAPS_CLOUD.restore(id), id);
+      assert.equal(await pc.evaluate(id => !!state.savedVersions[id], id), true);
+      await pc.locator("#history-load").click();
+      await pc.waitForFunction(() => document.querySelector("#history-list").textContent.includes("Guardada"));
+      assert.match(await pc.locator("#history-list h3").first().textContent(), /Versiones del/);
+      await pc.locator("#f-notes").fill("Escucha recuperada");
+      await pc.waitForFunction(() => CHAPS_CLOUD.core.status.mode === "synced");
+    });
     let secondId;
     await t.test("crear personaje independiente y alternar conserva CHAPS", async () => {
       await pc.locator("#character-name").fill("Segundo pícaro");
@@ -193,7 +216,7 @@ test("sincronización entre computadora/celular y panel sin superposición", {
       await pc.waitForFunction(() => state.name === "Segundo pícaro" && CHAPS_CLOUD.core.status.mode === "synced");
       secondId = await pc.evaluate(() => CHAPS_FEATURES.profiles.current.id);
       assert.equal(await pc.evaluate(() => state.level), 1);
-      assert.equal(await pc.evaluate(() => Object.keys(state.sessionNotes).length), 0);
+      assert.equal(await pc.evaluate(() => state.journal.length), 0);
       await pc.locator("#f-notes").fill("Solo segundo personaje");
       await pc.waitForFunction(() => CHAPS_CLOUD.core.status.mode === "synced");
       await pc.locator("[data-character-picker]").first().selectOption("chaps");
@@ -234,6 +257,13 @@ test("sincronización entre computadora/celular y panel sin superposición", {
           assert.ok(rect.x >= bounds.x && rect.x + rect.width <= bounds.x + bounds.width + 1);
         }
       }
+    });
+    await t.test("Cerrar sesión aparece en cabecera y devuelve acceso", async () => {
+      const button = pc.locator(".app-header #cloud-disconnect");
+      assert.equal(await button.textContent(), "Cerrar sesión");
+      await button.click();
+      await pc.waitForFunction(() => !document.querySelector("#login-gate").hidden);
+      assert.equal(await pc.evaluate(() => CHAPS_CLOUD.userInfo()), null);
     });
     assert.deepEqual(errors, []);
   } finally {

@@ -121,12 +121,13 @@ window.CHAPS_STORE = {
         !Array.isArray(value) && Object.keys(model).every((key) => check(value[key], model[key]));
       return typeof value === typeof model && (typeof value !== "number" || Number.isFinite(value));
     };
-    const compatible = { session: DEFAULT_STATE.session, sessionNotes: {}, tableConditions: {}, ...data };
+    const compatible = { session: DEFAULT_STATE.session, sessionNotes: {}, tableConditions: {}, savedVersions: {}, ...data };
     if (!check(compatible, DEFAULT_STATE)) throw new Error("Ficha de nube incompleta; conserva copia local.");
     const session = compatible.session;
     if (!session || ["lastPlayed", "location", "recap", "nextGoal"].some((key) => typeof session[key] !== "string")) throw new Error("Notas de sesión no válidas.");
     if (Object.values(compatible.sessionNotes).some((note) => !note || typeof note.title !== "string" || typeof note.text !== "string" || typeof note.date !== "string" || !Number.isFinite(note.createdAt) || typeof note.archived !== "boolean")) throw new Error("Nota de partida no válida.");
     if (Object.values(compatible.tableConditions).some((value) => typeof value !== "boolean")) throw new Error("Condiciones no válidas.");
+    if (Object.entries(compatible.savedVersions).some(([id, value]) => !/^r[1-9]\d*$/.test(id) || !value || !Number.isFinite(value.savedAt) || value.savedAt < 0)) throw new Error("Versión guardada no válida.");
     const lists = {
       weapons: { name: "", dice: 1, sides: 6, bonus: 0, props: "", mastery: "" },
       inventory: DEFAULT_STATE.inventory[0],
@@ -821,7 +822,9 @@ function addFeatFromCatalog() {
 function renderJournal() {
   const list = $("#journal-list");
   list.innerHTML = "";
-  state.journal.forEach((en, i) => {
+  const entries = state.journal.map((en, i) => ({ en, i }));
+  for (const [legacy, en] of Object.entries(state.sessionNotes || {})) entries.push({ en, i: -1, legacy });
+  entries.forEach(({ en, i, legacy }) => {
     const div = document.createElement("div");
     div.className = "journal-entry";
     div.innerHTML = `
@@ -832,16 +835,19 @@ function renderJournal() {
       </div>
       <textarea rows="3" placeholder="${t("journalTextPh")}" data-ji="${i}" data-jf="text">${escapeHtml(en.text)}</textarea>`;
     list.appendChild(div);
+    if (legacy) div.querySelectorAll("[data-jf], [data-jdel]").forEach(node => { node.dataset.jlegacy = legacy; });
   });
   list.querySelectorAll("[data-jf]").forEach((inp) => {
     inp.addEventListener("input", () => {
-      state.journal[+inp.dataset.ji][inp.dataset.jf] = inp.value;
+      const entry = inp.dataset.jlegacy ? state.sessionNotes[inp.dataset.jlegacy] : state.journal[+inp.dataset.ji];
+      entry[inp.dataset.jf] = inp.value;
       saveState();
     });
   });
   list.querySelectorAll("[data-jdel]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      state.journal.splice(+btn.dataset.jdel, 1);
+      if (btn.dataset.jlegacy) delete state.sessionNotes[btn.dataset.jlegacy];
+      else state.journal.splice(+btn.dataset.jdel, 1);
       saveState();
       renderJournal();
     });

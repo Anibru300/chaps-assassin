@@ -25,6 +25,15 @@
 .version-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .version-row span { overflow-wrap: anywhere; }
 .version-row button { flex-shrink: 0; }
+.version-day { margin-top: 20px; }
+.version-day h3 { color: var(--gold); }
+.header-controls { flex-wrap: wrap; justify-content: flex-end; }
+#cloud-disconnect { white-space: nowrap; }
+#section-persist { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+@media (max-width: 600px) {
+  .header-inner { flex-wrap: wrap; gap: 8px; }
+  .header-controls { margin-left: auto; }
+}
 @media (max-width: 720px) {
   .table-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .version-row { align-items: stretch; flex-direction: column; }

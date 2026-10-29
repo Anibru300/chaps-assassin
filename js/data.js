@@ -122,6 +122,7 @@ const DEFAULT_STATE = {
   journal: [],             // [{date, title, text}] — más reciente primero
   session: { lastPlayed: "", location: "", recap: "", nextGoal: "" },
   sessionNotes: {},        // notas por id, permite combinar ediciones independientes
+  savedVersions: {},       // rN: { savedAt }, conserva versiones guardadas manualmente
   tableConditions: {},    // condiciones anotadas manualmente en modo mesa
   progressionOverrides: {},// {nivel: true/false} — toggle manual sobre el auto-check
   asiNotes: {},            // {nivel: "texto"} — elección en niveles de mejora

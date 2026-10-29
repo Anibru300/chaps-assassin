@@ -163,6 +163,18 @@ globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus, meta
         if (ready && saved.uid === uid && saved.dirty) await write(session, saved.revision);
       });
     },
+    checkpoint(prepare) {
+      return task(async (session) => {
+        if (!ready) throw new Error("Resuelve sincronización antes de guardar versión.");
+        if (meta().dirty) await write(session, meta().revision);
+        if (session !== generation) return;
+        const saved = meta();
+        if (!ready || saved.dirty || !saved.revision) throw new Error("Espera sincronización y vuelve a guardar versión.");
+        const data = prepare(store.snapshot(), saved.revision);
+        store.validate(data); store.replace(data); api.changed();
+        await write(session, saved.revision);
+      });
+    },
     useLocal() {
       return task(async (session) => {
         // Elegir explícitamente esta copia permite migrar/reemplazar, con revisión atómica.

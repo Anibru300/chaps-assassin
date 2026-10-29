@@ -3,26 +3,27 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v10-characters-table";
+const CACHE_NAME = "chaps-v11-daily-versions-battlefield";
 const SHELL = [
   "./",
   "./index.html",
   "./css/style.css?v=4",
   "./css/v4.css?v=18",
-  "./css/features.css?v=1",
+  "./css/features.css?v=2",
+  "./css/combat-visuals.css?v=1",
   "./js/auth.js?v=5",
-  "./js/data.js?v=4",
-  "./js/app.js?v=8",
+  "./js/data.js?v=5",
+  "./js/app.js?v=9",
   "./js/combat-data.js?v=4",
-  "./js/combat.js?v=8",
+  "./js/combat.js?v=9",
   "./js/simulador.js?v=4",
   "./js/biblioteca.js?v=4",
   "./js/combat-extra.js?v=5",
-  "./js/cloud-core.js?v=3",
+  "./js/cloud-core.js?v=4",
   "./js/profile-store.js?v=1",
   "./js/account-auth.js?v=1",
-  "./js/features.js?v=1",
-  "./js/firebase-sync.js?v=4",
+  "./js/features.js?v=2",
+  "./js/firebase-sync.js?v=5",
   "./assets/chaps-portrait.jpg",
   "./assets/dragon-bg.png",
   "./assets/dragon-gate.svg",

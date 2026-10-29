@@ -33,7 +33,7 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     const assets = await page.evaluate(async () => {
-      const cache = await caches.open("chaps-v10-characters-table");
+      const cache = await caches.open("chaps-v11-daily-versions-battlefield");
       return (await cache.keys()).map(request => new URL(request.url).pathname);
     });
     for (const asset of ["/js/profile-store.js", "/js/account-auth.js", "/js/features.js", "/css/features.css"]) {
@@ -50,7 +50,7 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.locator("#table-observation").fill("Nota creada sin conexión");
     await page.locator("#table-note-add").click();
     await page.reload();
-    assert.equal(await page.evaluate(() => Object.keys(state.sessionNotes).length), 2);
+    assert.equal(await page.evaluate(() => state.journal.length), 2);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []);
   } finally {
