@@ -198,6 +198,8 @@ function cellBlocked(x, y) {
 /** ¿Celda ocupada por jugador, enemigo vivo u obstáculo? */
 function cellOccupied(x, y) {
   if (cellBlocked(x, y)) return true;
+  const ally = combat.scenario?.ally;
+  if (ally?.hp > 0 && ally.pos.x === x && ally.pos.y === y) return true;
   if (combat.p && combat.p.pos.x === x && combat.p.pos.y === y) return true;
   return combat.enemies.some((e) => e.hp > 0 && e.pos.x === x && e.pos.y === y);
 }
@@ -228,6 +230,32 @@ function reachableCells(from, ft) {
     }
   }
   return out;
+}
+
+/** Ruta de coste mínimo; misma cuadrícula y costes que reachableCells. */
+function movementPath(from, to, budget) {
+  if (cellOccupied(to.x, to.y)) return null;
+  const key = p => p.x + "," + p.y;
+  const first = { ...from, cost: 0 }, queue = [first], best = new Map([[key(from), first]]);
+  while (queue.length) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const current = queue.shift();
+    if (best.get(key(current)) !== current) continue;
+    if (current.x === to.x && current.y === to.y) {
+      const route = []; let node = current;
+      while (node) { route.unshift({ x: node.x, y: node.y, cost: node.cost }); node = node.parent; }
+      return route;
+    }
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      const next = { x: current.x + dx, y: current.y + dy };
+      if (cellOccupied(next.x, next.y)) continue;
+      next.cost = current.cost + (isDifficult(next.x, next.y) ? 10 : 5);
+      if (next.cost > budget || (best.has(key(next)) && best.get(key(next)).cost <= next.cost)) continue;
+      next.parent = current; best.set(key(next), next); queue.push(next);
+    }
+  }
+  return null;
 }
 
 /** ¿Este tipo de obstáculo proporciona cobertura media? */
@@ -359,9 +387,11 @@ function triggerTerrain(x, y, who, kind) {
     if (dmg > 0) {
       if (who === "p") {
         combat.p.hp = Math.max(0, combat.p.hp - dmg);
+        window.CHAPS_BATTLE?.terrainHit(t.type, x, y, dmg);
         cLog(`🔥 ${ct("terrainDmg") || "Terreno"}: ${state.name} recibe ${dmg} ${ct("dmgWord")} [${combat.p.hp} PG]`, "log-miss");
       } else {
         who.hp = Math.max(0, who.hp - dmg);
+        window.CHAPS_BATTLE?.terrainHit(t.type, x, y, dmg);
         cLog(`🔥 ${ct("terrainDmg") || "Terreno"}: ${eName(who)} recibe ${dmg} ${ct("dmgWord")} [${who.hp}/${who.maxHp} PG]`, "log-miss");
       }
     }
@@ -490,6 +520,7 @@ function addCond(e, id, expire) {
     const cdef = CONDITIONS.find((c) => c.id === id);
     cLog(`💠 ${eName(e)}: ${ct("condApplied")} — <strong>${cdef ? (LANG === "es" ? cdef.nameEs : cdef.nameEn) : id}</strong>`, "log-info");
     if (e.pos) boardFx("condition-fx", e.pos.x, e.pos.y, cdef ? (LANG === "es" ? cdef.nameEs : cdef.nameEn) : id);
+    if (!combat.quiet && e.pos) window.CHAPS_BATTLE?.condition(id, e.pos);
   }
 }
 
@@ -520,6 +551,7 @@ function enemySave(e, ability, dc) {
 /* ================= INICIO / INICIATIVA ================= */
 function startCombat() {
   if (!combat.enemies.length) return;
+  if (!combat.quiet && window.CHAPS_BATTLE?.canStart() === false) return;
   combat.on = true;
   // dificultad de la IA (selector del setup; "normal" si no existe, p. ej. tests)
   const dSel = typeof document !== "undefined" && document.getElementById && document.getElementById("c-diff");
@@ -532,6 +564,7 @@ function startCombat() {
   combat.enemies.forEach((e) => { e.acted = false; e.conds = []; e.hp = e.maxHp; e.react = true; });
   // Colocación inicial respetando obstáculos
   placeCombatants();
+  if (!combat.quiet) window.CHAPS_BATTLE?.started();
 
   const r1 = rollDie(20), r2 = rollDie(20);
   const pInit = Math.max(r1, r2) + state.initiative; // Asesinar: ventaja
@@ -571,6 +604,7 @@ function beginTurn() {
   } else {
     const e = combat.enemies[cur.idx];
     cLog(`— ${ct("round")} ${combat.round} · ${ct("turnStart")} <strong>${eName(e)}</strong> —`, "log-info");
+    if (!combat.quiet && window.CHAPS_BATTLE) { window.CHAPS_BATTLE.scheduleEnemy(e); return; }
     enemyTakeTurn(e);
     if (combat.on) nextTurn();
     return;
@@ -587,6 +621,8 @@ function nextTurn() {
     combat.turn = 0; combat.round++;
     if (!combat.quiet) tickAreaEffects();
   }
+  checkCombatEnd();
+  if (!combat.on) return;
   beginTurn();
 }
 
@@ -595,7 +631,8 @@ function cloneCombatState() {
     on: combat.on, round: combat.round, turn: combat.turn, order: structuredClone(combat.order),
     enemies: structuredClone(combat.enemies), p: combat.p ? structuredClone(combat.p) : null,
     log: combat.log.slice(), diff: combat.diff,
-    map: structuredClone(combat.map)
+    map: structuredClone(combat.map), stats: structuredClone(combat.stats || {}),
+    scenario: structuredClone(combat.scenario || null), tactical: structuredClone(combat.tactical || null), result: combat.result || null
   };
 }
 
@@ -603,6 +640,7 @@ function restoreCombatState(saved) {
   combat.on = saved.on; combat.round = saved.round; combat.turn = saved.turn;
   combat.order = saved.order; combat.enemies = saved.enemies; combat.p = saved.p;
   combat.log = saved.log; combat.diff = saved.diff; combat.map = saved.map;
+  combat.stats = saved.stats; combat.scenario = saved.scenario; combat.tactical = saved.tactical; combat.result = saved.result;
 }
 
 /** Simula un único combate contra los enemigos actuales. Devuelve resultado. */
@@ -610,6 +648,7 @@ function simulateOne() {
   const saved = cloneCombatState();
   const savedHp = state.hpCurrent;
   combat.quiet = true;
+  combat.scenario = null;
   combat.enemies = saved.enemies.map((e) => spawnEnemy(e.key)).filter(Boolean);
   combat.p = null; combat.order = []; combat.log = []; combat.on = false;
   startCombat();
@@ -655,6 +694,7 @@ function runMonteCarlo(runs) {
 }
 
 function renderSummary() {
+  if (combat.quiet) return;
   const card = ctEl("c-summary");
   const body = ctEl("c-summary-body");
   if (!card || !body) return;
@@ -670,15 +710,22 @@ function renderSummary() {
       <div class="summary-box"><div class="v">${s.hits}</div><div class="l">Impactos</div></div>
       <div class="summary-box"><div class="v">${s.crits}</div><div class="l">Críticos</div></div>
     </div>`;
+  window.CHAPS_BATTLE?.summary(body);
 }
 
 function checkCombatEnd() {
   if (!combat.on) return;
-  if (combat.enemies.every((e) => e.hp <= 0)) {
+  const mission = !combat.quiet ? window.CHAPS_BATTLE?.missionResult() : null;
+  if (mission) {
+    combat.on = false; combat.result = mission;
+    cLog(mission === "victory" ? "✅ Objetivo cumplido" : "💀 Objetivo fallido", mission === "victory" ? "log-crit" : "log-dead");
+  } else if (!combat.scenario && combat.enemies.every((e) => e.hp <= 0)) {
     combat.on = false;
+    combat.result = "victory";
     cLog(ct("victory"), "log-crit");
   } else if (combat.p && combat.p.hp <= 0) {
     combat.on = false;
+    combat.result = "defeat";
     cLog(ct("defeat"), "log-dead");
   }
   if (!combat.on) {
@@ -814,6 +861,7 @@ function playerAttack(w, e, opts) {
   }
 
   e.hp = Math.max(0, e.hp - dmg);
+  if (crit && !combat.quiet) window.CHAPS_BATTLE?.critical("p");
   fxHit(e, dmg, crit);
   flashCell(e.pos.x, e.pos.y, crit ? "flash-crit" : "shake");
   let html = `⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${effAc}${coverTxtP} → <strong>${crit ? ct("critWord") : ct("hitWord")}</strong><br>` +
@@ -958,35 +1006,42 @@ function playerMoveTo(x, y) {
   if (x < 0 || y < 0 || x >= BOARD.w || y >= BOARD.h || cellOccupied(x, y)) return false;
   const budget = p.move + p.withdraw;
   const from = { x: p.pos.x, y: p.pos.y };
-  const reachable = reachableCells(from, budget);
-  const dest = reachable.find((c) => c.x === x && c.y === y);
-  if (!dest) { cLog("⛔ " + ct("noMove"), "log-miss"); return false; }
-  const ft = dest.cost;
-  if (ft === 0) return false;
+  const route = movementPath(from, { x, y }, budget);
+  if (!route) { cLog("⛔ " + ct("noMove"), "log-miss"); return false; }
+  if (route.length < 2) return false;
+  let ft = 0;
+  const traversed = [route[0]];
+  for (const step of route.slice(1)) {
+    if (!combat.on || p.hp <= 0) break;
+    const previous = { ...p.pos }, cost = step.cost - ft;
 
   // AdO: salir del alcance de melé de un enemigo sin Retirarse/Retirada
-  const freeMove = p.diseng || p.withdraw >= ft;
+  const freeMove = p.diseng || p.withdraw >= cost;
   combat.enemies.forEach((en) => {
     if (en.hp <= 0 || !en.react || hasCond(en, "unconscious")) return;
     const reach = Math.max(...en.attacks.filter((a) => a.melee).map((a) => a.melee), 0);
     if (!reach) return;
-    if (distBetween(from, en.pos) <= reach && distBetween({ x, y }, en.pos) > reach && !freeMove) {
+    if (distBetween(previous, en.pos) <= reach && distBetween(step, en.pos) > reach && !freeMove && p.hp > 0) {
       const atk = en.attacks.find((a) => a.melee);
       en.react = false;
       cLog(`⚠ ${ct("oaLog")} ${eName(en)}!`, "log-miss");
       enemyAttackRoll(en, atk, true);
     }
   });
+    if (!combat.on || p.hp <= 0) break;
 
   // consume primero el movimiento de Retirada (libre de AdO)
-  const useWithdraw = Math.min(p.withdraw, ft);
+  const useWithdraw = Math.min(p.withdraw, cost);
   p.withdraw -= useWithdraw;
-  p.move -= (ft - useWithdraw);
-  p.pos = { x, y };
+  p.move -= (cost - useWithdraw);
+  p.pos = { x: step.x, y: step.y }; ft = step.cost; traversed.push(step);
+  triggerTerrain(step.x, step.y, "p", "enter");
+  checkCombatEnd();
+  }
   cLog(`👣 ${state.name} ${ct("aiMove")} ${ft} ft`, "log-info");
-  triggerTerrain(x, y, "p", "enter");
+  window.CHAPS_BATTLE?.moved(traversed, ft);
   if (typeof renderCombat === "function") renderCombat();
-  return true;
+  return ft > 0;
 }
 
 /** Acciones adicionales del jugador. */
@@ -1062,6 +1117,7 @@ function enemyAttackRoll(e, atk, isOA) {
     }
   }
   p.hp = Math.max(0, p.hp - dmg);
+  if (crit && !combat.quiet) window.CHAPS_BATTLE?.critical("e");
   if (combat.stats) combat.stats.taken += dmg;
   fxHitAt(p.pos.x, p.pos.y, dmg, crit);
   flashCell(p.pos.x, p.pos.y, crit ? "flash-crit" : "shake");
@@ -1217,6 +1273,7 @@ function tryPlayerOA(e, wasClose) {
   const atkBonus = profBonus(state.level) + dexMod();
   const total = chosen + atkBonus;
   const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
+  fxLine(p.pos, e.pos);
   if (chosen !== 1 && (chosen === 20 || total >= e.ac)) {
     const crit = chosen === 20;
     let dmg = rollDiceExpr(`${w.dice}d${w.sides}+${w.bonus}`, crit).total;
@@ -1227,10 +1284,13 @@ function tryPlayerOA(e, wasClose) {
       p.sneak = true;
     }
     e.hp = Math.max(0, e.hp - dmg);
+    if (crit && !combat.quiet) window.CHAPS_BATTLE?.critical("p");
+    fxHit(e, dmg, crit);
     cLog(`⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <strong>${dmg} ${ct("dmgWord")}</strong> [${eName(e)}: ${e.hp}/${e.maxHp}]`, crit ? "log-crit" : "log-hit");
     if (e.hp <= 0) cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead");
     checkCombatEnd();
   } else {
+    fxMiss(e);
     cLog(`⚔ ${w.name} → ${eName(e)}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${e.ac} → <em>${ct("missWord")}</em>`, "log-miss");
   }
 }
@@ -1240,6 +1300,7 @@ function enemyCast(e, sp) {
   sp.usesLeft--;
   const sName = LANG === "es" ? sp.es : sp.en;
   cLog(`🔮 ${eName(e)} ${ct("castLog")} <strong>${sName}</strong>`, "log-info");
+  if (sp.atk == null) fxLine(e.pos, combat.p.pos);
   if (sp.para) { // Inmovilizar Persona y similares
     if (!targetSave(combat.p, sp.save, sp.dc)) {
       combat.p.conds.push({ id: "paralyzed", save: sp.save, dc: sp.dc });
@@ -1266,6 +1327,7 @@ function enemyCast(e, sp) {
   }
   if (dmg > 0) {
     combat.p.hp = Math.max(0, combat.p.hp - dmg);
+    fxHitAt(combat.p.pos.x, combat.p.pos.y, dmg, false);
     cLog(`🔥 ${sName}: ${sp.dmg}(${res.rolls.join(",")}) = <strong>${dmg} ${ct("dmgWord")}</strong> [${state.name}: ${combat.p.hp} PG]`, "log-miss");
   }
   checkCombatEnd();
@@ -1276,6 +1338,7 @@ function dragonBreath(e) {
   const b = e.breath;
   b.ready = false;
   const bName = LANG === "es" ? b.es : b.en;
+  fxLine(e.pos, combat.p.pos);
   cLog(`🐉 ${eName(e)}: <strong>${bName}</strong>!`, "log-info");
   const ok = targetSave(combat.p, b.save, b.dc);
   let res = rollDiceExpr(b.dmg, false);
@@ -1286,6 +1349,7 @@ function dragonBreath(e) {
   }
   if (dmg > 0) {
     combat.p.hp = Math.max(0, combat.p.hp - dmg);
+    fxHitAt(combat.p.pos.x, combat.p.pos.y, dmg, false);
     cLog(`❄ ${bName}: ${b.dmg}(${res.rolls.join(",")}) = <strong>${dmg} ${ct("dmgWord")}</strong> [${state.name}: ${combat.p.hp} PG]`, "log-miss");
   }
   checkCombatEnd();
@@ -1518,6 +1582,7 @@ const TERRAIN_ICON = { difficult: "🌿", fire: "🔥", ice: "❄️", spikes: "
 const TERRAIN_BRUSHES = { difficult: { type: "difficult" }, fire: { type: "fire", dmg: "1d6", save: "dex", dc: 12, trigger: "enter" }, ice: { type: "ice", dmg: "1d4", save: "dex", dc: 10, trigger: "enter" }, spikes: { type: "spikes", dmg: "1d8", trigger: "enter" } };
 
 function renderBoard() {
+  if (combat.quiet) return;
   const bd = ctEl("c-board");
   if (!bd) return;
   const p = combat.p;
@@ -1561,6 +1626,7 @@ function renderBoard() {
           const token = cell.querySelector(".tok");
           token.tabIndex = 0; token.setAttribute("role", "button");
           const select = () => {
+            window.CHAPS_BATTLE?.inspect(index);
             const target = ctEl("c-atk-target");
             if (target && isPlayerTurn() && ctEl("c-attack-panel")?.hidden) openAttackPanel(false);
             if (target && [...target.options].some(option => option.value === String(index))) {
@@ -1576,7 +1642,10 @@ function renderBoard() {
       }
     }
     if (reach.has(x + "," + y)) {
-      cell.addEventListener("click", () => { moveMode = false; playerMoveTo(x, y); });
+      cell.addEventListener("click", () => {
+        if (window.CHAPS_BATTLE) window.CHAPS_BATTLE.previewRoute(x, y);
+        else { moveMode = false; playerMoveTo(x, y); }
+      });
     }
     if (obs && obs.destructible && !moveMode && isPlayerTurn() && combat.p && combat.p.action) {
       cell.addEventListener("click", () => {
@@ -1591,11 +1660,13 @@ function renderBoard() {
     bd.appendChild(cell);
   }
   effects.forEach(effect => bd.appendChild(effect));
+  window.CHAPS_BATTLE?.board(bd, reach);
   if (!combat.quiet && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
     for (const token of bd.querySelectorAll("[data-combatant]")) {
       const previous = oldTokens.get(token.dataset.combatant);
       if (!previous || (previous.x === token.dataset.x && previous.y === token.dataset.y)) continue;
       const rect = token.getBoundingClientRect();
+      if (window.CHAPS_BATTLE?.animateMove(token, previous, rect)) continue;
       const adjacent = Math.max(Math.abs(Number(previous.x) - Number(token.dataset.x)), Math.abs(Number(previous.y) - Number(token.dataset.y))) <= 1;
       token.animate?.(adjacent ? [{ transform: `translate(${previous.rect.left - rect.left}px, ${previous.rect.top - rect.top}px)` }, { transform: "translate(0, 0)" }] : [{ opacity: .2 }, { opacity: 1 }], { duration: 280, easing: "ease-out" });
     }
@@ -1655,6 +1726,7 @@ function boardFx(type, x, y, text) {
 function fxHitAt(x, y, dmg, crit) {
   boardFx(crit ? "crit" : "hit", x, y, dmg ? "−" + dmg : "");
   boardFx("impact-wave" + (crit ? " critical-wave" : ""), x, y);
+  window.CHAPS_BATTLE?.hit(x, y);
 }
 
 function fxHit(e, dmg, crit) {
@@ -1693,6 +1765,7 @@ function fxLine(from, to) {
   line.style.top = a.y + "px";
   line.style.transform = `rotate(${ang}rad)`;
   line.style.setProperty("--attack-angle", ang + "rad");
+  window.CHAPS_BATTLE?.styleLine(line);
   bd.appendChild(line);
   setTimeout(() => line.remove(), 500);
 }
@@ -1711,6 +1784,7 @@ function renderSuggestions() {
 }
 
 function renderCombat() {
+  if (combat.quiet) return;
   const area = ctEl("c-arena");
   if (!area) return;
   ctEl("c-setup").hidden = combat.on || combat.log.length > 0 ? true : false;
@@ -1720,6 +1794,7 @@ function renderCombat() {
   ctEl("c-round").textContent = combat.on ? `${ct("round")} ${combat.round}` : "—";
   const ord = ctEl("c-order");
   ord.innerHTML = "";
+  if (!combat.p) { window.CHAPS_BATTLE?.render(); return; }
   combat.order.forEach((o, i) => {
     const isCur = combat.on && i === combat.turn;
     const dead = o.who === "e" && combat.enemies[o.idx].hp <= 0;
@@ -1790,6 +1865,7 @@ function renderCombat() {
   ctEl("c-apply-hp").hidden = combat.on;
   renderBoard();
   renderCombatLog();
+  if (!combat.quiet) window.CHAPS_BATTLE?.render();
 }
 
 /* ---------- Panel de ataque ---------- */

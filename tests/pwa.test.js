@@ -33,10 +33,10 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     const assets = await page.evaluate(async () => {
-      const cache = await caches.open("chaps-v11-daily-versions-battlefield");
+      const cache = await caches.open("chaps-v12-tactical-combat");
       return (await cache.keys()).map(request => new URL(request.url).pathname);
     });
-    for (const asset of ["/js/profile-store.js", "/js/account-auth.js", "/js/features.js", "/css/features.css"]) {
+    for (const asset of ["/js/profile-store.js", "/js/account-auth.js", "/js/features.js", "/css/features.css", "/js/combat-tools.js", "/css/combat-visuals.css"]) {
       assert.ok(assets.includes(asset), "precaché incluye " + asset);
     }
     await page.locator("#f-name").fill("CHAPS OFFLINE");
@@ -51,6 +51,16 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.locator("#table-note-add").click();
     await page.reload();
     assert.equal(await page.evaluate(() => state.journal.length), 2);
+    await page.locator('.tab-btn[data-tab="combat"]').click();
+    await page.evaluate(() => {
+      combat.enemies = [spawnEnemy("orc")]; const old = rollDie; rollDie = () => 10;
+      try { startCombat(); } finally { rollDie = old; }
+      combat.p.hp = 42; combat.p.action = false; renderCombat();
+    });
+    await page.locator("#bt-save").click(); await page.reload();
+    await page.locator('.tab-btn[data-tab="combat"]').click(); await page.locator("#bt-resume").click();
+    assert.equal(await page.evaluate(() => combat.p.hp), 42);
+    assert.equal(await page.evaluate(() => combat.p.action), false);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []);
   } finally {

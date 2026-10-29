@@ -70,6 +70,33 @@ Si usas **PCGen 6.09.08** (instalado en `C:\Users\Carlos\Desktop\D&D\PCGen\PcGen
 
 > ⚠ **Aviso**: PCGen usa las reglas de **D&D 5e (SRD 2014)** y esta plataforma sigue las reglas de **2024**. Los datos importados son una base para revisar (p. ej. los rasgos y el Ataque Furtivo siguen la progresión 2024 que ya trae la plataforma).
 
+## Combate táctico
+
+1. **Ruta**: pulsa Mover, toca destino y confirma. Recorrido usa coste mínimo,
+   rodea obstáculos y avisa oportunidades/peligros. Terreno se aplica por casilla.
+2. **Alcance**: selector de arma y casillas normales/largas; rayado indica visión
+   bloqueada. Fichas muestran cobertura y distancia.
+3. **Ficha táctica**: toca personaje o enemigo, o usa teclado. Muestra PG, CA,
+   velocidad, condiciones, ataques, hechizos disponibles y aliento.
+4. **Efectos**: cortes, proyectiles, fuego, hielo, veneno, magia y curación externa;
+   respeta movimiento reducido. Curación recibida se registra sin inventar recursos.
+5. **Turnos**: velocidad lenta/normal/rápida, pausa y avance de un enemigo completo.
+   Al ocultar pestaña se pausan enemigos; retomar guardado también empieza pausado.
+6. **Escenarios**: preparar emboscada, escape, protección o resistencia y pulsar
+   Iniciar combate. Escape exige llegar a puerta este; defensa tiene aliado con PG;
+   resistencia/defensa exigen cinco rondas completas o eliminar amenazas.
+7. **Guardar/retomar**: guardado local automático y botón manual, separado por
+   cuenta/personaje. Conserva tablero, posiciones, turno, acciones usadas,
+   condiciones, hechizos restantes y métricas. Disponible offline en PWA instalada.
+   Solo mismo dispositivo; cambiar atributos/armas de ficha exige misma versión
+   antes de retomar. Cambiar cuenta limpia combate visible y conserva archivo propio.
+8. **Resumen**: daño efectivo sin sobrecontar exceso, impactos, críticos, curación,
+   daño a aliado, movimiento, acciones/adicionales/reacciones, Furtivo, dados de
+   Golpes Astutos y desglose por objetivo/arma. Simulador conserva métricas reales;
+   estima eliminación de enemigos, no objetivos especiales de escenarios.
+
+Pruebas opcionales Playwright: `tests/combat-tools.test.js` y `tests/battlefield.test.js`.
+
 ## Tecnología
 
 HTML + CSS + JavaScript puro. Sin frameworks ni build. Ficha local disponible offline y mediante `file://`; sincronización usa Firebase modular por CDN y requiere HTTPS o localhost. La Biblioteca consume la API pública de **Open5e** (SRD 5.2 © Wizards of the Coast, licencia CC-BY-4.0; condiciones y objetos mágicos del SRD 5.1).

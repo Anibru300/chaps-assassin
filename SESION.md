@@ -2,7 +2,30 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
-## Última actualización: 2026-10-29 — v11: versiones diarias y tablero visual
+## Última actualización: 2026-10-29 — v12: ocho mejoras tácticas
+
+- Usuario pidió implementar ocho mejoras: rutas, alcance, ficha ampliada, efectos,
+  turnos pausables, escenarios, guardar/retomar combate y resumen táctico.
+- Nuevo `js/combat-tools.js` se carga después de motor y antes de simulador.
+  Core mantiene fallback síncrono sin módulo y durante `combat.quiet`.
+- `movementPath` usa coste mínimo compatible con terreno/ocupación. Movimiento
+  recorre casillas, aplica peligros y AdO en trayecto; UI exige confirmar ruta.
+- Rango por arma y visión; inspector accesible con ataques/hechizos/usos y cobertura.
+- Efectos por arma/conjuro, aliento, veneno, terreno y curación externa registrada.
+- IA diferida con velocidad, pausa/paso y cancelación por generación/turno/sesión.
+  Pestaña oculta pausa; guardado recuperado empieza pausado, sin reiniciar acciones.
+- Escenarios: emboscada, escape por este, defender aliado, sobrevivir cinco rondas
+  completas. Defensa tiene PG y ataques reales al aliado; condiciones y terreno activos.
+- Guardado local v1 por UID/personaje: mapa, actores, orden/turno, recursos,
+  condiciones, escenario y métricas. Valida formato/ficha; no sincroniza por nube.
+  Cambio de identidad limpia combate visible. Guardado offline probado en PWA.
+- Telemetría de daño efectivo, críticos, reacciones, acciones, Furtivo y costes;
+  simulación masiva excluye escenarios y conserva estado/estadísticas reales.
+- Caché `chaps-v12-tactical-combat`; `combat.js?v=10`, CSS visual v2 y módulo nuevo v1.
+- Nuevas pruebas integrales `tests/combat-tools.test.js`; ver bitácora para
+  resultado final, commit publicado y estado de despliegue.
+
+### Registro anterior — v11 (histórico)
 
 - Usuario confirmó reglas publicadas; versión anterior `91d95f3` se publicó con
   workflow Pages exitoso. GitHub shell no tiene red; usar conexión GitHub disponible.
