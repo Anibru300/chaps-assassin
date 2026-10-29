@@ -3,7 +3,7 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v14-instant-move-rolls";
+const CACHE_NAME = "chaps-v15-character-icon";
 const SHELL = [
   "./",
   "./index.html",
@@ -31,8 +31,11 @@ const SHELL = [
   "./assets/chaps-portrait.jpg",
   "./assets/dragon-bg.png",
   "./assets/dragon-gate.svg",
-  "./assets/icon-192.png",
-  "./assets/icon-512.png",
+  "./assets/chaps-icon-192.png",
+  "./assets/chaps-icon-512.png",
+  "./assets/chaps-icon-maskable-512.png",
+  "./assets/chaps-apple-touch-180.png",
+  "./assets/chaps-favicon-48.png",
   "./assets/tokens/Goblin.jpg",
   "./assets/tokens/Bandit.jpg",
   "./assets/tokens/Wolf.jpg",

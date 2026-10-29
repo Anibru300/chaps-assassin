@@ -33,11 +33,27 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     const assets = await page.evaluate(async () => {
-      const cache = await caches.open("chaps-v14-instant-move-rolls");
+      const cache = await caches.open("chaps-v15-character-icon");
       return (await cache.keys()).map(request => new URL(request.url).pathname);
     });
     for (const asset of ["/js/profile-store.js", "/js/account-auth.js", "/js/features.js", "/css/features.css", "/js/combat-tools.js", "/css/combat-visuals.css", "/js/combat-help.js", "/css/combat-layout.css", "/js/combat-rolls.js"]) {
       assert.ok(assets.includes(asset), "precaché incluye " + asset);
+    }
+    const icons = await page.evaluate(async () => {
+      const manifest = await (await fetch("manifest.json")).json();
+      const entries = [...manifest.icons,
+        { src: document.querySelector('[rel="apple-touch-icon"]').getAttribute("href"), sizes: "180x180" },
+        { src: document.querySelector('[rel="icon"]').getAttribute("href"), sizes: "48x48" }];
+      return Promise.all(entries.map(async entry => {
+        const image = new Image(); image.src = entry.src; await image.decode();
+        return { ...entry, actual: `${image.naturalWidth}x${image.naturalHeight}` };
+      }));
+    });
+    assert.equal(icons.length, 5);
+    assert.ok(icons.some(icon => icon.purpose === "maskable"));
+    for (const icon of icons) {
+      assert.equal(icon.actual, icon.sizes);
+      assert.ok(assets.includes("/" + icon.src), "icono disponible offline");
     }
     await page.locator("#f-name").fill("CHAPS OFFLINE");
     await page.locator('.tab-btn[data-tab="table"]').click();

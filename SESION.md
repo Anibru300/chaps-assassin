@@ -2,6 +2,12 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
+## Actualización: 2026-10-29 — v15: icono CHAPS
+
+- Retrato CHAPS adaptado con imagegen; iconos Android 192/512, maskable 512, iPhone 180 y favicon 48.
+- Caché v15 incluye todos los iconos para uso offline. Identidad de instalación conservada.
+- Prueba PWA verifica tamaños reales, precaché y funcionamiento offline.
+
 ## Última actualización: 2026-10-29 — v14: movimiento inmediato y tirada interactiva
 
 - Usuario pidió quitar confirmación de movimiento; Mover + clic/toque en casilla
