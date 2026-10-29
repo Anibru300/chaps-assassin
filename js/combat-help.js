@@ -4,15 +4,14 @@
   const el = id => document.getElementById(id);
   const descriptions = () => ({
     "c-btn-attack": ["Atacar · acción", "Abre tirada. Elige arma y enemigo; acción se gasta al resolver ataque, incluso si falla."],
-    "c-atk-roll": ["¡Tirar!", "Resuelve ataque preparado: d20, acierto, daño y efectos. Revisa ventaja, alcance y Golpes Astutos antes de confirmar."],
+    "c-atk-roll": ["Tirar dados", "Muestra d20 real, bono, total contra CA y daño. Revisa ventaja, alcance y Golpes Astutos antes de tirar."],
     "c-atk-cancel": ["Cancelar", "Cierra preparación sin gastar acción. Puedes cambiar objetivo o mover primero."],
     "c-btn-extra": ["Extra · arma ligera", "Aparece tras ataque ligero. Normalmente usa acción adicional; Nick dominado permite ataque extra sin gastarla."],
     "c-btn-steady": ["Puntería · acción adicional", state.level >= 9 ? "Da ventaja al próximo ataque de este turno. Motor aplica movilidad de Asesino desde N9." : "Da ventaja al próximo ataque y deja movimiento en cero durante turno."],
     "c-btn-hide": ["Ocultar · acción adicional", "Motor tira Sigilo contra Percepción enemiga. Éxito ayuda al próximo ataque; revisa resultado en registro."],
     "c-btn-dash": ["Dash · acción adicional", "Añade movimiento igual a velocidad. En esta app usa Acción Astuta del Pícaro."],
     "c-btn-disengage": ["Retirar · acción adicional", "Evita ataques de oportunidad durante movimiento de este turno. No equivale a Golpe Astuto Retirada."],
-    "c-btn-move": ["Mover · movimiento", "Elige destino y confirma ruta. Casilla normal cuesta 5 ft, difícil 10 ft; aviso señala peligros y oportunidades."],
-    "bt-confirm-move": ["Confirmar movimiento", "Recorre ruta elegida y descuenta distancia real. Terreno peligroso puede causar daño en casillas intermedias."],
+    "c-btn-move": ["Mover · movimiento", "Activa Mover y toca casilla: movimiento inmediato, sin confirmación. Casilla normal cuesta 5 ft, difícil 10 ft; ruta, peligros y oportunidades se calculan automáticamente."],
     "c-btn-end": ["Fin turno", "Entrega turno a enemigos. Recursos se recuperan al empezar siguiente turno propio; enemigos respetan pausa y velocidad."],
     "bt-heal": ["Curación recibida", "Registra PG recibidos de aliado u objeto hasta máximo. No descuenta pociones ni acciones automáticamente."],
     "bt-pause": ["Pausar enemigos", "Detiene ejecución automática. Continuar reanuda enemigo pendiente; no reinicia turno."],
@@ -74,7 +73,7 @@
     el("battle-console-status").textContent = combat.p ? `Ronda ${combat.round} · ${combat.on ? isPlayerTurn() ? "Tu turno" : "Turno enemigo" : "Combate terminado"}` : "Prepara combate para comenzar";
     const panel = el("c-attack-panel");
     if (!combat.on && !panel.hidden) panel.hidden = true;
-    el("c-arena").classList.toggle("combat-aiming", !panel.hidden);
+    el("c-arena").classList.toggle("combat-aiming", !panel.hidden || !el("combat-roll-result").hidden);
     dockHeight(); contextual(); if (el("combat-help-dialog").open) resources();
   }
   function showBattle() {
@@ -101,7 +100,18 @@
     if (resumeAfterHelp) el("bt-pause").click();
     el("combat-help-dialog").showModal();
   }
-  window.CHAPS_COMBAT_HELP = { render, attackOpened };
+  function resultShown() {
+    render();
+    requestAnimationFrame(() => {
+      if (el("combat-roll-result").hidden) return;
+      if (window.matchMedia("(min-width: 900px)").matches) {
+        const consoleNode = el("battle-console"), bounds = consoleNode.getBoundingClientRect(), verdict = el("combat-roll-result").querySelector(".roll-verdict").getBoundingClientRect();
+        const bottom = Math.min(bounds.bottom, innerHeight - 8);
+        if (verdict.bottom > bottom - 8) consoleNode.scrollTop += verdict.bottom - bottom + 12;
+      } else showBattle();
+    });
+  }
+  window.CHAPS_COMBAT_HELP = { render, attackOpened, resultShown };
   document.addEventListener("DOMContentLoaded", () => {
     for (const [id, [, detail]] of Object.entries(descriptions())) {
       const button = el(id); if (!button) continue;
@@ -117,6 +127,7 @@
     el("c-btn-start").addEventListener("click", () => requestAnimationFrame(showBattle));
     el("bt-resume").addEventListener("click", () => requestAnimationFrame(showBattle));
     new MutationObserver(render).observe(el("c-attack-panel"), { attributes: true, attributeFilter: ["hidden"] });
+    new MutationObserver(render).observe(el("combat-roll-result"), { attributes: true, attributeFilter: ["hidden"] });
     if (window.ResizeObserver) new ResizeObserver(dockHeight).observe(document.querySelector(".battle-console .combat-actions"));
     window.addEventListener("resize", dockHeight); render();
   });

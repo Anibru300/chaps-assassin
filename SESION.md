@@ -2,7 +2,28 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
-## Última actualización: 2026-10-29 — v13: consola lateral y ayuda
+## Última actualización: 2026-10-29 — v14: movimiento inmediato y tirada interactiva
+
+- Usuario pidió quitar confirmación de movimiento; Mover + clic/toque en casilla
+  ejecuta ruta directamente. Enter/Espacio también. Hover solo previsualiza.
+  Se retiraron botón, referencias y ayuda de confirmación; conserva costes/AdO/terreno.
+- Usuario reportó bloqueo de Ocultar después de ataque y pidió dados visibles a derecha.
+  Atacar mantiene adicional independiente; nuevo indicador explica recurso disponible,
+  Puntería/Extra ya gastados o combate terminado. Ocultar usa adicional, no reacción.
+- Corrección real: Extra consumía adicional antes de validar alcance/visión; ahora
+  consume solo al resolver tirada. Preparación inválida conserva modo Extra y recursos.
+- Nuevo `js/combat-rolls.js`: presenta datos estructurados emitidos por motor,
+  d20/ventaja, DES+competencia, total/CA, resultado y daño/PG. Sin nuevas tiradas
+  para animación y sin bloquear adicionales. Incluye acceso a Ocultar y resultado Sigilo.
+- `lastBonus` en combatiente local explica coste; se reinicia al comenzar turno.
+  Dados conservan resultado visible tras derrotar último enemigo. Respeta movimiento reducido.
+- Caché `chaps-v14-instant-move-rolls`: motor v12, tools v3, help/layout v2,
+  data v6, módulo rolls v1. Nuevo módulo precacheado.
+- Prueba nueva `tests/combat-rolls.test.js`: móvil/escritorio, sumas/daño reales,
+  sin reroll, Atacar→Ocultar, Puntería agotada, fallo, crítico, fin y Extra inválido.
+- Ver bitácora para validación final y publicación.
+
+### Registro anterior — v13 (histórico)
 
 - Usuario pidió mapa izquierda, atacar/tirar derecha sin perder mapa y ayuda de
   botones/reglas/recursos (propuesta general #6).

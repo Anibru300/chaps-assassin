@@ -63,7 +63,7 @@ const STRIKES = [
 function newCombatPlayer() {
   return {
     hp: state.hpCurrent, move: state.speed,
-    action: true, ba: true, react: true,
+    action: true, ba: true, react: true, lastBonus: null,
     sneak: false, hidden: false, diseng: false, steady: false, withdraw: 0,
     conds: [],        // [{id, save, dc}] condiciones del jugador (Fase 3)
     vexTarget: null,  // Vex: próximo ataque contra este enemigo con ventaja (Fase 5)
@@ -588,6 +588,7 @@ function beginTurn() {
   if (cur.who === "p") {
     const p = combat.p;
     p.action = true; p.ba = true; p.react = true;
+    p.lastBonus = null;
     p.move = state.speed; p.sneak = false; p.diseng = false; p.steady = false; p.withdraw = 0;
     p.vexTarget = null; p.nickReady = false; p.nickFree = false; p.lightMainIdx = -1;
     combat.enemies.forEach((x) => { x.slow = false; }); // Slow dura hasta el inicio de tu próximo turno
@@ -745,8 +746,7 @@ function playerAttack(w, e, opts) {
   opts = opts || {};
   if (opts.extra) {
     // Ataque extra (Ligera/Nick): no gasta acción; sin Nick dominado gasta la acción adicional
-    if (p.nickFree) { /* gratis */ } else if (p.ba) { p.ba = false; } else { cLog("⛔ " + ct("noBA"), "log-miss"); return false; }
-    p.nickReady = false;
+    if (!p.nickFree && !p.ba) { cLog("⛔ " + ct("noBA"), "log-miss"); return false; }
   } else if (!p.action) { cLog("⛔ " + ct("noAction"), "log-miss"); return false; }
 
   // --- Alcance ---
@@ -804,18 +804,25 @@ function playerAttack(w, e, opts) {
   const rollStr = (rolls.length > 1 ? `${advIcon} d20(${rolls.join(", ")})→${chosen}` : `${advIcon} d20(${chosen})`);
   if (cover) reasons.push(ct("coverBonus"));
 
-  if (!opts.extra) p.action = false;
+  const hpBefore = e.hp;
+  const showRoll = (damage, damageParts) => {
+    if (!combat.quiet) window.CHAPS_ROLLS?.result({ weapon: w.name, target: eName(e), rolls: [...rolls], chosen, dex: dexMod(), proficiency: profBonus(state.level), bonus: atkBonus, total, armor: effAc, cover: cover ? 2 : 0, mode: flat ? "Ventaja y desventaja se cancelan" : adv ? "Ventaja" : dis ? "Desventaja" : "Tirada normal", reasons: [...reasons], hit: isHit, crit, damage, damageParts: [...damageParts], effectiveDamage: hpBefore - e.hp, hpBefore, hpAfter: e.hp, maxHp: e.maxHp });
+  };
+  if (opts.extra) { if (!p.nickFree) { p.ba = false; p.lastBonus = "extra"; } p.nickReady = false; }
+  else p.action = false;
   p.steady = false;
   p.hidden = false; // atacar revela tu posición
 
   fxLine(p.pos, e.pos);
   if (!isHit) {
+    let grazeDamage = 0;
     fxMiss(e);
     flashCell(e.pos.x, e.pos.y, "flash-miss");
     // Graze: al FALLAR, daño = modificador de la característica
     if (mastActive === "graze") {
       const g = Math.max(0, dexMod());
       if (g > 0) {
+        grazeDamage = g;
         e.hp = Math.max(0, e.hp - g);
         cLog(`🎯 Graze: ${ct("missWord")} pero ${eName(e)} recibe ${g} ${ct("dmgWord")} [${e.hp}/${e.maxHp}]`, "log-hit");
         if (e.hp <= 0) { cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead"); checkCombatEnd(); }
@@ -823,12 +830,13 @@ function playerAttack(w, e, opts) {
     }
     cLog(`${w.name}: ${rollStr} ${fmtMod(atkBonus)} = ${total} ${ct("vsAc")} ${effAc}${coverTxtP} → <em>${ct("missWord")}</em>`, "log-miss");
     if (typeof renderCombat === "function") renderCombat();
+    showRoll(grazeDamage, grazeDamage ? ["Graze: " + grazeDamage] : []);
     return true;
   }
 
   // --- Daño ---
   const parts = [];
-  let dmg = 0;
+  let dmg = 0, extraDamage = 0;
   // Ataque extra de arma ligera: no añade modificador de habilidad al daño
   const wBonus = opts.extra ? 0 : w.bonus;
   const wExpr = `${w.dice}d${w.sides}${wBonus ? "+" + wBonus : ""}`;
@@ -885,6 +893,8 @@ function playerAttack(w, e, opts) {
         if (state.level >= 13) { // Armas Envenenadas
           const eRolls = rollDice(2, 6);
           const en = sum(eRolls);
+          extraDamage += en;
+          parts.push(`Veneno 2d6(${eRolls.join(",")}) = ${en}`);
           e.hp = Math.max(0, e.hp - en);
           cLog(`🧪 ${ct("envenom2d6")}: 2d6(${eRolls.join(",")}) = <strong>${en}</strong> [${eName(e)}: ${e.hp}/${e.maxHp}]`, "log-hit");
         }
@@ -932,6 +942,7 @@ function playerAttack(w, e, opts) {
   if (e.hp <= 0) cLog(`💀 ${eName(e)} ${ct("enemyDead")}`, "log-dead");
   checkCombatEnd();
   if (typeof renderCombat === "function") renderCombat();
+  showRoll(dmg + extraDamage, parts);
   return true;
 }
 
@@ -1062,10 +1073,11 @@ function playerBonus(kind) {
     const ok = r + mod >= best;
     if (ok) { p.hidden = true; p.hiddenDC = r + mod; cLog(`🫥 Sigilo: ${r} ${fmtMod(mod)} = ${r + mod} vs Percepción pasiva ${best} → ${ct("hiddenNow")}`, "log-hit"); }
     else cLog(`🫥 Sigilo: ${r} ${fmtMod(mod)} = ${r + mod} vs ${best} → ${ct("hideFail")}`, "log-miss");
+    if (!combat.quiet) window.CHAPS_ROLLS?.note(`Ocultar: d20(${r}) ${fmtMod(mod)} = ${r + mod} contra Percepción ${best} → ${ok ? "Oculto" : "No logras ocultarte"}`);
   }
   if (kind === "dash") { p.move += state.speed; cLog("💨 " + ct("dashOn"), "log-info"); }
   if (kind === "disengage") { p.diseng = true; cLog("🌀 " + ct("disengageOn"), "log-info"); }
-  p.ba = false;
+  p.ba = false; p.lastBonus = kind;
   if (typeof renderCombat === "function") renderCombat();
 }
 
@@ -1643,7 +1655,7 @@ function renderBoard() {
     }
     if (reach.has(x + "," + y)) {
       cell.addEventListener("click", () => {
-        if (window.CHAPS_BATTLE) window.CHAPS_BATTLE.previewRoute(x, y);
+        if (window.CHAPS_BATTLE) window.CHAPS_BATTLE.moveTo(x, y);
         else { moveMode = false; playerMoveTo(x, y); }
       });
     }
@@ -1867,6 +1879,7 @@ function renderCombat() {
   renderCombatLog();
   if (!combat.quiet) window.CHAPS_BATTLE?.render();
   if (!combat.quiet) window.CHAPS_COMBAT_HELP?.render();
+  if (!combat.quiet) window.CHAPS_ROLLS?.refresh();
 }
 
 /* ---------- Panel de ataque ---------- */
@@ -1967,6 +1980,7 @@ function openAttackPanel(extra) {
     });
   });
   window.CHAPS_COMBAT_HELP?.attackOpened();
+  window.CHAPS_ROLLS?.prepare();
 }
 
 function confirmAttack() {
@@ -1978,8 +1992,9 @@ function confirmAttack() {
   const strikes = Array.from(ctEl("c-atk-strikes").querySelectorAll("input:checked")).map((c) => c.value);
   const ally = ctEl("c-atk-ally").checked;
   ctEl("c-attack-panel").hidden = true;
-  playerAttack(w, e, { strikes, ally, extra: attackExtraMode });
-  attackExtraMode = false;
+  const performed = playerAttack(w, e, { strikes, ally, extra: attackExtraMode });
+  if (!performed && combat.on && isPlayerTurn()) { ctEl("c-attack-panel").hidden = false; window.CHAPS_ROLLS?.invalid(); }
+  if (performed) attackExtraMode = false;
 }
 
 /* ---------- Editor de mapa ---------- */

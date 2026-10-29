@@ -3,7 +3,7 @@
    Cache-first para el shell de la app; network-first para datos.
    ============================================================ */
 
-const CACHE_NAME = "chaps-v13-combat-console-help";
+const CACHE_NAME = "chaps-v14-instant-move-rolls";
 const SHELL = [
   "./",
   "./index.html",
@@ -11,14 +11,15 @@ const SHELL = [
   "./css/v4.css?v=18",
   "./css/features.css?v=2",
   "./css/combat-visuals.css?v=2",
-  "./css/combat-layout.css?v=1",
+  "./css/combat-layout.css?v=2",
   "./js/auth.js?v=5",
-  "./js/data.js?v=5",
+  "./js/data.js?v=6",
   "./js/app.js?v=9",
   "./js/combat-data.js?v=4",
-  "./js/combat.js?v=11",
-  "./js/combat-tools.js?v=2",
-  "./js/combat-help.js?v=1",
+  "./js/combat.js?v=12",
+  "./js/combat-tools.js?v=3",
+  "./js/combat-help.js?v=2",
+  "./js/combat-rolls.js?v=1",
   "./js/simulador.js?v=4",
   "./js/biblioteca.js?v=4",
   "./js/combat-extra.js?v=5",

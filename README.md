@@ -79,7 +79,13 @@ despliegan cuando hacen falta. Botón **¿Cómo jugar?** abre ayuda de botones,
 reglas y recursos actuales; pausa enemigos mientras lees y restaura pausa anterior.
 Foco/ratón sobre controles muestra explicación breve de coste y efecto.
 
-1. **Ruta**: pulsa Mover, toca destino y confirma. Recorrido usa coste mínimo,
+**Atacar → Tirar dados** muestra d20 real animado, Destreza + competencia, total
+contra CA, acierto/fallo/crítico y desglose de daño con PG descontados. Animación
+no vuelve a tirar ni bloquea acciones. Ocultar después de atacar sigue disponible
+si queda acción adicional; panel explica si ya se gastó en Puntería/Extra o terminó
+combate. Ocultar usa adicional, no reacción. Ataque extra inválido no consume recurso.
+
+1. **Ruta**: pulsa Mover y toca destino: movimiento inmediato, sin confirmación. También funciona con Enter/Espacio. Recorrido usa coste mínimo,
    rodea obstáculos y avisa oportunidades/peligros. Terreno se aplica por casilla.
 2. **Alcance**: selector de arma y casillas normales/largas; rayado indica visión
    bloqueada. Fichas muestran cobertura y distancia.

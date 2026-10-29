@@ -18,7 +18,7 @@ test("herramientas de combate: ocho mejoras integradas", {
   const browser = await chromium.launch({ headless: true });
   const errors = [];
   try {
-    const context = await browser.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: "block" });
+    const context = await browser.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: "block", hasTouch: true });
     await context.addInitScript(() => sessionStorage.setItem("chaps-auth-v1", "1"));
     const page = await context.newPage(); page.on("pageerror", error => errors.push(error.stack));
     page.on("dialog", dialog => dialog.accept());
@@ -39,7 +39,7 @@ test("herramientas de combate: ocho mejoras integradas", {
         document.querySelector("#c-attack-panel").hidden = true; renderCombat();
       });
     }
-    await t.test("ruta rodea obstáculos, cobra terreno difícil y espera confirmación", async () => {
+    await t.test("clic mueve al instante, rodea obstáculos y cobra terreno difícil", async () => {
       await reset();
       const route = await page.evaluate(() => {
         addObstacle(2, 2, "wall"); addObstacle(2, 3, "wall"); combat.map.terrain.push({ x: 2, y: 4, type: "difficult" });
@@ -48,24 +48,28 @@ test("herramientas de combate: ocho mejoras integradas", {
       assert.equal(route.at(-1).cost, 15);
       assert.equal(route.some(point => point.x === 2 && point.y === 3), false);
       await page.locator("#c-btn-move").click(); await page.locator("#cell-3-3").click();
-      assert.equal(await page.evaluate(() => combat.p.pos.x), 1);
+      assert.equal(await page.locator("#bt-confirm-move").count(), 0);
       assert.match(await page.locator("#bt-route").textContent(), /15 ft/);
-      await page.locator("#bt-confirm-move").click();
       assert.deepEqual(await page.evaluate(() => combat.p.pos), { x: 3, y: 3 });
       assert.equal(await page.evaluate(() => combat.p.move), 15);
       assert.equal(await page.evaluate(() => combat.tactical.feet), 15);
+      await page.locator("#c-btn-move").click(); await page.locator("#cell-3-4").focus(); await page.keyboard.press("Enter");
+      assert.deepEqual(await page.evaluate(() => combat.p.pos), { x: 3, y: 4 });
+      await page.locator("#c-btn-move").tap(); await page.locator("#cell-2-4").tap();
+      assert.deepEqual(await page.evaluate(() => combat.p.pos), { x: 2, y: 4 });
+      assert.equal(await page.evaluate(() => combat.p.move), 0);
     });
     await t.test("aviso de oportunidad y peligros intermedios coinciden con movimiento", async () => {
       await reset();
       await page.evaluate(() => { combat.enemies[0].pos = { x: 2, y: 3 }; renderCombat(); });
-      await page.locator("#c-btn-move").click(); await page.locator("#cell-1-5").click();
+      await page.locator("#c-btn-move").click(); await page.locator("#cell-1-5").hover();
       assert.match(await page.locator("#bt-route").textContent(), /Ataques de oportunidad: Orco/);
       await page.evaluate(() => {
         combat.p.diseng = true;
         combat.map.terrain.push({ x: 0, y: 4, type: "fire", dmg: "1", trigger: "enter" }, { x: 1, y: 4, type: "fire", dmg: "1", trigger: "enter" }, { x: 2, y: 4, type: "fire", dmg: "1", trigger: "enter" });
       });
       const before = await page.evaluate(() => combat.p.hp);
-      await page.locator("#bt-confirm-move").click();
+      await page.locator("#cell-1-5").click();
       assert.equal(await page.evaluate(() => combat.p.hp), before - 1);
     });
     await t.test("alcance, visión bloqueada y fichas ampliadas funcionan con toque y teclado", async () => {
@@ -99,6 +103,7 @@ test("herramientas de combate: ocho mejoras integradas", {
         } finally { rollDie = old; }
       });
       assert.deepEqual(effects, { fire: true, ice: true, poison: true, arrow: true });
+      await page.locator("#combat-roll-close").click();
       await page.locator(".battle-healing-details summary").click();
       await page.locator("#bt-heal-amount").fill("3"); await page.locator("#bt-heal").click();
       assert.equal(await page.evaluate(() => combat.tactical.healed), 3);

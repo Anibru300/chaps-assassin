@@ -9,7 +9,7 @@
   const node = (tag, content, cls) => { const value = document.createElement(tag); if (content != null) value.textContent = content; if (cls) value.className = cls; return value; };
   const metrics = () => combat.tactical ||= { damage: 0, received: 0, allyDamage: 0, healed: 0, actions: 0, bonus: 0, reactions: 0, feet: 0, attacks: 0, misses: 0, sneaks: 0, cunningDice: 0, crits: 0, enemyCrits: 0, targets: {}, weapons: {} };
   let pending = null, timer = null, generation = 0, paused = false, speed = 900, executing = false;
-  let ownerScope = null, ownerUid = null, route = null, routeLocked = false, lastMove = null, selected = null, effect = "cut", depth = 0, redirectHero = null, saveTimer = null;
+  let ownerScope = null, ownerUid = null, route = null, lastMove = null, selected = null, effect = "cut", depth = 0, redirectHero = null, saveTimer = null;
   const palette = { cut: "#e8d7bd", arrow: "#e5c47d", fire: "#ff8c40", ice: "#8fe3ff", poison: "#a5e36c", radiant: "#ffe99f", force: "#d8a2ff", healing: "#79f0b7" };
   const symbols = { cut: "✦", arrow: "➶", fire: "🔥", ice: "❄", poison: "☣", radiant: "✧", force: "◉", healing: "+" };
   const kind = value => {
@@ -112,12 +112,10 @@
     const catalog = WEAPON_MASTERY.find(item => item.id === value?.weaponId);
     return { melee: catalog ? catalog.melee || 0 : 5, range: catalog?.range ? catalog.range.split("/").map(Number) : [] };
   }
-  function previewRoute(x, y, hover = false) {
+  function previewRoute(x, y) {
     if (!combat.on || !isPlayerTurn() || !moveMode) return;
-    if (hover && routeLocked) return;
-    if (!hover) routeLocked = true;
     route = movementPath(combat.p.pos, { x, y }, combat.p.move + combat.p.withdraw);
-    if (!route) { text("bt-route", "Destino fuera de alcance o bloqueado."); el("bt-confirm-move").disabled = true; return; }
+    if (!route) { text("bt-route", "Destino fuera de alcance o bloqueado."); return; }
     const risk = new Set(), hazards = new Set(); let free = combat.p.withdraw;
     for (let index = 1; index < route.length; index++) {
       const current = route[index], previous = route[index - 1], cost = current.cost - previous.cost;
@@ -130,9 +128,17 @@
     }
     const cost = route.at(-1).cost;
     text("bt-route", `${cost} ft de ${combat.p.move + combat.p.withdraw} ft disponibles. ${risk.size ? "⚠ Ataques de oportunidad: " + [...risk].join(", ") + ". " : "Sin ataques de oportunidad previstos. "}${hazards.size ? "⚠ Terreno peligroso: " + [...hazards].join(", ") : ""}`);
-    el("bt-confirm-move").disabled = false;
     for (const cell of el("c-board").querySelectorAll(".cell")) { cell.classList.remove("route-step"); delete cell.dataset.route; }
     route.slice(1).forEach((point, index) => { const cell = el(`cell-${point.x}-${point.y}`); cell?.classList.add("route-step"); if (cell) cell.dataset.route = index + 1; });
+  }
+  function moveTo(x, y) {
+    if (!combat.on || !isPlayerTurn() || !moveMode) return false;
+    previewRoute(x, y);
+    if (!route) return false;
+    moveMode = false;
+    const moved = playerMoveTo(x, y);
+    route = null;
+    return moved;
   }
   function inspect(index) { selected = index; renderInspector(); if (el("bt-inspector")) el("bt-inspector").open = true; }
   function renderInspector() {
@@ -153,7 +159,7 @@
   }
   function board(boardNode, reach) {
     if (!combat.p) return;
-    if (!moveMode) { route = null; routeLocked = false; if (el("bt-confirm-move")) el("bt-confirm-move").disabled = true; }
+    if (!moveMode) route = null;
     const range = weaponRange(weapon()), ranges = el("bt-ranges")?.checked;
     for (let y = 0; y < BOARD.h; y++) for (let x = 0; x < BOARD.w; x++) {
       const cell = el(`cell-${x}-${y}`), position = { x, y }, distance = distBetween(combat.p.pos, position);
@@ -165,8 +171,8 @@
       if (combat.scenario?.type === "escape" && x === BOARD.w - 1 && [3, 4].includes(y)) cell.classList.add("exit-cell");
       if (reach.has(x + "," + y)) {
         cell.tabIndex = 0; cell.setAttribute("role", "button"); cell.setAttribute("aria-label", `Destino ${x + 1}, ${y + 1}`);
-        cell.addEventListener("pointerenter", event => { if (event.pointerType === "mouse") previewRoute(x, y, true); });
-        cell.addEventListener("keydown", event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); previewRoute(x, y); } });
+        cell.addEventListener("pointerenter", event => { if (event.pointerType === "mouse") previewRoute(x, y); });
+        cell.addEventListener("keydown", event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); moveTo(x, y); } });
       }
     }
     const hero = boardNode.querySelector('[data-combatant="p"]');
@@ -175,7 +181,7 @@
     const ally = combat.scenario?.ally;
     if (ally?.hp > 0) { const cell = el(`cell-${ally.pos.x}-${ally.pos.y}`); cell.classList.add("ally-cell"); cell.appendChild(node("span", "🛡", "ally-token")); cell.appendChild(node("span", `${ally.hp}/${ally.maxHp}`, "token-hp")); cell.title = "Explorador protegido"; }
   }
-  function moved(path, cost) { lastMove = path; route = null; routeLocked = false; metrics().feet += cost; if (el("bt-confirm-move")) el("bt-confirm-move").disabled = true; text("bt-route", `Movimiento realizado: ${cost} ft.`); }
+  function moved(path, cost) { lastMove = path; route = null; metrics().feet += cost; text("bt-route", `Movimiento realizado: ${cost} ft.`); }
   function animateMove(token) {
     if (token.dataset.combatant !== "p" || !lastMove || lastMove.length < 2) return false;
     const path = lastMove; lastMove = null;
@@ -309,7 +315,7 @@
       return result;
     };
   }
-  window.CHAPS_BATTLE = { started, scheduleEnemy, missionResult, board, render, summary, previewRoute, moved, animateMove, inspect, save, resume, validateSaved,
+  window.CHAPS_BATTLE = { started, scheduleEnemy, missionResult, board, render, summary, previewRoute, moveTo, moved, animateMove, inspect, save, resume, validateSaved,
     canStart() {
       let free = 0; for (let x = 0; x < BOARD.w; x++) for (let y = 0; y < BOARD.h; y++) if (!cellBlocked(x, y)) free++;
       if (state.hpCurrent <= 0 || free < combat.enemies.length + 1 + Number(combat.scenario?.type === "protect")) { text("bt-save-status", state.hpCurrent <= 0 ? "Recupera PG en ficha antes de iniciar combate." : "Mapa sin suficientes casillas libres para combatientes. Retira obstáculos."); return false; }
@@ -331,7 +337,6 @@
     el("bt-step").onclick = () => { paused = true; executeEnemy(); status(); };
     el("bt-speed").onchange = () => { speed = Number(el("bt-speed").value); armTimer(); };
     el("bt-weapon").onchange = renderBoard; el("bt-ranges").onchange = renderBoard;
-    el("bt-confirm-move").onclick = () => { if (!route || !isPlayerTurn()) return; const destination = route.at(-1); moveMode = false; playerMoveTo(destination.x, destination.y); route = null; };
     el("bt-heal").onclick = () => {
       if (!combat.on || !combat.p) return;
       const amount = Number(el("bt-heal-amount").value); if (!Number.isInteger(amount) || amount < 1 || amount > 999) return;

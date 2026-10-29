@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/v4.css?v=18">
   <link rel="stylesheet" href="css/features.css?v=2">
   <link rel="stylesheet" href="css/combat-visuals.css?v=2">
-  <link rel="stylesheet" href="css/combat-layout.css?v=1">
+  <link rel="stylesheet" href="css/combat-layout.css?v=2">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -747,7 +747,7 @@
           </div>
           <div class="battlefield-viewport" id="c-board-viewport"><div id="c-board" class="board"></div></div>
           <div class="rest-row"><label>Alcance de <select id="bt-weapon" aria-label="Arma para mostrar alcance"></select></label><label><input type="checkbox" id="bt-ranges" checked> Mostrar alcance y línea de visión</label></div>
-          <p class="hint" id="bt-route" role="status">Mover → elige destino → confirma recorrido.</p><button class="btn btn-crimson" id="bt-confirm-move" type="button" disabled>Confirmar movimiento</button>
+          <p class="hint" id="bt-route" role="status">Mover → toca casilla para moverte al instante.</p>
           <details class="battle-map-guide"><summary>Leyenda y uso del mapa</summary>
           <div class="battlefield-legend"><span>◉ Aro: vida restante</span><span>✦ Condición activa</span><span>× Fuera de combate</span><span>Pulsa ficha enemiga para elegir objetivo</span></div>
           <div class="battlefield-legend"><span>Azul: alcance normal</span><span>Ámbar: largo alcance</span><span>Rayado: visión bloqueada</span><span>Ruta dorada: recorrido elegido</span></div>
@@ -765,6 +765,7 @@
             <div class="field"><span data-i18n="ac">CA</span> <strong id="c-pac"></strong></div>
           </div>
           <div id="c-pips" class="turn-pips"></div>
+          <p class="battle-action-state" id="battle-action-state" role="status"></p>
           <div id="c-pconds"></div>
           <div id="c-suggestions" class="combat-suggestions"></div>
           <div class="combat-actions">
@@ -783,7 +784,7 @@
 
         <!-- Panel de ataque -->
         <div class="card attack-panel" id="c-attack-panel" hidden>
-          <h2 id="c-atk-title" data-i18n="ctAttackTitle">Tirada de ataque</h2>
+          <div class="combat-roll-heading"><h2 id="c-atk-title" data-i18n="ctAttackTitle">Tirada de ataque</h2><span id="combat-roll-prep" class="combat-roll-prep"></span></div>
           <div class="grid grid-3 atk-grid">
             <label class="field"><span data-i18n="weapon">Arma</span> <select id="c-atk-weapon"></select></label>
             <label class="field"><span data-i18n="ctTarget">Objetivo</span> <select id="c-atk-target"></select></label>
@@ -791,7 +792,7 @@
           </div>
           <div id="c-atk-preview" class="attack-preview"></div>
           <div class="rest-row battle-roll-actions">
-            <button class="btn btn-crimson" id="c-atk-roll" data-i18n="ctRoll">¡Tirar!</button>
+            <button class="btn btn-crimson" id="c-atk-roll" data-i18n="ctRoll">Tirar dados</button>
             <button class="btn" id="c-atk-cancel" data-i18n="pcgenCancel">Cancelar</button>
           </div>
           <details class="battle-strikes-details"><summary>Golpes Astutos · cambiar daño por efectos</summary><fieldset class="cs-fieldset">
@@ -799,6 +800,13 @@
             <div id="c-atk-strikes"></div>
           </fieldset></details>
         </div>
+        <section class="card combat-roll-card" id="combat-roll-result" hidden aria-label="Resultado de tirada">
+          <div class="combat-roll-heading"><h2>Resultado de ataque</h2><button class="btn btn-small" id="combat-roll-close" type="button">Cerrar resultado</button></div>
+          <p id="combat-roll-resources" class="battle-action-state" role="status"></p>
+          <div id="combat-roll-body" aria-live="polite"></div>
+          <p id="combat-roll-followup" role="status"></p>
+          <button class="btn" id="combat-roll-hide" type="button">Ocultarme · acción adicional</button>
+        </section>
         </aside>
         </div>
 
@@ -952,12 +960,13 @@
 
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/auth.js?v=5"></script>
-  <script src="js/data.js?v=5"></script>
+  <script src="js/data.js?v=6"></script>
   <script src="js/app.js?v=9"></script>
   <script src="js/combat-data.js?v=4"></script>
-  <script src="js/combat.js?v=11"></script>
-  <script src="js/combat-tools.js?v=2"></script>
-  <script src="js/combat-help.js?v=1"></script>
+  <script src="js/combat.js?v=12"></script>
+  <script src="js/combat-tools.js?v=3"></script>
+  <script src="js/combat-help.js?v=2"></script>
+  <script src="js/combat-rolls.js?v=1"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>
