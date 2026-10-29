@@ -99,6 +99,7 @@ test("herramientas de combate: ocho mejoras integradas", {
         } finally { rollDie = old; }
       });
       assert.deepEqual(effects, { fire: true, ice: true, poison: true, arrow: true });
+      await page.locator(".battle-healing-details summary").click();
       await page.locator("#bt-heal-amount").fill("3"); await page.locator("#bt-heal").click();
       assert.equal(await page.evaluate(() => combat.tactical.healed), 3);
       assert.equal(await page.locator(".board-fx.healing-fx").count(), 1);

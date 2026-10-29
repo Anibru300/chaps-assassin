@@ -2,7 +2,26 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
-## Última actualización: 2026-10-29 — v12: ocho mejoras tácticas
+## Última actualización: 2026-10-29 — v13: consola lateral y ayuda
+
+- Usuario pidió mapa izquierda, atacar/tirar derecha sin perder mapa y ayuda de
+  botones/reglas/recursos (propuesta general #6).
+- Nueva estructura `.battle-workspace`: mapa y consola lateral desde 900px;
+  paneles sticky con scroll independiente. Móvil: acciones fijas y tirada inferior
+  compacta, mapa adaptado a altura disponible. Inicio/retomar centra zona de combate.
+- Curación, Golpes Astutos, iniciativa y leyenda plegables. Tirada antes de opciones
+  secundarias. Ficha táctica abre al seleccionar combatiente.
+- Nuevo `js/combat-help.js`, CSS `css/combat-layout.css`: ayuda contextual, modal
+  accesible con recursos reales y enlaces oficiales. Abrir ayuda pausa enemigos;
+  cerrar recupera estado anterior sin consumir acciones/PG/movimiento.
+- Ruta elegida queda fijada al tocar/clicar: hover posterior no cambia destino
+  mientras usuario llega a botón Confirmar movimiento (regresión detectada por test).
+- Caché `chaps-v13-combat-console-help`; motor v11, combat-tools v2, ayuda/layout v1.
+- Prueba `tests/combat-layout.test.js`: cinco pantallas, mapa/tirada juntos, página
+  no se desplaza al atacar en escritorio, móvil sin solapamiento, ayuda sin gasto.
+- Ver bitácora para pruebas finales y commit/despliegue.
+
+### Registro anterior — v12 (histórico)
 
 - Usuario pidió implementar ocho mejoras: rutas, alcance, ficha ampliada, efectos,
   turnos pausables, escenarios, guardar/retomar combate y resumen táctico.

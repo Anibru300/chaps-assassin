@@ -1866,6 +1866,7 @@ function renderCombat() {
   renderBoard();
   renderCombatLog();
   if (!combat.quiet) window.CHAPS_BATTLE?.render();
+  if (!combat.quiet) window.CHAPS_COMBAT_HELP?.render();
 }
 
 /* ---------- Panel de ataque ---------- */
@@ -1965,6 +1966,7 @@ function openAttackPanel(extra) {
       if (checked.length > maxCunningStrikes(state.level) || cost > sneakDiceCount(state.level)) cb.checked = false;
     });
   });
+  window.CHAPS_COMBAT_HELP?.attackOpened();
 }
 
 function confirmAttack() {

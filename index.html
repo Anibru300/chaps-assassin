@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/v4.css?v=18">
   <link rel="stylesheet" href="css/features.css?v=2">
   <link rel="stylesheet" href="css/combat-visuals.css?v=2">
+  <link rel="stylesheet" href="css/combat-layout.css?v=1">
 </head>
 <body>
   <!-- Puerta de acceso -->
@@ -603,7 +604,7 @@
 
       <!-- Preparación -->
       <div class="card" id="battle-tools">
-        <h2>Escenarios y combate guardado</h2>
+        <div class="combat-head"><h2>Escenarios y combate guardado</h2><button class="btn btn-small" type="button" data-combat-help>Ayuda de combate</button></div>
         <div class="grid grid-2">
           <label class="field"><span>Escenario</span><select id="bt-scenario"><option value="ambush">Emboscada entre ruinas</option><option value="escape">Escapar por puerta este</option><option value="protect">Proteger explorador · 5 rondas</option><option value="survive">Resistir · 5 rondas</option></select></label>
           <div class="rest-row"><button class="btn" id="bt-prepare" type="button">Preparar escenario</button><button class="btn" id="bt-free" type="button">Combate libre</button></div>
@@ -723,12 +724,12 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="battle-turn-card">
           <div class="combat-head">
             <h2 id="c-round">RONDA 1</h2>
             <span id="c-banner" class="combat-banner"></span>
           </div>
-          <div id="c-order" class="init-order-vertical"></div>
+          <details class="battle-order-details"><summary>Orden de iniciativa</summary><div id="c-order" class="init-order-vertical"></div></details>
           <div class="rest-row battle-playback">
             <label>Velocidad enemiga <select id="bt-speed"><option value="1800">Lenta</option><option value="900" selected>Normal</option><option value="200">Rápida</option></select></label>
             <button class="btn" id="bt-pause" type="button" aria-pressed="false">Pausar enemigos</button><button class="btn" id="bt-step" type="button">Avanzar un turno enemigo</button>
@@ -737,7 +738,8 @@
         </div>
 
         <!-- Tablero -->
-        <div class="card">
+        <div class="battle-workspace" id="battle-workspace">
+        <div class="card battle-map" id="battle-map">
           <div class="combat-head">
             <h2 data-i18n="ctBoard">Campo de batalla</h2>
             <button class="btn btn-small" id="c-board-zoom" type="button" aria-pressed="false">Ampliar tablero</button>
@@ -746,14 +748,18 @@
           <div class="battlefield-viewport" id="c-board-viewport"><div id="c-board" class="board"></div></div>
           <div class="rest-row"><label>Alcance de <select id="bt-weapon" aria-label="Arma para mostrar alcance"></select></label><label><input type="checkbox" id="bt-ranges" checked> Mostrar alcance y línea de visión</label></div>
           <p class="hint" id="bt-route" role="status">Mover → elige destino → confirma recorrido.</p><button class="btn btn-crimson" id="bt-confirm-move" type="button" disabled>Confirmar movimiento</button>
+          <details class="battle-map-guide"><summary>Leyenda y uso del mapa</summary>
           <div class="battlefield-legend"><span>◉ Aro: vida restante</span><span>✦ Condición activa</span><span>× Fuera de combate</span><span>Pulsa ficha enemiga para elegir objetivo</span></div>
           <div class="battlefield-legend"><span>Azul: alcance normal</span><span>Ámbar: largo alcance</span><span>Rayado: visión bloqueada</span><span>Ruta dorada: recorrido elegido</span></div>
           <p class="hint" data-i18n="ctBoardHint"></p>
-          <details id="bt-inspector" open><summary>Ficha táctica de combatiente</summary><div id="bt-inspector-body" aria-live="polite">Toca ficha de personaje o enemigo.</div></details>
+          </details>
+          <details id="bt-inspector"><summary>Ficha táctica de combatiente</summary><div id="bt-inspector-body" aria-live="polite">Toca ficha de personaje o enemigo.</div></details>
         </div>
 
-        <div class="card">
-          <h2>CHAPS</h2>
+        <aside class="battle-console" id="battle-console" aria-label="Acciones y tirada de ataque">
+        <div class="card" id="battle-player-card">
+          <div class="combat-head"><h2 id="battle-hero-title">Personaje</h2><button class="btn btn-small" type="button" data-combat-help>¿Cómo jugar?</button></div>
+          <p class="battle-console-status" id="battle-console-status" role="status"></p>
           <div class="grid grid-4">
             <div class="field"><span data-i18n="hpCurrent">Vida</span> <strong id="c-php"></strong></div>
             <div class="field"><span data-i18n="ac">CA</span> <strong id="c-pac"></strong></div>
@@ -761,7 +767,6 @@
           <div id="c-pips" class="turn-pips"></div>
           <div id="c-pconds"></div>
           <div id="c-suggestions" class="combat-suggestions"></div>
-          <div class="rest-row"><label>Curación externa <input id="bt-heal-amount" type="number" min="1" max="999" value="1" aria-label="PG de curación recibida"></label><button class="btn" id="bt-heal" type="button">Registrar curación recibida</button></div><p class="hint">Registra curación recibida de aliado u objeto; no asigna consumo de recursos automáticamente.</p>
           <div class="combat-actions">
             <button class="ca-btn btn-crimson" id="c-btn-attack" title="Atacar"><span>⚔</span><b>Atacar</b></button>
             <button class="ca-btn" id="c-btn-extra" title="Ataque extra con arma ligera"><span>🗡</span><b>Extra</b></button>
@@ -771,26 +776,30 @@
             <button class="ca-btn" id="c-btn-disengage" title="Retirarse"><span>🏃</span><b>Retirar</b></button>
             <button class="ca-btn" id="c-btn-end" title="Finalizar turno"><span>⏭</span><b>Fin turno</b></button>
           </div>
+          <p class="battle-context-help" id="battle-context-help" role="status">Toca enemigo en mapa y pulsa Atacar. Elige arma y confirma tirada.</p>
+          <details class="battle-healing-details"><summary>Registrar curación externa</summary><div class="rest-row"><label>PG recibidos <input id="bt-heal-amount" type="number" min="1" max="999" value="1" aria-label="PG de curación recibida"></label><button class="btn" id="bt-heal" type="button">Registrar curación recibida</button></div><p class="hint">Registra curación recibida de aliado u objeto; no asigna consumo de recursos automáticamente.</p></details>
           <button class="btn btn-small" id="c-apply-hp" data-i18n="ctApplyHp" hidden>Guardar PG en la ficha</button>
         </div>
 
         <!-- Panel de ataque -->
         <div class="card attack-panel" id="c-attack-panel" hidden>
-          <h2 data-i18n="ctAttackTitle">Tirada de ataque</h2>
+          <h2 id="c-atk-title" data-i18n="ctAttackTitle">Tirada de ataque</h2>
           <div class="grid grid-3 atk-grid">
             <label class="field"><span data-i18n="weapon">Arma</span> <select id="c-atk-weapon"></select></label>
             <label class="field"><span data-i18n="ctTarget">Objetivo</span> <select id="c-atk-target"></select></label>
             <label class="field checkbox-field"><input type="checkbox" id="c-atk-ally"><span data-i18n="ctAlly">Aliado cerca</span></label>
           </div>
           <div id="c-atk-preview" class="attack-preview"></div>
-          <fieldset class="cs-fieldset">
-            <legend data-i18n="ctStrikes">Golpes Astutos</legend>
-            <div id="c-atk-strikes"></div>
-          </fieldset>
-          <div class="rest-row">
+          <div class="rest-row battle-roll-actions">
             <button class="btn btn-crimson" id="c-atk-roll" data-i18n="ctRoll">¡Tirar!</button>
             <button class="btn" id="c-atk-cancel" data-i18n="pcgenCancel">Cancelar</button>
           </div>
+          <details class="battle-strikes-details"><summary>Golpes Astutos · cambiar daño por efectos</summary><fieldset class="cs-fieldset">
+            <legend data-i18n="ctStrikes">Golpes Astutos</legend>
+            <div id="c-atk-strikes"></div>
+          </fieldset></details>
+        </div>
+        </aside>
         </div>
 
         <div class="card">
@@ -807,6 +816,16 @@
           <ul id="c-log" class="combat-log"></ul>
         </div>
       </div>
+
+      <dialog id="combat-help-dialog" aria-labelledby="combat-help-title">
+        <div class="combat-help-heading"><h2 id="combat-help-title">Guía de combate</h2><button class="btn btn-small" type="button" id="combat-help-close" autofocus>Cerrar ayuda</button></div>
+        <p>Mapa: elige enemigo o destino. Consola: prepara acción y confirma tirada.</p>
+        <h3>Recursos ahora</h3><dl id="combat-help-resources" class="combat-help-resources"></dl>
+        <h3>Botones y costes</h3><dl id="combat-help-buttons"></dl>
+        <h3>Reglas durante partida</h3><div id="combat-help-rules"></div>
+        <p class="hint">Ayuda adaptada al motor de Pícaro Asesino de esta app. Consulta regla completa con tu DM.</p>
+        <p><a href="https://www.dndbeyond.com/sources/dnd/br-2024/rules-glossary" target="_blank" rel="noopener noreferrer">Glosario oficial 2024</a> · <a href="https://www.dndbeyond.com/sources/dnd/br-2024/character-classes" target="_blank" rel="noopener noreferrer">Reglas oficiales de Pícaro</a></p>
+      </dialog>
 
       <!-- Dados rápidos -->
       <div class="card" id="dice-card">
@@ -936,8 +955,9 @@
   <script src="js/data.js?v=5"></script>
   <script src="js/app.js?v=9"></script>
   <script src="js/combat-data.js?v=4"></script>
-  <script src="js/combat.js?v=10"></script>
-  <script src="js/combat-tools.js?v=1"></script>
+  <script src="js/combat.js?v=11"></script>
+  <script src="js/combat-tools.js?v=2"></script>
+  <script src="js/combat-help.js?v=1"></script>
   <script src="js/simulador.js?v=4"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>

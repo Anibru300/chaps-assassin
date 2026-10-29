@@ -1,0 +1,74 @@
+/* Mapa y consola comparten pantalla; móvil mantiene acciones al alcance. */
+.battle-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.battle-workspace > *, .battle-console > * { min-width: 0; }
+.battle-console { display: flex; flex-direction: column; gap: 12px; }
+.battle-console .card { margin-bottom: 0; padding: 12px; }
+.battle-console .combat-head { gap: 8px; }
+.battle-console h2 { margin-bottom: 6px; font-size: .86rem; }
+.battle-console .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.battle-console .grid .field { flex-direction: row; align-items: center; gap: 8px; }
+.battle-console .atk-grid { grid-template-columns: minmax(0, 1fr); }
+.battle-console .atk-grid .field { flex-direction: column; align-items: stretch; gap: 3px; }
+.battle-console .atk-grid .checkbox-field { flex-direction: row; align-items: center; }
+.battle-console .field select { min-width: 0; width: 100%; padding: 7px 8px; }
+.battle-console .turn-pips { gap: 4px; margin: 6px 0; }
+.battle-console .turn-pip { font-size: .68rem; padding: 3px 5px; }
+.battle-console .combat-actions { gap: 6px; margin-top: 8px; }
+.battle-console .ca-btn { min-height: 46px; padding: 4px; gap: 2px; flex-direction: row; font-size: .78rem; }
+.battle-console .ca-btn span { font-size: 1.05rem; }
+.battle-console [hidden] { display: none !important; }
+.battle-console #c-suggestions { display: none; }
+.battle-console-status { color: var(--gold); font-size: .8rem; margin: 4px 0 8px; }
+.battle-context-help { color: var(--text-dim); font-size: .78rem; line-height: 1.4; margin: 8px 0; }
+.battle-healing-details, .battle-strikes-details, .battle-map-guide, .battle-order-details { margin-top: 8px; font-size: .8rem; }
+.battle-healing-details summary, .battle-strikes-details summary, .battle-map-guide summary, .battle-order-details summary { cursor: pointer; padding: 5px 0; }
+.battle-console .attack-preview { font-size: .78rem; line-height: 1.3; padding: 6px; }
+.battle-roll-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 8px 0; }
+.battle-roll-actions .btn { min-height: 44px; }
+.battle-console .cs-fieldset { margin: 8px 0 0; padding: 8px; }
+.battle-console .cs-option { font-size: .8rem; }
+.combat-aiming .battle-context-help, .combat-aiming .battle-healing-details { display: none; }
+.battle-map .combat-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; }
+.battle-map .combat-head h2 { margin-bottom: 0; font-size: 1rem; }
+.battle-map #c-board { aspect-ratio: 3 / 2; grid-template-rows: repeat(8, minmax(0, 1fr)); }
+.battle-map #bt-route { margin: 6px 0; font-size: .78rem; }
+.battle-map #bt-inspector { margin-top: 8px; padding: 8px 10px; }
+.battle-map #bt-inspector summary { min-height: 28px; }
+.battle-map .rest-row { gap: 8px; font-size: .78rem; }
+.battle-map #bt-weapon { min-height: 36px; max-width: 230px; }
+.battle-map select, .battle-healing-details input { color: var(--text); background: var(--bg-card-alt); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+.battle-healing-details input { width: 5em; font-size: 16px; }
+.battle-map #bt-confirm-move { min-height: 38px; }
+.battle-workspace { scroll-margin-top: calc(var(--app-header-height, 110px) + 8px); }
+#combat-help-dialog { color: var(--text); background: var(--bg-card); border: 1px solid var(--gold); border-radius: 14px; width: min(740px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 20px; box-sizing: border-box; overflow-y: auto; }
+#combat-help-dialog::backdrop { background: #03050cbd; }
+.combat-help-heading { position: sticky; top: -20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-card); padding: 12px 0; z-index: 1; }
+.combat-help-heading h2 { margin: 0; font-size: 1.1rem; color: var(--gold); }
+#combat-help-dialog h3 { color: var(--gold); font-size: .95rem; margin-top: 22px; }
+#combat-help-dialog dt { font-weight: 700; margin-top: 12px; }
+#combat-help-dialog dd { margin: 4px 0 0; color: var(--text-dim); line-height: 1.5; }
+.combat-help-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
+.combat-help-resources div { padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
+.combat-help-resources dt { margin-top: 0 !important; }
+@media (min-width: 900px) {
+  .battle-workspace { grid-template-columns: minmax(0, 1fr) minmax(330px, 390px); }
+  .battle-map, .battle-console { position: sticky; top: calc(var(--app-header-height, 110px) + 8px); max-height: calc(100dvh - var(--app-header-height, 110px) - 20px); overflow: auto; scrollbar-width: thin; }
+  .battle-map { margin-bottom: 0; padding: 12px; }
+  .battle-map #c-board { max-width: min(960px, calc((100dvh - var(--app-header-height, 110px) - 245px) * 1.5)); }
+  .battle-map .board-zoomed #c-board { max-width: none; }
+  .battle-console { padding: 0 3px 3px 0; }
+}
+@media (max-width: 899px) {
+  #tab-combat { padding-bottom: calc(var(--combat-dock-height, 130px) + 24px); }
+  .battle-console .combat-actions { position: fixed; bottom: 0; left: 0; right: 0; z-index: 65; margin: 0; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: #11131bf5; border-top: 1px solid var(--gold); box-shadow: 0 -4px 16px #0008; }
+  .battle-console .ca-btn { min-height: 44px; }
+  .battle-console #c-attack-panel { position: fixed; bottom: calc(var(--combat-dock-height, 130px) + 6px); left: 8px; right: 8px; z-index: 66; max-height: min(40dvh, 380px); overflow-y: auto; box-sizing: border-box; box-shadow: 0 -4px 24px #000a; background: #171b25; }
+  .battle-console .atk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .battle-console .atk-grid .checkbox-field { grid-column: 1 / -1; }
+  .battle-console #c-atk-title { margin-bottom: 6px; }
+  .battle-map { padding: 10px; }
+  .battle-map .combat-head h2 { font-size: .85rem; line-height: 1.2; }
+  .combat-aiming .battle-map #c-board { max-width: min(100%, max(180px, calc((100dvh - var(--app-header-height, 110px) - var(--combat-dock-height, 130px) - min(40dvh, 380px) - 105px) * 1.5))); }
+  .combat-aiming .battle-map .board-zoomed #c-board { max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) { .battle-console, #combat-help-dialog { scroll-behavior: auto; } }

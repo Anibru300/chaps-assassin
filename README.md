@@ -72,6 +72,13 @@ Si usas **PCGen 6.09.08** (instalado en `C:\Users\Carlos\Desktop\D&D\PCGen\PcGen
 
 ## Combate táctico
 
+Escritorio: mapa a izquierda y consola de acciones/tirada a derecha, con
+desplazamiento independiente. Celular: acciones fijas y tirada inferior compacta;
+mapa se ajusta para permanecer visible. Golpes Astutos, curación y leyenda se
+despliegan cuando hacen falta. Botón **¿Cómo jugar?** abre ayuda de botones,
+reglas y recursos actuales; pausa enemigos mientras lees y restaura pausa anterior.
+Foco/ratón sobre controles muestra explicación breve de coste y efecto.
+
 1. **Ruta**: pulsa Mover, toca destino y confirma. Recorrido usa coste mínimo,
    rodea obstáculos y avisa oportunidades/peligros. Terreno se aplica por casilla.
 2. **Alcance**: selector de arma y casillas normales/largas; rayado indica visión
