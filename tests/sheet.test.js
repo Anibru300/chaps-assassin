@@ -24,6 +24,7 @@ test('ficha: descansos 2024, cálculos actualizados y atributos válidos', {
       const page = await context.newPage(), errors = [];
       page.on('pageerror', error => errors.push(error.message));
       await context.addInitScript(() => sessionStorage.setItem('chaps-auth-v1', '1'));
+      await require("./legacy-fixture").seed(context);
       await page.route('https://www.gstatic.com/firebasejs/**', route => route.abort());
       await page.goto(`http://127.0.0.1:${server.address().port}`);
       await page.evaluate(() => {
@@ -79,7 +80,7 @@ test('ficha: descansos 2024, cálculos actualizados y atributos válidos', {
       await page.evaluate(() => window.auditReset());
       const dex = page.locator('#ability-grid input[data-ab="dex"]');
       await dex.fill('18'); await dex.dispatchEvent('change');
-      assert.equal(await page.locator('#weapons-body tr').first().locator('td').nth(2).textContent(), '+8');
+      assert.equal(await page.locator('#weapons-body tr').first().locator('.weapon-attack-value').textContent(), '+8');
       assert.equal(await page.evaluate(() => state.weapons[0].bonus), 5, 'conserva daño manual');
       for (const invalid of ['99', '0', '18.5', '']) {
         await dex.fill(invalid); await dex.dispatchEvent('change');
@@ -99,7 +100,7 @@ test('ficha: descansos 2024, cálculos actualizados y atributos válidos', {
       assert.equal(await page.locator('#f-level').inputValue(), '13');
       assert.equal(await page.locator('#f-prof').inputValue(), '+5');
       assert.equal(await page.locator('#f-passive').inputValue(), '17');
-      assert.equal(await page.locator('#weapons-body tr').first().locator('td').nth(2).textContent(), '+10');
+      assert.equal(await page.locator('#weapons-body tr').first().locator('.weapon-attack-value').textContent(), '+10');
       await page.reload();
       assert.equal(await page.locator('#f-level').inputValue(), '13');
       assert.equal(await page.locator('#f-passive').inputValue(), '17');

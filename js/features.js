@@ -17,11 +17,12 @@
     const current = profiles.current;
     const entries = profiles.catalog(current.uid);
     const active = { id: current.id, name: state.name, level: state.level };
-    const list = [active, ...entries.filter((entry) => entry.id !== current.id)];
+    const list = [...(state.identity?.charClass ? [active] : []), ...entries.filter((entry) => entry.id !== current.id || !state.identity?.charClass)];
     document.querySelectorAll("[data-character-picker]").forEach((select) => {
       const signature = JSON.stringify(list);
       if (select.dataset.options !== signature) {
         select.replaceChildren();
+        if (!list.length) { const option = document.createElement('option'); option.value = ''; option.textContent = 'Crea tu primer personaje'; select.appendChild(option); }
         for (const entry of list) {
           const option = document.createElement("option");
           option.value = entry.id; option.textContent = `${entry.name || "Sin nombre"} · N${entry.level}`;
@@ -48,7 +49,7 @@
   function renderMesa() {
     if (!el("table-name")) return;
     message("table-name", state.name);
-    const stats = [["CA", state.ac], ["PG máximos", state.hpMax], ["Iniciativa", fmtMod(state.initiative)], ["Dados de golpe", `${Math.max(0, state.level - state.hitDiceSpent)}/${state.level}d8`]];
+    const stats = [["CA", state.ac], ["PG máximos", state.hpMax], ["Iniciativa", fmtMod(state.initiative)], ["Dados de golpe", `${Math.max(0, state.level - state.hitDiceSpent)}/${state.level}d${characterHitDie()}`]];
     el("table-stats").replaceChildren();
     for (const [label, value] of stats) {
       const box = document.createElement("div");
@@ -69,6 +70,7 @@
   }
   async function createCharacter(copy) {
     try {
+      if (!copy && window.CHARACTER_UI) { window.CHARACTER_UI.open(); return; }
       const name = el("character-name").value.trim();
       if (!name) throw new Error("Escribe nombre de personaje.");
       await window.CHAPS_CLOUD.createCharacter(name, copy);

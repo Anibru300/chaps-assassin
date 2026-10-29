@@ -63,7 +63,7 @@ const STRIKES = [
 function newCombatPlayer() {
   return {
     hp: state.hpCurrent, move: state.speed,
-    action: true, ba: true, react: true, lastBonus: null,
+    action: true, ba: true, react: true, lastBonus: null, attacksUsed: 0,
     sneak: false, hidden: false, diseng: false, steady: false, withdraw: 0,
     conds: [],        // [{id, save, dc}] condiciones del jugador (Fase 3)
     vexTarget: null,  // Vex: próximo ataque contra este enemigo con ventaja (Fase 5)
@@ -122,8 +122,8 @@ function targetSave(tc, ability, dc) {
 
 /** Salvación del jugador (competencia en DES/INT; SAB/CAR desde N15). */
 function playerSave(ability, dc) {
-  const prof = ability === "dex" || ability === "int" ||
-    (state.level >= 15 && (ability === "wis" || ability === "cha"));
+  const prof = !!state.saveProfs[ability] ||
+    (isRogueCharacter() && state.level >= 15 && (ability === "wis" || ability === "cha"));
   const mod = abilityMod(state.abilities[ability]) + (prof ? profBonus(state.level) : 0);
   const r = rollDie(20);
   const ok = r + mod >= dc;
@@ -495,7 +495,7 @@ function eName(e) { return LANG === "es" ? e.es : e.en; }
 /** Imagen/emoji visual para un enemigo según categoría. */
 function enemyToken(e) {
   const file = TOKEN_MAP[e.key];
-  if (file) return `<img src="assets/tokens/${file}" alt="${eName(e)}" loading="lazy">`;
+  if (file) return `<img src="assets/tokens/${file}" alt="${escapeHtml(eName(e))}" loading="lazy">`;
   if (e.cat === "dragon") return "🐉";
   if (e.cat === "creature") return e.key.includes("wolf") ? "🐺" : (e.key.includes("bear") ? "🐻" : "🦂");
   if (e.role === "caster") return e.cat === "paladin" ? "🛡" : "🧙";
@@ -504,12 +504,16 @@ function enemyToken(e) {
 }
 
 /** Emoji/SVG visual para el jugador. */
-function playerToken() { return '<img src="assets/chaps-portrait.jpg" alt="" loading="lazy">'; }
+function playerToken() { return `<img src="${state.creation || !state.identity.charClass ? 'assets/adventurer.svg' : 'assets/chaps-portrait.jpg'}" alt="" loading="lazy">`; }
 
 function cLog(html, cls) {
   if (combat.quiet) return; // simulación masiva: sin registro (Fase 6)
-  combat.log.unshift({ cls: cls || "log-info", html });
+  combat.log.unshift({ cls: cls || "log-info", html: safeCombatMarkup(html) });
   if (typeof renderCombatLog === "function") renderCombatLog();
+}
+
+function safeCombatMarkup(value) {
+  return String(value).replace(/<[^>]*>/g,tag=>/^(<\/?(?:strong|em|b|i)>|<br\s*\/?>|<\/span>|<span class="[a-z0-9_ -]*">)$/i.test(tag)?tag:escapeHtml(tag));
 }
 
 function hasCond(e, id) { return e.conds.some((c) => c.id === id); }
@@ -550,6 +554,7 @@ function enemySave(e, ability, dc) {
 
 /* ================= INICIO / INICIATIVA ================= */
 function startCombat() {
+  if (typeof CHARACTER_RULES !== "undefined" && !CHARACTER_RULES.classFor(state)) { if(!combat.quiet) window.alert('Crea personaje y elige clase antes de iniciar combate.'); return; }
   if (!combat.enemies.length) return;
   if (!combat.quiet && window.CHAPS_BATTLE?.canStart() === false) return;
   combat.on = true;
@@ -566,9 +571,9 @@ function startCombat() {
   placeCombatants();
   if (!combat.quiet) window.CHAPS_BATTLE?.started();
 
-  const r1 = rollDie(20), r2 = rollDie(20);
-  const pInit = Math.max(r1, r2) + state.initiative; // Asesinar: ventaja
-  cLog(`🎯 ${ct("initLog")} ${state.name}: d20(${r1}, ${r2}) ${fmtMod(state.initiative)} = <strong>${pInit}</strong>`, "log-info");
+  const initDice=rollDice(isAssassinCharacter()?2:1,20);
+  const pInit = Math.max(...initDice) + state.initiative;
+  cLog(`🎯 ${ct("initLog")} ${escapeHtml(state.name)}: d20(${initDice.join(', ')}) ${fmtMod(state.initiative)} = <strong>${pInit}</strong>`, "log-info");
   combat.enemies.forEach((e) => {
     e.initRoll = rollDie(20) + e.init;
     cLog(`🎯 ${ct("initLog")} ${eName(e)}: d20 ${fmtMod(e.init)} = <strong>${e.initRoll}</strong>`, "log-info");
@@ -589,7 +594,7 @@ function beginTurn() {
     const p = combat.p;
     p.action = true; p.ba = true; p.react = true;
     p.lastBonus = null;
-    p.move = state.speed; p.sneak = false; p.diseng = false; p.steady = false; p.withdraw = 0;
+    p.move = state.speed; p.sneak = false; p.diseng = false; p.steady = false; p.withdraw = 0; p.attacksUsed = 0; p.slotSpellCast = false;
     p.vexTarget = null; p.nickReady = false; p.nickFree = false; p.lightMainIdx = -1;
     combat.enemies.forEach((x) => { x.slow = false; }); // Slow dura hasta el inicio de tu próximo turno
     cLog(`— ${ct("round")} ${combat.round} · ${ct("turnStart")} <strong>${state.name}</strong> —`, "log-info");
@@ -661,7 +666,8 @@ function simulateOne() {
       const target = combat.enemies.filter((e) => e.hp > 0).sort((a, b) => distOf(a) - distOf(b))[0];
       if (target) {
         const w = state.weapons[0];
-        playerAttack(w, target, { ally: false, strikes: [] });
+        const attacks=typeof CHARACTER_RULES === 'undefined'?1:CHARACTER_RULES.attacks(state);
+        for(let i=0;i<attacks&&combat.p.action&&target.hp>0;i++)if(!playerAttack(w,target,{ally:false,strikes:[]}))break;
         // Ataque extra con otra arma ligera (Two-Weapon Fighting)
         if (combat.p.nickReady && combat.p.hp > 0 && target.hp > 0) {
           const extraW = state.weapons.find((wp, i) => i !== combat.p.lightMainIdx && isLightWeapon(wp));
@@ -772,14 +778,14 @@ function playerAttack(w, e, opts) {
   // --- Ventaja / desventaja ---
   const reasons = [];
   let adv = false, dis = false;
-  const mastActive = cat && state.masteryChoices.includes(cat.id) ? cat.mastery : null;
+  const mastActive = cat && state.masteryChoices.slice(0,typeof CHARACTER_RULES === "undefined" ? 2 : CHARACTER_RULES.masteryCount(state)).includes(cat.id) ? cat.mastery : null;
   const cm = condModsVs(e, dist);
   if (cm.adv) { adv = true; if (hasCond(e, "prone")) reasons.push(ct("proneAdv")); else if (hasCond(e, "blinded")) reasons.push(ct("blindAdv")); }
   if (cm.dis) { dis = true; }
   if (p.steady) { adv = true; reasons.push(ct("steadyOn")); }
   if (p.hidden) { adv = true; reasons.push("🫥 " + ct("hiddenNow")); }
   if (p.vexTarget === e) { adv = true; reasons.push("Vex"); p.vexTarget = null; } // Vex: se consume
-  if (combat.round === 1 && !e.acted) { adv = true; reasons.push("🗡 " + ct("firstRound")); }
+  if (isAssassinCharacter() && combat.round === 1 && !e.acted) { adv = true; reasons.push("🗡 " + ct("firstRound")); }
   if (mode === "ranged") {
     const [rn] = range.split("/").map(Number);
     if (dist > rn) { dis = true; reasons.push(ct("longRangeDis")); }
@@ -792,7 +798,8 @@ function playerAttack(w, e, opts) {
   let rolls, chosen;
   if (flat || (!adv && !dis)) { rolls = [rollDie(20)]; chosen = rolls[0]; }
   else { rolls = [rollDie(20), rollDie(20)]; chosen = adv ? Math.max(...rolls) : Math.min(...rolls); }
-  const atkBonus = profBonus(state.level) + dexMod();
+  const ws = weaponStats(w);
+  const atkBonus = ws.attack;
   const total = chosen + atkBonus;
   const natCrit = chosen === 20, natMiss = chosen === 1;
   const cover = hasCover(e, combat.p) && !adv;
@@ -806,10 +813,10 @@ function playerAttack(w, e, opts) {
 
   const hpBefore = e.hp;
   const showRoll = (damage, damageParts) => {
-    if (!combat.quiet) window.CHAPS_ROLLS?.result({ weapon: w.name, target: eName(e), rolls: [...rolls], chosen, dex: dexMod(), proficiency: profBonus(state.level), bonus: atkBonus, total, armor: effAc, cover: cover ? 2 : 0, mode: flat ? "Ventaja y desventaja se cancelan" : adv ? "Ventaja" : dis ? "Desventaja" : "Tirada normal", reasons: [...reasons], hit: isHit, crit, damage, damageParts: [...damageParts], effectiveDamage: hpBefore - e.hp, hpBefore, hpAfter: e.hp, maxHp: e.maxHp });
+    if (!combat.quiet) window.CHAPS_ROLLS?.result({ weapon: w.name, target: eName(e), rolls: [...rolls], chosen, ability: ws.ability, dex: ws.abilityMod, proficiency: ws.proficient ? profBonus(state.level) : 0, adjustment: Number(w.attackBonus)||0, bonus: atkBonus, total, armor: effAc, cover: cover ? 2 : 0, mode: flat ? "Ventaja y desventaja se cancelan" : adv ? "Ventaja" : dis ? "Desventaja" : "Tirada normal", reasons: [...reasons], hit: isHit, crit, damage, damageParts: [...damageParts], effectiveDamage: hpBefore - e.hp, hpBefore, hpAfter: e.hp, maxHp: e.maxHp });
   };
   if (opts.extra) { if (!p.nickFree) { p.ba = false; p.lastBonus = "extra"; } p.nickReady = false; }
-  else p.action = false;
+  else { p.attacksUsed = (p.attacksUsed || 0) + 1; p.action = p.attacksUsed < (typeof CHARACTER_RULES === "undefined" ? 1 : CHARACTER_RULES.attacks(state)); }
   p.steady = false;
   p.hidden = false; // atacar revela tu posición
 
@@ -820,7 +827,7 @@ function playerAttack(w, e, opts) {
     flashCell(e.pos.x, e.pos.y, "flash-miss");
     // Graze: al FALLAR, daño = modificador de la característica
     if (mastActive === "graze") {
-      const g = Math.max(0, dexMod());
+      const g = Math.max(0, ws.abilityMod);
       if (g > 0) {
         grazeDamage = g;
         e.hp = Math.max(0, e.hp - g);
@@ -838,14 +845,14 @@ function playerAttack(w, e, opts) {
   const parts = [];
   let dmg = 0, extraDamage = 0;
   // Ataque extra de arma ligera: no añade modificador de habilidad al daño
-  const wBonus = opts.extra ? 0 : w.bonus;
-  const wExpr = `${w.dice}d${w.sides}${wBonus ? "+" + wBonus : ""}`;
+  const wBonus = opts.extra ? Math.min(0,ws.damage) : ws.damage;
+  const wExpr = `${w.dice}d${w.sides}${fmtMod(wBonus)}`;
   const wRes = rollDiceExpr(wExpr, crit);
   parts.push(`${wRes.dice}d${wRes.sides}(${wRes.rolls.join(",")})${fmtMod(wRes.bonus)}`);
   dmg += wRes.total;
 
   // Furtivo
-  const canSneak = fin && !p.sneak && (adv || (opts.ally && !dis)) && !flat;
+  const canSneak = isRogueCharacter() && fin && !p.sneak && (adv || (opts.ally && !dis)) && !flat;
   let strikeIds = [];
   if (!fin) reasons.push(ct("sneakNoFinesse"));
   if (canSneak) {
@@ -861,7 +868,7 @@ function playerAttack(w, e, opts) {
     }
     p.sneak = true;
     // Asesinar: 1ª ronda y no ha actuado
-    if (combat.round === 1 && !e.acted) {
+    if (isAssassinCharacter() && combat.round === 1 && !e.acted) {
       parts.push(`${t("lAssassinate")} +${state.level}`);
       dmg += state.level;
       reasons.push(ct("assasNote").replace("{lv}", state.level));
@@ -890,7 +897,7 @@ function playerAttack(w, e, opts) {
     if (!ok) {
       if (id === "poison") {
         addCond(e, "poisoned");
-        if (state.level >= 13) { // Armas Envenenadas
+        if (isAssassinCharacter() && state.level >= 13) { // Armas Envenenadas
           const eRolls = rollDice(2, 6);
           const en = sum(eRolls);
           extraDamage += en;
@@ -912,7 +919,7 @@ function playerAttack(w, e, opts) {
   if (mastActive === "sap") { e.sap = true; cLog(`🥊 Sap: ${eName(e)} ${ct("mSap")}`, "log-info"); }
   if (mastActive === "push") pushEnemy(e, 10);
   if (mastActive === "topple") {
-    const dcT = 8 + dexMod() + profBonus(state.level);
+    const dcT = 8 + ws.abilityMod + profBonus(state.level);
     if (!enemySave(e, "con", dcT)) addCond(e, "prone");
   }
   if (mastActive === "cleave" && mode === "melee") {
@@ -970,7 +977,7 @@ function playerAttackObstacle(w, obs) {
   const adv = p.steady || p.hidden;
   let rolls = adv ? [rollDie(20), rollDie(20)] : [rollDie(20)];
   const chosen = adv ? Math.max(...rolls) : rolls[0];
-  const atkBonus = profBonus(state.level) + dexMod();
+  const atkBonus = weaponStats(w).attack;
   const total = chosen + atkBonus;
   const crit = chosen === 20;
   p.action = false; p.steady = false; p.hidden = false;
@@ -981,7 +988,7 @@ function playerAttackObstacle(w, obs) {
     if (typeof renderCombat === "function") renderCombat();
     return true;
   }
-  const expr = `${w.dice}d${w.sides}+${w.bonus}`;
+  const expr = `${w.dice}d${w.sides}${fmtMod(weaponStats(w).damage)}`;
   const dmg = rollDiceExpr(expr, crit).total;
   damageObstacle(obs, dmg);
   cLog(`💥 ${w.name} → obstáculo ${obs.type}: ${advIcon}${total} vs CA ${ac} → <strong>${dmg} ${ct("dmgWord")}</strong> (${obs.hp}/${obs.maxHp} PG)`, crit ? "log-crit" : "log-hit");
@@ -1058,10 +1065,12 @@ function playerMoveTo(x, y) {
 /** Acciones adicionales del jugador. */
 function playerBonus(kind) {
   const p = combat.p;
-  if (!p.ba) { cLog("⛔ " + ct("noBA"), "log-miss"); return; }
+  const bonus = kind === "steady" || isRogueCharacter() && state.level >= 2;
+  if (kind === "steady" && (!isRogueCharacter() || state.level < 3 || p.move < state.speed)) return false;
+  if (bonus ? !p.ba : !p.action) { cLog("⛔ " + ct(bonus ? "noBA" : "noAction"), "log-miss"); return false; }
   if (kind === "steady") {
     p.steady = true;
-    if (state.level < 9) p.move = 0; // Puntería Itinerante (N9) conserva el movimiento
+    if (!isAssassinCharacter() || state.level < 9) p.move = 0;
     cLog("🎯 " + ct(state.level >= 9 ? "steadyOn9" : "steadyOn"), "log-info");
   }
   if (kind === "hide") {
@@ -1077,7 +1086,7 @@ function playerBonus(kind) {
   }
   if (kind === "dash") { p.move += state.speed; cLog("💨 " + ct("dashOn"), "log-info"); }
   if (kind === "disengage") { p.diseng = true; cLog("🌀 " + ct("disengageOn"), "log-info"); }
-  p.ba = false; p.lastBonus = kind;
+  if (bonus) { p.ba = false; p.lastBonus = kind; } else p.action = false;
   if (typeof renderCombat === "function") renderCombat();
 }
 
@@ -1120,7 +1129,7 @@ function enemyAttackRoll(e, atk, isOA) {
     cLog(`✨ ${ct("smiteLog")}: ${e.smite}(${sm.rolls.join(",")})`, "log-miss");
   }
   // Esquiva Asombrosa (solo el jugador real, no proxies)
-  if (p.react && !isOA && !p.proxy) {
+  if (isRogueCharacter() && state.level >= 5 && p.react && !isOA && !p.proxy) {
     const ask = combat.confirm || ((q) => (typeof window !== "undefined" ? window.confirm(q) : false));
     if (ask(`${ct("uncannyQ")}\n${ct("dmgWord")}: ${dmg}`)) {
       dmg = Math.floor(dmg / 2);
@@ -1282,15 +1291,15 @@ function tryPlayerOA(e, wasClose) {
   const adv = p.hidden; // oculto → ventaja
   const rolls = adv ? [rollDie(20), rollDie(20)] : [rollDie(20)];
   const chosen = adv ? Math.max(...rolls) : rolls[0];
-  const atkBonus = profBonus(state.level) + dexMod();
+  const atkBonus = weaponStats(w).attack;
   const total = chosen + atkBonus;
   const rollStr = rolls.length > 1 ? `d20(${rolls.join(", ")})→${chosen}` : `d20(${chosen})`;
   fxLine(p.pos, e.pos);
   if (chosen !== 1 && (chosen === 20 || total >= e.ac)) {
     const crit = chosen === 20;
-    let dmg = rollDiceExpr(`${w.dice}d${w.sides}+${w.bonus}`, crit).total;
+    let dmg = rollDiceExpr(`${w.dice}d${w.sides}${fmtMod(weaponStats(w).damage)}`, crit).total;
     // furtivo en AdO: permitido si hay ventaja (reacción, 1/turno ya controlado por p.sneak)
-    if (fin && adv && !p.sneak) {
+    if (isRogueCharacter() && fin && adv && !p.sneak) {
       const sn = sneakDiceCount(state.level);
       dmg += sum(rollDice(crit ? sn * 2 : sn, 6));
       p.sneak = true;
@@ -1333,7 +1342,7 @@ function enemyCast(e, sp) {
     dmg = Math.floor(dmg / 2);
   }
   // Evasión (N7): salvaciones de DES de medio daño → éxito 0 / fallo mitad
-  if (sp.save === "dex" && sp.half && state.level >= 7) {
+  if (sp.save === "dex" && sp.half && state.level >= 7 && (isRogueCharacter() || /^(monje|monk)$/i.test(state.identity.charClass))) {
     if (ok) { cLog(`🌀 ${ct("evasionOk")}`, "log-hit"); dmg = 0; }
     else { cLog(`🌀 ${ct("evasionHalf")}`, "log-info"); dmg = Math.floor(res.total / 2); }
   }
@@ -1355,7 +1364,7 @@ function dragonBreath(e) {
   const ok = targetSave(combat.p, b.save, b.dc);
   let res = rollDiceExpr(b.dmg, false);
   let dmg = ok ? Math.floor(res.total / 2) : res.total;
-  if (b.save === "dex" && b.half && state.level >= 7) {
+  if (b.save === "dex" && b.half && state.level >= 7 && (isRogueCharacter() || /^(monje|monk)$/i.test(state.identity.charClass))) {
     if (ok) { cLog(`🌀 ${ct("evasionOk")}`, "log-hit"); dmg = 0; }
     else dmg = Math.floor(res.total / 2);
   }
@@ -1532,7 +1541,7 @@ function renderCombatLog() {
   combat.log.forEach((l) => {
     const li = document.createElement("li");
     li.className = l.cls;
-    li.innerHTML = l.html;
+    li.innerHTML = safeCombatMarkup(l.html);
     ul.appendChild(li);
   });
 }
@@ -1559,7 +1568,7 @@ function renderSetup() {
   combat.enemies.forEach((e, i) => {
     const div = document.createElement("div");
     div.className = "enemy-row";
-    div.innerHTML = `<span><strong>${eName(e)}</strong> — ${e.hp} PG · CA ${e.ac} · ${e.speed} ft</span>
+    div.innerHTML = `<span><strong>${escapeHtml(eName(e))}</strong> — ${e.hp} PG · CA ${e.ac} · ${e.speed} ft</span>
       <select class="enemy-strategy" data-sq="${i}" title="Estrategia de IA">
         <option value="closest" ${e.strategy === "closest" ? "selected" : ""}>Cercano</option>
         <option value="weakest" ${e.strategy === "weakest" ? "selected" : ""}>Más débil</option>
@@ -1786,7 +1795,7 @@ function renderSuggestions() {
   if (!combat.on || !isPlayerTurn() || !combat.p) return "";
   const p = combat.p;
   const tips = [];
-  if (combat.round === 1) tips.push("🗡 1ª ronda: <strong>Asesinar</strong> da ventaja y +" + state.level + " daño si el enemigo no ha actuado.");
+  if (isAssassinCharacter() && combat.round === 1) tips.push("🗡 1ª ronda: <strong>Asesinar</strong> da ventaja y +" + state.level + " daño si el enemigo no ha actuado.");
   const meleeFoes = combat.enemies.filter((e) => e.hp > 0 && distOf(e) <= 5);
   if (meleeFoes.length && !p.diseng && !p.withdraw) tips.push("⚠ Enemigo a 5 ft. <strong>Retirarse</strong> evita ataques de oportunidad.");
   if (!p.hidden && !p.steady && p.ba && meleeFoes.length === 0) tips.push("🌑 <strong>Esconderse</strong> → ataque con ventaja → Furtivo.");
@@ -1853,7 +1862,7 @@ function renderCombat() {
     const pct = Math.max(0, (e.hp / e.maxHp) * 100);
     div.innerHTML = `
       <span class="enemy-portrait" aria-hidden="true">${enemyToken(e)}</span><div class="enemy-info">
-        <strong>${eName(e)}</strong> ${condBadges(e)}
+        <strong>${escapeHtml(eName(e))}</strong> ${condBadges(e)}
         <div class="enemy-bar"><div class="enemy-bar-fill" style="width:${pct}%"></div></div>
         <span class="hint-inline">${e.hp}/${e.maxHp} PG · CA ${e.ac} · ${ct("distFt")}: ${distOf(e)} ft</span>
       </div>`;
@@ -1861,10 +1870,9 @@ function renderCombat() {
   });
 
   // Botones de acción
-  ctEl("c-btn-steady").disabled = !isPlayerTurn() || !p.ba;
-  ctEl("c-btn-hide").disabled = !isPlayerTurn() || !p.ba;
-  ctEl("c-btn-dash").disabled = !isPlayerTurn() || !p.ba;
-  ctEl("c-btn-disengage").disabled = !isPlayerTurn() || !p.ba;
+  ctEl("c-btn-steady").disabled = !isPlayerTurn() || !p.ba || !isRogueCharacter() || state.level < 3 || p.move < state.speed;
+  const cunning = isRogueCharacter() && state.level >= 2;
+  for (const id of ["c-btn-hide","c-btn-dash","c-btn-disengage"]) { ctEl(id).disabled = !isPlayerTurn() || (cunning ? !p.ba : !p.action); ctEl(id).title = cunning ? 'Acción adicional' : 'Acción'; }
   ctEl("c-btn-attack").disabled = !isPlayerTurn() || !p.action;
   const extra = ctEl("c-btn-extra");
   if (extra) {
@@ -1880,6 +1888,7 @@ function renderCombat() {
   if (!combat.quiet) window.CHAPS_BATTLE?.render();
   if (!combat.quiet) window.CHAPS_COMBAT_HELP?.render();
   if (!combat.quiet) window.CHAPS_ROLLS?.refresh();
+  if (!combat.quiet) window.CHARACTER_UI?.renderCombat();
 }
 
 /* ---------- Panel de ataque ---------- */
@@ -1910,7 +1919,7 @@ function updateAttackPreview() {
   if (p.steady) { adv = true; reasons.push(ct("steadyOn")); }
   if (p.hidden) { adv = true; reasons.push("🫥 " + ct("hiddenNow")); }
   if (p.vexTarget === e) { adv = true; reasons.push("Vex"); }
-  if (combat.round === 1 && !e.acted) { adv = true; reasons.push("🗡 " + ct("firstRound")); }
+  if (isAssassinCharacter() && combat.round === 1 && !e.acted) { adv = true; reasons.push("🗡 " + ct("firstRound")); }
   if (mode === "ranged") {
     const parts = range.split("/").map(Number);
     if (dist > parts[0]) { dis = true; reasons.push(ct("longRangeDis")); }
@@ -1940,7 +1949,7 @@ function openAttackPanel(extra) {
     }
     const opt = document.createElement("option");
     opt.value = i;
-    opt.textContent = `${weaponView(w).name} (${w.dice}d${w.sides}+${w.bonus})`;
+    opt.textContent = `${weaponView(w).name} (${w.dice}d${w.sides}${fmtMod(weaponStats(w).damage)})`;
     wSel.appendChild(opt);
   });
   if (!wSel.options.length) {
@@ -1967,7 +1976,7 @@ function openAttackPanel(extra) {
   STRIKES.forEach((s) => {
     const lab = document.createElement("label");
     lab.className = "cs-option";
-    const locked = state.level < s.lock;
+    const locked = !isRogueCharacter() || state.level < s.lock;
     lab.innerHTML = `<input type="checkbox" value="${s.id}" data-cost="${s.cost}" ${locked ? "disabled" : ""}>
       <span>${t(strikeLabel[s.id])}${locked ? " 🔒 N" + s.lock : ""}</span>`;
     box.appendChild(lab);

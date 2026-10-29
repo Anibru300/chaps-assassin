@@ -34,6 +34,7 @@ test("navegación de ficha en móvil, tablet y escritorio", {
         const errors = [];
         page.on("pageerror", (error) => errors.push(error.message));
         await context.addInitScript(() => sessionStorage.setItem("chaps-auth-v1", "1"));
+      await require("./legacy-fixture").seed(context);
         await page.route("https://www.gstatic.com/firebasejs/**", (route) => route.abort());
         await page.goto(`http://127.0.0.1:${server.address().port}`);
         const sidebar = page.locator("#sheet-sidebar");

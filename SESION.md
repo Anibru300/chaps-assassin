@@ -2,6 +2,19 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
+## Actualización: 2026-10-29 — v17: plataforma general de personajes
+
+- Usuario pidió implementación multiusuario completa; continúa autorización de publicar cambios de plataforma.
+- Inicio neutral, asistente tres pasos para doce clases, orígenes gratuitos/personalizados, reparto/compra/manual y validaciones. Ficha creada es base; elecciones especiales/niveles altos pendientes se señalan explícitamente.
+- Módulos `character-rules`, `character-builder`, `character-equipment`, `character-magic`; CSS y avatar neutral SVG.
+- Creación valida datos, guarda por UID/personaje y confirma sincronización. Cuenta nueva no adopta ficha sin dueño; respaldo local conservado. Otro dispositivo recupera primer personaje real.
+- Armas usan FUE/DES y competencia propia; nueva tienda compra/equipa sin regalar oro y equipo simultáneos. Descansos usan dado de clase; magia de pacto recupera espacios al finalizar descanso corto.
+- Furtivo/Asesino/Esquiva y acciones astutas requieren clase/nivel. Ataques extra por clase, salvaciones propias; progresión por clase. CHAPS previo conserva valores manuales.
+- Conjuros/espacios y recursos editables; siete conjuros rápidos con resolución básica. Efectos especiales y opciones no automatizadas se indican como mesa/DM; no multiclase.
+- Precaché `chaps-v17-character-platform`. Nuevas pruebas de reglas, combate, asistente 360/1440, cuentas/dispositivos y PWA offline.
+- Documento técnico: `PLATAFORMA.md`. Ver bitácora raíz para resultado final y despliegue. No publicar antes de completar comprobación.
+- Validación final: 106 pruebas, 104 pasan, 0 fallan, 2 omitidas (emuladores Firebase ausentes); 59 checks de motor pasan. Veinte scripts JS con sintaxis válida; diff correcto. Capturas 360/1440 revisadas.
+
 ## Actualización: 2026-10-29 — v16: correcciones de auditoría de ficha
 
 - Usuario autorizó corregir, comprobar y desplegar seis fallos confirmados.

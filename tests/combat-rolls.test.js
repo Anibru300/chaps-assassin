@@ -20,6 +20,7 @@ test("tirada interactiva real y acción adicional independiente de ataque", {
     for (const width of [1440, 390]) await t.test("ancho " + width, async () => {
       const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
       await context.addInitScript(() => sessionStorage.setItem("chaps-auth-v1", "1"));
+      await require("./legacy-fixture").seed(context);
       const page = await context.newPage(), errors = [];
       page.on("pageerror", error => errors.push(error.message));
       await page.route("https://www.gstatic.com/firebasejs/**", route => route.abort());

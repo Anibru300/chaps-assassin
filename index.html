@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CHAPS — Asesino D&D 2024</title>
+  <title>CHAPS — Personajes y combate D&D 2024</title>
   <link rel="icon" type="image/png" sizes="48x48" href="assets/chaps-favicon-48.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/chaps-apple-touch-180.png">
   <meta name="theme-color" content="#0d0e12">
@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/style.css?v=5">
   <link rel="stylesheet" href="css/v4.css?v=18">
   <link rel="stylesheet" href="css/features.css?v=2">
+  <link rel="stylesheet" href="css/characters.css?v=1">
   <link rel="stylesheet" href="css/combat-visuals.css?v=2">
   <link rel="stylesheet" href="css/combat-layout.css?v=2">
 </head>
@@ -26,9 +27,9 @@
       <div class="lg-brand">
         <div class="lg-sigil">🗡</div>
         <h1 class="lg-title">CHAPS</h1>
-        <p class="lg-sub">Asesino · D&amp;D 2024</p>
+        <p class="lg-sub">Tus personajes · D&amp;D 2024</p>
         <div class="lg-divider"><span></span>◆<span></span></div>
-        <p class="lg-flavor">«Krynn es grande. Yo soy paciente.»</p>
+        <p class="lg-flavor">Crea tu aventurero. Prepara tu próxima partida.</p>
       </div>
       <form id="login-form" class="login-card">
         <h2 class="lg-form-title">Acceso al gremio</h2>
@@ -91,6 +92,7 @@
             <a href="#section-account">Cuenta y acceso</a>
             <a href="#section-history">Historial</a>
             <a href="#section-identity">Identidad</a>
+            <a href="#section-class">Clase, magia y recursos</a>
             <a href="#section-abilities">Características</a>
             <a href="#section-skills">Habilidades</a>
             <a href="#section-languages">Idiomas</a>
@@ -136,9 +138,9 @@
         <label class="field"><span>Personaje activo</span><select data-character-picker aria-label="Personaje activo"></select></label>
         <div class="grid grid-2">
           <label class="field"><span>Nombre para personaje nuevo o copia</span><input id="character-name" type="text" maxlength="80" placeholder="Nombre del personaje"></label>
-          <div class="rest-row"><button class="btn btn-crimson" id="character-create" type="button">Crear personaje</button><button class="btn" id="character-copy" type="button">Duplicar actual</button></div>
+          <div class="rest-row"><button class="btn btn-crimson" id="character-create" type="button">Crear personaje guiado</button><button class="btn" id="character-copy" type="button">Duplicar actual</button></div>
         </div>
-        <p class="hint">Cada personaje conserva ficha, historial y notas propios. Progresión y entrenador de combate siguen reglas de Pícaro Asesino.</p>
+        <p class="hint">Cada cuenta y personaje conserva ficha, historial y notas propios. Crea una de las 12 clases de D&D 2024. Rasgos especiales se completan con referencia de clase y DM.</p>
         <p class="hint" id="character-status" role="status"></p>
       </div>
 
@@ -166,11 +168,31 @@
       </div>
 
       <!-- Identidad y stats principales -->
+      <div class="card" id="character-welcome" hidden>
+        <h2>Tu primera aventura empieza aquí</h2>
+        <p>Crea tu personaje desde cero. Elige clase, especie, trasfondo y características; tus datos serán privados de tu cuenta.</p>
+        <button type="button" class="btn btn-crimson" id="welcome-create">Crear mi primer personaje</button>
+      </div>
+      <div class="card" id="section-class">
+        <h2>Clase, magia y recursos</h2>
+        <p id="class-summary"></p><a id="class-source" target="_blank" rel="noopener noreferrer">Referencia oficial de clase</a>
+        <p class="hint" id="class-notes"></p><p id="class-checklist" role="status"></p>
+        <details><summary>Comprar y equipar</summary><p class="hint">Compra con monedas de ficha. Cambio automático a oro, plata y cobre; acero equivale a oro. Equipo añadido manualmente sigue permitido para regalos y botín. Munición y componentes se descuentan manualmente.</p><label class="field"><span>Equipo básico</span><select id="character-shop-item"></select></label><button type="button" class="btn" id="character-shop-buy">Comprar</button><p id="character-shop-status" role="status"></p><div id="character-equipped"></div></details>
+        <details><summary>Conjuros y espacios</summary>
+          <p class="hint">Espacios calculados por clase y nivel. Gestiona preparados, componentes y efectos especiales con DM. Gastar espacio aquí registra uso; no aplica daño automáticamente.</p>
+          <label class="field"><span>Conjuro rápido de clase (opcional)</span><select id="character-spell-quick"><option value="">Conjuro libre / personalizar</option></select></label>
+          <div id="spell-slots"></div><div id="character-spell-list"></div>
+          <form id="character-spell-form"><div class="grid grid-2"><label class="field"><span>Conjuro</span><input id="character-spell-name" maxlength="120" required></label><label class="field"><span>Nivel (0 = truco)</span><input id="character-spell-level" type="number" min="0" max="9" value="0" required></label></div><label class="field"><span>Detalles: tiempo, alcance, componentes y efecto</span><textarea id="character-spell-details" maxlength="5000"></textarea></label><button class="btn" type="submit">Añadir conjuro</button></form>
+        </details>
+        <details><summary>Recursos de clase y especie</summary><p class="hint">Registra Furia, Segundo aliento, Inspiración bárdica, Canalizar divinidad, Focus u otros usos. Los descansos recuperan usos según opción elegida. Aplicar efectos se resuelve con DM.</p><div id="character-resources"></div>
+          <form id="character-resource-form"><div class="grid grid-3"><label class="field"><span>Recurso</span><input id="character-resource-name" maxlength="80" required></label><label class="field"><span>Usos máximos</span><input id="character-resource-max" type="number" min="1" max="999" value="1" required></label><label class="field"><span>Recuperar al descansar</span><select id="character-resource-rest"><option value="long">Largo</option><option value="short">Corto o largo</option></select></label></div><button class="btn" type="submit">Añadir recurso</button></form>
+        </details>
+      </div>
       <div class="card" id="section-identity">
         <h2 data-i18n="identity">Identidad</h2>
         <div class="identity-layout">
           <div class="portrait-frame">
-            <img src="assets/chaps-portrait.jpg" id="portrait-img" data-i18n-alt="portraitAlt" alt="CHAPS">
+            <img src="assets/adventurer.svg" id="portrait-img" alt="Personaje">
           </div>
           <div class="identity-fields">
             <div class="grid grid-3">
@@ -332,6 +354,7 @@
           <label class="field"><span data-i18n="masteryWeapon">Arma</span> 2
             <select id="mastery-2"></select></label>
         </div>
+        <div class="grid grid-4" id="mastery-extra"></div>
         <p class="hint" data-i18n="masteryNote"></p>
         <details class="mastery-glossary">
           <summary data-i18n="masteryGlossaryTitle"></summary>
@@ -783,6 +806,7 @@
         </div>
 
         <!-- Panel de ataque -->
+        <details class="card" id="character-magic-panel"><summary>Magia de personaje</summary><p class="hint">Resolución básica de conjuros rápidos preparados. Un objetivo enemigo por lanzamiento; curación solo a ti. Componentes, resistencias y reacciones defensivas requieren revisión de DM.</p><label class="field"><span>Conjuro preparado</span><select id="character-cast-spell"></select></label><label class="field"><span>Objetivo enemigo</span><select id="character-cast-target"></select></label><label class="field"><span>Espacio (trucos no gastan)</span><select id="character-cast-slot"></select></label><button type="button" class="btn" id="character-cast">Lanzar conjuro</button><p id="character-cast-status" role="status"></p></details>
         <div class="card attack-panel" id="c-attack-panel" hidden>
           <div class="combat-roll-heading"><h2 id="c-atk-title" data-i18n="ctAttackTitle">Tirada de ataque</h2><span id="combat-roll-prep" class="combat-roll-prep"></span></div>
           <div class="grid grid-3 atk-grid">
@@ -971,20 +995,24 @@
 
   <!-- Scripts planos en orden: data.js primero, app.js después (sin módulos ES) -->
   <script src="js/auth.js?v=5"></script>
-  <script src="js/data.js?v=7"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/data.js?v=8"></script>
+  <script src="js/character-rules.js?v=1"></script>
+  <script src="js/character-equipment.js?v=1"></script>
+  <script src="js/app.js?v=11"></script>
   <script src="js/combat-data.js?v=4"></script>
-  <script src="js/combat.js?v=12"></script>
-  <script src="js/combat-tools.js?v=3"></script>
-  <script src="js/combat-help.js?v=2"></script>
-  <script src="js/combat-rolls.js?v=1"></script>
-  <script src="js/simulador.js?v=4"></script>
+  <script src="js/combat.js?v=13"></script>
+  <script src="js/combat-tools.js?v=4"></script>
+  <script src="js/combat-help.js?v=3"></script>
+  <script src="js/combat-rolls.js?v=2"></script>
+  <script src="js/simulador.js?v=5"></script>
   <script src="js/biblioteca.js?v=4"></script>
   <script src="js/combat-extra.js?v=5"></script>
   <script src="js/cloud-core.js?v=4"></script>
-  <script src="js/profile-store.js?v=1"></script>
+  <script src="js/profile-store.js?v=2"></script>
   <script src="js/account-auth.js?v=1"></script>
-  <script src="js/features.js?v=2"></script>
-  <script src="js/firebase-sync.js?v=5"></script>
+  <script src="js/features.js?v=3"></script>
+  <script src="js/character-builder.js?v=1"></script>
+  <script src="js/character-magic.js?v=1"></script>
+  <script src="js/firebase-sync.js?v=6"></script>
 </body>
 </html>

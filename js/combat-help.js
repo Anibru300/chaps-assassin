@@ -7,10 +7,10 @@
     "c-atk-roll": ["Tirar dados", "Muestra d20 real, bono, total contra CA y daño. Revisa ventaja, alcance y Golpes Astutos antes de tirar."],
     "c-atk-cancel": ["Cancelar", "Cierra preparación sin gastar acción. Puedes cambiar objetivo o mover primero."],
     "c-btn-extra": ["Extra · arma ligera", "Aparece tras ataque ligero. Normalmente usa acción adicional; Nick dominado permite ataque extra sin gastarla."],
-    "c-btn-steady": ["Puntería · acción adicional", state.level >= 9 ? "Da ventaja al próximo ataque de este turno. Motor aplica movilidad de Asesino desde N9." : "Da ventaja al próximo ataque y deja movimiento en cero durante turno."],
-    "c-btn-hide": ["Ocultar · acción adicional", "Motor tira Sigilo contra Percepción enemiga. Éxito ayuda al próximo ataque; revisa resultado en registro."],
-    "c-btn-dash": ["Dash · acción adicional", "Añade movimiento igual a velocidad. En esta app usa Acción Astuta del Pícaro."],
-    "c-btn-disengage": ["Retirar · acción adicional", "Evita ataques de oportunidad durante movimiento de este turno. No equivale a Golpe Astuto Retirada."],
+    "c-btn-steady": ["Puntería · Pícaro N3 · acción adicional", isAssassinCharacter() && state.level >= 9 ? "Da ventaja al próximo ataque de este turno sin reducir velocidad. Requiere no haber movido antes de usarla." : "Pícaro N3: da ventaja al próximo ataque; requiere no haber movido y deja movimiento en cero."],
+    "c-btn-hide": [isRogueCharacter() && state.level >= 2 ? "Ocultar · acción adicional" : "Ocultar · acción", "Motor tira Sigilo contra Percepción enemiga. Éxito ayuda al próximo ataque; revisa resultado en registro."],
+    "c-btn-dash": [isRogueCharacter() && state.level >= 2 ? "Dash · acción adicional" : "Dash · acción", "Añade movimiento igual a velocidad. Acción Astuta desde Pícaro N2 permite usar adicional."],
+    "c-btn-disengage": [isRogueCharacter() && state.level >= 2 ? "Retirar · acción adicional" : "Retirar · acción", "Evita ataques de oportunidad durante movimiento de este turno. No equivale a Golpe Astuto Retirada."],
     "c-btn-move": ["Mover · movimiento", "Activa Mover y toca casilla: movimiento inmediato, sin confirmación. Casilla normal cuesta 5 ft, difícil 10 ft; ruta, peligros y oportunidades se calculan automáticamente."],
     "c-btn-end": ["Fin turno", "Entrega turno a enemigos. Recursos se recuperan al empezar siguiente turno propio; enemigos respetan pausa y velocidad."],
     "bt-heal": ["Curación recibida", "Registra PG recibidos de aliado u objeto hasta máximo. No descuenta pociones ni acciones automáticamente."],
@@ -45,8 +45,8 @@
       ["Acción", usable(p?.action)], ["Acción adicional", usable(p?.ba)],
       ["Reacción", !p ? "Sin combate activo" : p.react ? "Disponible, también fuera de turno propio" : "Gastada"],
       ["Movimiento", p ? `${p.move + p.withdraw} ft restantes` : `${state.speed} ft de velocidad`],
-      ["Furtivo", `${sneakDiceCount(state.level)}d6 · ${p?.sneak ? "usado este turno" : "se aplica si cumples condiciones"}`],
-      ["Golpes Astutos", state.level < 5 ? "Se desbloquean en nivel 5" : `CD ${saveDC()} · hasta ${maxCunningStrikes(state.level)} efecto(s) por Furtivo`]
+      ["Furtivo", isRogueCharacter() ? `${sneakDiceCount(state.level)}d6 · ${p?.sneak ? "usado este turno" : "se aplica si cumples condiciones"}` : 'Rasgo de Pícaro; no disponible para esta clase'],
+      ["Golpes Astutos", !isRogueCharacter() ? 'Rasgo de Pícaro' : state.level < 5 ? "Se desbloquean en nivel 5" : `CD ${saveDC()} · hasta ${maxCunningStrikes(state.level)} efecto(s) por Furtivo`]
     ];
     for (const [label, value] of values) { const group = document.createElement("div"); append(group, "dt", label); append(group, "dd", value); container.appendChild(group); }
   }

@@ -1,6 +1,10 @@
-# CHAPS — Asesino D&D 2024 🗡
+# CHAPS — Personajes y combate D&D 2024
 
-Plataforma web estática de **entrenamiento y gestión de personaje** para **CHAPS**, un pícaro humano nivel 12 (subclase Asesino, trasfondo Criminal) con las reglas del nuevo Manual del Jugador de D&D 2024.
+Plataforma web para **crear personajes propios por cuenta Google o correo**, guardar fichas privadas, sincronizar dispositivos y preparar combates de D&D 2024. Conserva compatibilidad con CHAPS original.
+
+**v17:** creación guiada para 12 clases, orígenes gratuitos o personalizados, compra/equipamiento, magia y recursos por personaje. Base de una clase y niveles 1–20. Rasgos especiales, subclases y conjuros no soportados automáticamente se gestionan con DM; no se anuncia simulación exhaustiva de todas las reglas.
+
+Consulta [PLATAFORMA.md](PLATAFORMA.md) para capacidades, límites, arquitectura, compatibilidad y pruebas. Documentación siguiente conserva funciones originales de CHAPS y del entrenador de Asesino.
 
 ## Contenido
 

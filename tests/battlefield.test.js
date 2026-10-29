@@ -26,6 +26,7 @@ test("tablero: selección, daño visible tras redibujar, estados y movimiento", 
     for (const width of [390, 1440]) await t.test("ancho " + width, async () => {
       const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
       await context.addInitScript(() => sessionStorage.setItem("chaps-auth-v1", "1"));
+      await require("./legacy-fixture").seed(context);
       const page = await context.newPage(), errors = [];
       page.on("pageerror", error => errors.push(error.message));
       await page.route("https://www.gstatic.com/firebasejs/**", route => route.abort());

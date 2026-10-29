@@ -5,7 +5,7 @@
   const text = (id, value) => { if (el(id)) el(id).textContent = value; };
   const scope = () => JSON.stringify(window.CHAPS_FEATURES?.profiles.current || { uid: null, id: "chaps" });
   const storageKey = () => "chaps-battle-v1:" + scope();
-  const signature = () => JSON.stringify([state.name, state.level, state.hpMax, state.ac, state.speed, state.abilities, state.weapons, state.skills]);
+  const signature = () => JSON.stringify([state.name, state.level, state.hpMax, state.ac, state.speed, state.abilities, state.weapons, state.skills, state.identity, state.spellbook]);
   const node = (tag, content, cls) => { const value = document.createElement(tag); if (content != null) value.textContent = content; if (cls) value.className = cls; return value; };
   const metrics = () => combat.tactical ||= { damage: 0, received: 0, allyDamage: 0, healed: 0, actions: 0, bonus: 0, reactions: 0, feet: 0, attacks: 0, misses: 0, sneaks: 0, cunningDice: 0, crits: 0, enemyCrits: 0, targets: {}, weapons: {} };
   let pending = null, timer = null, generation = 0, paused = false, speed = 900, executing = false;
@@ -200,7 +200,9 @@
   function validateSaved(value) {
     const validPos = point => point && Number.isInteger(point.x) && Number.isInteger(point.y) && point.x >= 0 && point.x < BOARD.w && point.y >= 0 && point.y < BOARD.h;
     const saved = value?.state;
-    if (value?.schema !== 1 || value.scope !== scope() || value.signature !== signature()) throw new Error("Guardado pertenece a otra ficha o sus atributos/armas cambiaron. Recupera misma versión de ficha antes de retomarlo.");
+    const legacySignature=JSON.stringify([state.name,state.level,state.hpMax,state.ac,state.speed,state.abilities,state.weapons,state.skills]);
+    const legacyCompatible=isAssassinCharacter()&&!state.spellbook?.length&&value?.signature===legacySignature;
+    if (value?.schema !== 1 || value.scope !== scope() || value.signature !== signature()&&!legacyCompatible) throw new Error("Guardado pertenece a otra ficha o sus atributos/armas cambiaron. Recupera misma versión de ficha antes de retomarlo.");
     const actor = creature => creature && validPos(creature.pos) && Number.isFinite(creature.hp) && creature.hp >= 0 && Array.isArray(creature.conds);
     if (!saved || !actor(saved.p) || !Array.isArray(saved.enemies) || saved.enemies.length > 40 || !saved.enemies.every(enemy => actor(enemy) && Number.isFinite(enemy.maxHp) && enemy.maxHp > 0 && Array.isArray(enemy.attacks)) || !Array.isArray(saved.order) || saved.order.filter(item => item.who === "p").length !== 1 || !saved.order.every(item => item.who === "p" || item.who === "e" && Number.isInteger(item.idx) && !!saved.enemies[item.idx]) || !Number.isInteger(saved.turn) || !saved.order[saved.turn] || !Number.isInteger(saved.round) || saved.round < 1 || !Array.isArray(saved.log) || !Array.isArray(saved.map?.obstacles) || !Array.isArray(saved.map?.terrain) || ![...saved.map.obstacles, ...saved.map.terrain].every(validPos)) throw new Error("Guardado de combate incompleto; no se reemplazó combate actual.");
     if (saved.scenario && !["ambush", "escape", "protect", "survive"].includes(saved.scenario.type)) throw new Error("Escenario guardado incompatible.");

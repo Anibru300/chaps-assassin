@@ -10,15 +10,16 @@
     const p = combat.p;
     if (!p) return "Prepara combate para comenzar.";
     if (!combat.on) return "Combate finalizado. No quedan acciones de turno pendientes.";
+    if (!isRogueCharacter() || state.level < 2) return p.action ? 'Acción disponible: atacar, ocultar, Dash o Retirar. Rasgos especiales se gestionan en Mesa.' : 'Acción gastada. Ocultar, Dash y Retirar requieren acción para esta clase y nivel.';
     if (!isPlayerTurn()) return "Turno enemigo. Ocultar requiere acción adicional en tu turno; no usa reacción.";
     if (p.ba) return p.action ? "Ocultar, Dash y Retirar usan acción adicional, independiente de Atacar." : "Ataque resuelto. Aún tienes acción adicional: puedes Ocultar, Dash o Retirar.";
     return `Acción adicional gastada${bonusNames[p.lastBonus] ? " en " + bonusNames[p.lastBonus] : ""}. Ocultar no usa reacción.`;
   }
   function refresh() {
     if (!el("combat-roll-result")) return;
-    el("battle-action-state").textContent = combat.on && isPlayerTurn() && combat.p?.ba ? "Acción adicional disponible: Ocultar, Dash o Retirar." : resourceMessage();
+    el("battle-action-state").textContent = isRogueCharacter() && state.level >= 2 && combat.on && isPlayerTurn() && combat.p?.ba ? "Acción adicional disponible: Ocultar, Dash o Retirar." : resourceMessage();
     el("combat-roll-resources").textContent = resourceMessage();
-    el("combat-roll-hide").disabled = !combat.on || !isPlayerTurn() || !combat.p?.ba;
+    el("combat-roll-hide").disabled = !combat.on || !isPlayerTurn() || (isRogueCharacter() && state.level >= 2 ? !combat.p?.ba : !combat.p?.action);
     if (actor && (actor !== combat.p || owner !== scope())) {
       const visible = !el("combat-roll-result").hidden;
       el("combat-roll-result").hidden = true; actor = null; owner = null;
@@ -28,7 +29,8 @@
   function prepare() {
     el("combat-roll-result").hidden = true;
     el("combat-roll-followup").textContent = "";
-    el("combat-roll-prep").textContent = `d20 ${fmtMod(profBonus(state.level) + dexMod())}`;
+    const w = state.weapons[Number(el('c-atk-weapon')?.value)||0];
+    el("combat-roll-prep").textContent = `d20 ${fmtMod(w ? weaponStats(w).attack : 0)}`;
     el("combat-roll-prep").classList.remove("roll-invalid");
     window.CHAPS_COMBAT_HELP?.render();
   }
@@ -53,7 +55,8 @@
       die.setAttribute("aria-label", `d20: ${value}${chosen ? ", usado" : ", descartado"}`);
       add(die, "span", "d20"); add(die, "strong", value);
     });
-    const formula = add(body, "p", `d20(${data.chosen}) ${fmtMod(data.dex)} DES ${fmtMod(data.proficiency)} competencia = ${data.total}`, "roll-formula");
+    const ability = ({str:'FUE',dex:'DES',con:'CON',int:'INT',wis:'SAB',cha:'CAR'})[data.ability||'dex'];
+    const formula = add(body, "p", `d20(${data.chosen}) ${fmtMod(data.dex)} ${ability} ${fmtMod(data.proficiency)} competencia${data.adjustment ? ' '+fmtMod(data.adjustment)+' ajuste' : ''} = ${data.total}`, "roll-formula");
     formula.dataset.total = data.total; formula.dataset.bonus = data.bonus;
     add(body, "p", `Total ${data.total} contra CA ${data.armor}${data.cover ? " (incluye +2 por cobertura)" : ""}`, "roll-versus");
     const label = data.crit && data.hit ? "¡CRÍTICO!" : data.hit ? "¡IMPACTO!" : "FALLO";

@@ -20,6 +20,7 @@ test("herramientas de combate: ocho mejoras integradas", {
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: "block", hasTouch: true });
     await context.addInitScript(() => sessionStorage.setItem("chaps-auth-v1", "1"));
+      await require("./legacy-fixture").seed(context);
     const page = await context.newPage(); page.on("pageerror", error => errors.push(error.stack));
     page.on("dialog", dialog => dialog.accept());
     await page.route("https://www.gstatic.com/firebasejs/**", route => route.abort());

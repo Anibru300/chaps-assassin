@@ -24,7 +24,22 @@ function abilityMod(score) { return Math.floor((score - 10) / 2); }
 function profBonus(level) { return Math.ceil(level / 4) + 1; }
 
 /** Dados de Ataque Furtivo según nivel de pícaro (1d6 cada 2 niveles). */
-function sneakDiceCount(level) { return Math.ceil(level / 2); }
+function sneakDiceCount(level) { return isRogueCharacter() ? Math.ceil(level / 2) : 0; }
+
+function isRogueCharacter() { return typeof CHARACTER_RULES === "undefined" ? /^(pícaro|picaro|rogue)$/i.test(state.identity.charClass) : CHARACTER_RULES.isRogue(state); }
+function isAssassinCharacter() { return isRogueCharacter() && state.level >= 3 && /^(asesino|assassin)$/i.test(state.identity.subclass); }
+function characterHitDie() { return typeof CHARACTER_RULES === "undefined" ? 8 : CHARACTER_RULES.classFor(state)?.die || 8; }
+function weaponStats(w) { return typeof CHARACTER_RULES === "undefined" ? {ability:"dex",abilityMod:abilityMod(state.abilities.dex),proficient:true,attack:profBonus(state.level)+abilityMod(state.abilities.dex),damage:w.bonus} : CHARACTER_RULES.weapon(state,w); }
+function characterProgression() {
+  if (isAssassinCharacter()) return LEVEL_PROGRESSION;
+  if (typeof CHARACTER_RULES !== 'undefined') return CHARACTER_RULES.progression(state);
+  const c = typeof CHARACTER_RULES === "undefined" ? null : CHARACTER_RULES.classFor(state);
+  return Array.from({length:20},(_,i) => {
+    const lv=i+1, asi=[4,8,12,16].includes(lv)||(c?.id==='fighter'&&[6,14].includes(lv))||(c?.id==='rogue'&&lv===10);
+    const label=[`Competencia +${profBonus(lv)}`,isRogueCharacter()?`Furtivo ${Math.ceil(lv/2)}d6`:"",lv===3?'Elegir subclase':"",asi?'Dote / mejora de características':"",lv===19?'Dote épica':""].filter(Boolean).join(' · ');
+    return {lv,asi,boon:lv===19,es:label,en:label,detailEs:`${c?.es||'Clase personalizada'}: consulta rasgos de este nivel en referencia de clase. Registra elecciones en ficha.`,detailEn:`${c?.en||'Custom class'}: review this level's class features and record choices on your sheet.`};
+  });
+}
 
 /** Formatea un modificador con signo: +5 / -1 */
 function fmtMod(n) { return (n >= 0 ? "+" : "") + n; }
@@ -54,7 +69,7 @@ let state = loadState();
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return structuredClone(DEFAULT_STATE);
+    if (!raw) return typeof CHARACTER_RULES === "undefined" ? structuredClone(DEFAULT_STATE) : CHARACTER_RULES.blank(DEFAULT_STATE);
     // Mezcla superficial profunda: los valores por defecto rellenan claves nuevas.
     const loaded = JSON.parse(raw);
     const merged = structuredClone(DEFAULT_STATE);
@@ -85,7 +100,7 @@ function loadState() {
     return merged;
   } catch (e) {
     console.warn("Estado corrupto, se usan valores por defecto.", e);
-    return structuredClone(DEFAULT_STATE);
+    return typeof CHARACTER_RULES === "undefined" ? structuredClone(DEFAULT_STATE) : CHARACTER_RULES.blank(DEFAULT_STATE);
   }
 }
 
@@ -121,7 +136,8 @@ window.CHAPS_STORE = {
         !Array.isArray(value) && Object.keys(model).every((key) => check(value[key], model[key]));
       return typeof value === typeof model && (typeof value !== "number" || Number.isFinite(value));
     };
-    const compatible = { session: DEFAULT_STATE.session, sessionNotes: {}, tableConditions: {}, savedVersions: {}, ...data };
+    const compatible = { spellbook: [], spellSlotsSpent: {}, resources: {}, portrait: "", session: DEFAULT_STATE.session, sessionNotes: {}, tableConditions: {}, savedVersions: {}, ...data, creation: null };
+    if (typeof CHARACTER_RULES !== "undefined") CHARACTER_RULES.validateState(data);
     if (!check(compatible, DEFAULT_STATE)) throw new Error("Ficha de nube incompleta; conserva copia local.");
     const session = compatible.session;
     if (!session || ["lastPlayed", "location", "recap", "nextGoal"].some((key) => typeof session[key] !== "string")) throw new Error("Notas de sesión no válidas.");
@@ -218,7 +234,7 @@ function renderIdentity() {
 
 function renderHitDice() {
   const remaining = state.level - state.hitDiceSpent;
-  $("#f-hitdice").textContent = `${remaining}/${state.level}d8 (${state.hitDiceSpent} ${t("hitDiceSpent")})`;
+  $("#f-hitdice").textContent = `${remaining}/${state.level}d${characterHitDie()} (${state.hitDiceSpent} ${t("hitDiceSpent")})`;
 }
 
 function renderDeathPips() {
@@ -266,7 +282,9 @@ function renderAbilities() {
         return;
       }
       state.abilities[inp.dataset.ab] = score;
+      if(typeof CHARACTER_RULES !== 'undefined')CHARACTER_RULES.recalculate(state,window.CHARACTER_EQUIPMENT?.armorClass);
       saveState();
+      renderIdentity();
       renderAbilities();
       renderSkills();      // los mods de habilidades dependen de las características
       renderTools();
@@ -274,6 +292,7 @@ function renderAbilities() {
       renderPassivePerception();
       renderWeapons();
       renderCombos();
+      window.CHARACTER_UI?.render();
     });
   });
   grid.querySelectorAll("input[data-save]").forEach((cb) => {
@@ -352,14 +371,14 @@ function renderSkills() {
 function renderWeapons() {
   const body = $("#weapons-body");
   body.innerHTML = "";
-  const atkBonus = profBonus(state.level) + abilityMod(state.abilities.dex);
   state.weapons.forEach((w, i) => {
+    const stats = weaponStats(w);
     const v = weaponView(w);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="text" value="${escapeHtml(v.name)}" data-i="${i}" data-f="name"></td>
-      <td><input type="text" value="${w.dice}d${w.sides}${w.bonus >= 0 ? "+" : ""}${w.bonus}" data-i="${i}" data-f="dmg" title="dados+característica, p. ej. 1d8+5" style="min-width:80px"></td>
-      <td>${fmtMod(atkBonus)}</td>
+      <td><input type="text" value="${w.dice}d${w.sides}${stats.damage >= 0 ? "+" : ""}${stats.damage}" data-i="${i}" data-f="dmg" title="dados+característica, p. ej. 1d8+5" style="min-width:80px"></td>
+      <td><span class="weapon-attack-value">${fmtMod(stats.attack)}</span><label class="hint"><input type="checkbox" data-i="${i}" data-f="proficient" ${stats.proficient ? 'checked' : ''}> Comp.</label></td>
       <td><input type="text" value="${escapeHtml(v.props)}" data-i="${i}" data-f="props"></td>
       <td><input type="text" value="${escapeHtml(v.mastery)}" data-i="${i}" data-f="mastery" style="min-width:70px"></td>
       <td><button class="btn btn-small btn-danger" data-del="${i}">✕</button></td>`;
@@ -368,13 +387,15 @@ function renderWeapons() {
   body.querySelectorAll("input[data-f]").forEach((inp) => {
     inp.addEventListener("change", () => {
       const w = state.weapons[+inp.dataset.i];
+      if (inp.dataset.f === "proficient") { w.proficient = inp.checked; saveState(); renderWeapons(); return; }
       if (inp.dataset.f === "dmg") {
         // Daño editable: "1d8+5" → dados, caras y bono. Si no se entiende, se revierte.
-        const m = inp.value.match(/(\d+)\s*d\s*(\d+)\s*([+-]?\s*\d+)?/);
-        if (m) {
+        const m = inp.value.trim().match(/^(\d{1,3})\s*d\s*(\d{1,4})\s*([+-]?\s*\d{1,3})?$/);
+        if (m && +m[1] >= 1 && +m[1] <= 100 && +m[2] >= 1 && +m[2] <= 1000) {
           w.dice = +m[1];
           w.sides = +m[2];
           w.bonus = m[3] ? parseInt(m[3].replace(/\s/g, ""), 10) : 0;
+          w.autoBonus = false;
         }
         saveState();
         renderWeapons();
@@ -428,6 +449,7 @@ function addWeaponFromCatalog(weaponId) {
     name: LANG === "es" ? w.es : w.en,
     dice, sides,
     bonus: abilityMod(state.abilities.dex),
+    autoBonus: true,
     props: LANG === "es" ? w.propsEs : w.propsEn,
     mastery: prop.name,
     weaponId: w.id // vínculo al catálogo: nombre/props/maestría se traducen solos
@@ -511,14 +533,17 @@ function shortRest() {
 }
 
 function renderShortRest() {
-  $("#short-rest-summary").textContent = `${state.hpCurrent}/${state.hpMax} PG · ${Math.max(0, state.level - state.hitDiceSpent)}/${state.level}d8`;
+  $("#short-rest-spend").textContent = t('spendRestDie').replace('1d8',`1d${characterHitDie()}`);
+  const help = $("#short-rest-dialog [data-i18n='shortRestHelp']"); if (help) help.textContent=t('shortRestHelp').replace('1d8',`1d${characterHitDie()}`);
+  $("#short-rest-summary").textContent = `${state.hpCurrent}/${state.hpMax} PG · ${Math.max(0, state.level - state.hitDiceSpent)}/${state.level}d${characterHitDie()}`;
   $("#short-rest-spend").disabled = state.hpCurrent < 1 || state.hpCurrent >= state.hpMax || state.hitDiceSpent >= state.level;
   $("#short-rest-warning").textContent = state.hpCurrent < 1 ? t("restNeedsHp") : "";
 }
 
 function spendRestHitDie() {
   if (state.hpCurrent < 1 || state.hpCurrent >= state.hpMax || state.hitDiceSpent >= state.level) return;
-  const die = rollDie(8);
+  const sides = characterHitDie();
+  const die = rollDie(sides);
   const modifier = abilityMod(state.abilities.con);
   const healed = Math.min(state.hpMax - state.hpCurrent, Math.max(1, die + modifier));
   state.hitDiceSpent++;
@@ -527,7 +552,7 @@ function spendRestHitDie() {
   state.deathFail = 0;
   saveState();
   renderIdentity();
-  $("#short-rest-result").textContent = `d8(${die}) ${fmtMod(modifier)} → +${healed} PG`;
+  $("#short-rest-result").textContent = `d${sides}(${die}) ${fmtMod(modifier)} → +${healed} PG`;
   renderShortRest();
 }
 
@@ -539,20 +564,33 @@ function longRest() {
   state.hitDiceSpent = 0;
   state.deathSuccess = 0;
   state.deathFail = 0;
-  state.inspiration = true; // 2024: se gana Inspiración Heroica tras un descanso largo
+  if (/^(humano|human)$/i.test(state.identity.species)) state.inspiration = true;
+  if (typeof CHARACTER_RULES !== "undefined") CHARACTER_RULES.recharge(state, "long");
   saveState();
   renderIdentity();
   // Recordatorio: tras un descanso largo puedes cambiar las armas de Maestría.
   $("#section-mastery").classList.remove("mastery-remind");
   void $("#section-mastery").offsetWidth; // reinicia la animación
   $("#section-mastery").classList.add("mastery-remind");
+  window.CHARACTER_UI?.render();
 }
 
 /* ---------- Maestría de armas ---------- */
 function renderMastery() {
-  [1, 2].forEach((n) => {
+  const count = typeof CHARACTER_RULES === "undefined" ? 2 : CHARACTER_RULES.masteryCount(state);
+  $("#section-mastery").hidden = count === 0;
+  const extra = $("#mastery-extra");
+  if(extra) {
+    extra.innerHTML='';
+    for(let n=3;n<=count;n++) {
+      const label=document.createElement('label');label.className='field';label.textContent=`Arma ${n}`;
+      const select=document.createElement('select');select.id='mastery-'+n;select.addEventListener('change',()=>setMastery(n-1,select.value));label.appendChild(select);extra.appendChild(label);
+    }
+  }
+  Array.from({length:Math.max(2,count)},(_,i)=>i+1).forEach((n) => {
     const sel = $("#mastery-" + n);
     sel.innerHTML = "";
+    const none = document.createElement('option');none.value='';none.textContent='— Sin elegir —';sel.appendChild(none);
     WEAPON_MASTERY.forEach((w) => {
       const prop = MASTERY_PROPERTIES.find((p) => p.id === w.mastery);
       const opt = document.createElement("option");
@@ -560,7 +598,7 @@ function renderMastery() {
       opt.textContent = `${LANG === "es" ? w.es : w.en} — ${w.dmg} — ${prop.name}`;
       sel.appendChild(opt);
     });
-    if (state.masteryChoices[n - 1]) sel.value = state.masteryChoices[n - 1];
+    sel.value = state.masteryChoices[n - 1] || '';
   });
   const gl = $("#mastery-glossary-list");
   gl.innerHTML = "";
@@ -574,11 +612,14 @@ function renderMastery() {
 function initMasteryEvents() {
   [1, 2].forEach((n) => {
     $("#mastery-" + n).addEventListener("change", (e) => {
-      state.masteryChoices[n - 1] = e.target.value;
-      saveState();
-      $("#mastery-card").classList.remove("mastery-remind"); // ya hiciste el cambio
+      setMastery(n - 1,e.target.value);
     });
   });
+}
+
+function setMastery(index,value) {
+  if(value && state.masteryChoices.some((id,i)=>i!==index&&id===value)){renderMastery();return;}
+  state.masteryChoices[index]=value;saveState();$("#section-mastery").classList.remove("mastery-remind");
 }
 
 /* ---------- Condiciones (referencia rápida) ---------- */
@@ -759,6 +800,7 @@ function renderXp() {
   // Auto-sync: el nivel lo manda la tabla de PX 2024 (sin botón manual)
   if (state.level !== lv) {
     state.level = lv;
+    if(typeof CHARACTER_RULES !== 'undefined')CHARACTER_RULES.recalculate(state,window.CHARACTER_EQUIPMENT?.armorClass);
     saveState();
     renderAll();
     return;
@@ -884,7 +926,7 @@ function renderJournal() {
 function renderProgression() {
   const body = $("#progression-body");
   body.innerHTML = "";
-  LEVEL_PROGRESSION.forEach((f) => {
+  characterProgression().forEach((f) => {
     // Auto-marcado por nivel actual, salvo que exista un toggle manual.
     const auto = state.level >= f.lv;
     const checked = state.progressionOverrides[f.lv] !== undefined
@@ -1158,6 +1200,8 @@ function initSheetEvents() {
       const value = numeric ? (parseInt(e.target.value, 10) || 0) : e.target.value;
       if (state[key] === value) return;
       state[key] = value;
+      const automatic={hpMax:'autoHp',ac:'autoAc',initiative:'autoInitiative',speed:'autoSpeed'}[key];
+      if(automatic&&state.creation)state.creation[automatic]=false;
       saveState();
       if (key === "level" || key === "hpMax") renderIdentity();
       if (key === "level") { renderAbilities(); renderSkills(); renderTools(); renderWeapons(); renderCombos(); renderProgression(); renderPassivePerception(); }
@@ -1171,6 +1215,7 @@ function initSheetEvents() {
    ["#f-background", "background"], ["#f-alignment", "alignment"], ["#f-playerName", "playerName"],
    ["#f-campaign", "campaign"]].forEach(([id, key]) => {
     $(id).addEventListener("input", (e) => { state.identity[key] = e.target.value; saveState(); });
+    $(id).addEventListener("change", () => { if(['charClass','subclass','species'].includes(key))renderAll(); });
   });
   bind("#f-level", "level", true);
   bind("#f-speed", "speed", true);
@@ -1192,7 +1237,7 @@ function initSheetEvents() {
 
   $("#btn-short-rest").addEventListener("click", shortRest);
   $("#short-rest-spend").addEventListener("click", spendRestHitDie);
-  $("#short-rest-close").addEventListener("click", () => $("#short-rest-dialog").close());
+  $("#short-rest-close").addEventListener("click", () => { if (state.hpCurrent > 0 && typeof CHARACTER_RULES !== "undefined") { CHARACTER_RULES.recharge(state, "short"); saveState(); window.CHARACTER_UI?.render(); } $("#short-rest-dialog").close(); });
   $("#btn-long-rest").addEventListener("click", longRest);
 
   // --- Experiencia ---
@@ -1301,7 +1346,7 @@ function initSheetEvents() {
 function dexMod() { return abilityMod(state.abilities.dex); }
 function saveDC() { return 8 + profBonus(state.level) + dexMod(); }
 /** Nº máximo de efectos de Golpe Astuto por ataque según el nivel (2024). Usado por combat.js. */
-function maxCunningStrikes(level) { return level >= 11 ? 2 : level >= 5 ? 1 : 0; }
+function maxCunningStrikes(level) { return !isRogueCharacter() ? 0 : level >= 11 ? 2 : level >= 5 ? 1 : 0; }
 
 /* ============================================================
    TAB 3 — GUÍA DE COMBOS
@@ -1310,6 +1355,7 @@ function maxCunningStrikes(level) { return level >= 11 ? 2 : level >= 5 ? 1 : 0;
 function renderCombos() {
   const box = $("#combos-container");
   box.innerHTML = "";
+  if (!isAssassinCharacter()) { const p = document.createElement('p'); p.textContent = 'Combos de Asesino disponibles al elegir esa subclase. Usa Mesa, recursos de clase y Combate para tu personaje.'; box.appendChild(p); return; }
   const pb = profBonus(state.level);
   const sneak = sneakDiceCount(state.level);
 
@@ -1399,7 +1445,7 @@ function rollComboDamage(comboId) {
 function renderFeatures() {
   const body = $("#features-body");
   body.innerHTML = "";
-  LEVEL_PROGRESSION.forEach((f) => {
+  characterProgression().forEach((f) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${f.lv}</td><td>${escapeHtml(LANG === "es" ? f.es : f.en)}</td>`;
     body.appendChild(tr);
@@ -1434,6 +1480,7 @@ function renderAll() {
   renderCombos();
   renderFeatures();
   if (window.CHAPS_FEATURES) window.CHAPS_FEATURES.render();
+  window.CHARACTER_UI?.render();
 }
 
 /* ---------- Sidebar de secciones ---------- */

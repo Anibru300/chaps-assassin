@@ -91,9 +91,12 @@
 
   /** Precarga los campos con los stats actuales de la ficha. */
   function prefillFromSheet() {
-    const dex = abilityMod(state.abilities.dex);
-    document.getElementById("dpr-atk").value = profBonus(state.level) + dex;
-    document.getElementById("dpr-dmg").value = dex;
+    const weapon = state.weapons[0], stats=weapon?weaponStats(weapon):null;
+    document.getElementById("dpr-atk").value = stats?.attack || 0;
+    document.getElementById("dpr-dmg").value = stats?.damage || 0;
+    if(weapon)document.getElementById('dpr-dice').value=`${weapon.dice}d${weapon.sides}`;
+    document.getElementById('dpr-attacks').value=typeof CHARACTER_RULES==='undefined'?1:CHARACTER_RULES.attacks(state);
+    document.getElementById('dpr-use-sneak').checked=isRogueCharacter();
     document.getElementById("dpr-sneak").value = sneakDiceCount(state.level) + "d6";
   }
 

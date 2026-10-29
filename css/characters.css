@@ -1,0 +1,15 @@
+#character-builder { width: min(800px, calc(100% - 24px)); max-height: 92dvh; overflow: auto; box-sizing: border-box; padding: 22px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-card); color: var(--text); }
+#character-builder::backdrop { background: rgb(0 0 0 / 75%); }
+#character-builder [hidden] { display: none !important; }
+#character-builder input, #character-builder select, #character-builder textarea { font-size: 16px; max-width: 100%; }
+.builder-abilities { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+.builder-checks { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 16px; }
+.builder-checks label { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.builder-actions { position: sticky; bottom: -22px; background: var(--bg-card); padding: 16px 0; flex-wrap: wrap; }
+.resource-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.resource-row span { flex: 1 1 180px; }
+.spell-row { border-top: 1px solid var(--border); padding: 10px 0; }
+.spell-row p { white-space: pre-wrap; overflow-wrap: anywhere; }
+#builder-error { white-space: pre-line; }
+#character-welcome { border-color: var(--gold); }
+@media(max-width:600px) { .builder-abilities { grid-template-columns: repeat(2,minmax(0,1fr)); } .builder-checks { grid-template-columns: 1fr; } #character-builder { padding: 14px; } .builder-actions { bottom: -14px; } }

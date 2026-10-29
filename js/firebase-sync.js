@@ -113,14 +113,21 @@
     async linkGoogle() { await boot(); const result = await account.linkGoogle(); user = auth.currentUser; return result; },
     async verifyGoogle() { await boot(); return account.verifyGoogle(); },
     selectCharacter: (id) => selectCharacter(id),
-    async createCharacter(name, copy) {
+    async createCharacter(name, copy, spec) {
       requireUser();
       if (!name.trim() || name.length > 80) throw new Error("Nombre de personaje no válido.");
       if (profiles.catalog(user.uid).length >= 20) throw new Error("Límite: 20 personajes por cuenta.");
-      const data = copy ? window.CHAPS_STORE.snapshot() : freshCharacter();
+      const data = copy ? window.CHAPS_STORE.snapshot() : spec ? CHARACTER_RULES.create(window.CHAPS_STORE.defaults(), { ...spec, name }) : freshCharacter();
+      if (copy && !data.identity.charClass) throw new Error("Crea personaje antes de duplicarlo.");
+      window.CHAPS_STORE.validate(data);
       data.savedVersions = {};
       data.name = name.trim();
-      await selectCharacter("c_" + crypto.randomUUID(), data);
+      const uid = user.uid, id = "c_" + crypto.randomUUID();
+      await selectCharacter(id, data);
+      if (user?.uid !== uid || profiles.current.id !== id) throw new Error("Cuenta o personaje cambió durante creación.");
+      saveState();
+      await cloud.flush();
+      return { id, synced: cloud.status.mode === "synced" };
     },
     async history() {
       requireUser();
@@ -166,6 +173,7 @@
   function requireUser() { if (!user || !profiles) throw new Error("Inicia sesión para usar personajes e historial."); }
   function messageCharacterError(error) { const node = el("character-status"); if (node) node.textContent = errorText(error); }
   function freshCharacter() {
+    if (typeof CHARACTER_RULES !== "undefined") throw new Error("Usa creación guiada: elige clase, especie y trasfondo.");
     const data = window.CHAPS_STORE.defaults();
     Object.assign(data, { level: 1, xp: 0, hpCurrent: 8, hpMax: 8, hpTemp: 0, ac: 10, initiative: 0, hitDiceSpent: 0, deathSuccess: 0, deathFail: 0, inspiration: false, weapons: [], feats: [], inventory: [], journal: [], notes: "", backstory: "" });
     data.identity = { ...data.identity, subclass: "", playerName: "", campaign: "" };
@@ -254,7 +262,12 @@
             try { const data = JSON.parse(row.data().payload); return { id: row.id, name: String(data.name || row.id), level: Number(data.level) || 1 }; }
             catch (_) { return null; }
           }).filter(Boolean);
-          profiles?.updateCatalog(uid, entries); window.CHAPS_FEATURES?.render();
+          profiles?.updateCatalog(uid, entries); window.CHAPS_FEATURES?.render(); window.CHARACTER_UI?.render();
+          // Otro dispositivo: recuperar primer personaje real en vez de dejar borrador vacío.
+          if (entries.length && profiles?.current.id === "chaps" && !window.CHAPS_STORE.hasLocal() && !switching) {
+            const first = entries.find(entry => entry.id === "chaps") || entries[0];
+            if (first.id !== "chaps") selectCharacter(first.id).catch(messageCharacterError);
+          }
         }, (error) => messageCharacterError(error));
       }, (error) => showStatus({ mode: "error", error }));
     })().catch((error) => { booting = null; throw error; });

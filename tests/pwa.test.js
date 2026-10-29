@@ -26,6 +26,7 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.addInitScript(() => sessionStorage.setItem("chaps-auth-v1", "1"));
+      await require("./legacy-fixture").seed(context);
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
@@ -33,10 +34,10 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     const assets = await page.evaluate(async () => {
-      const cache = await caches.open("chaps-v16-sheet-audit-fixes");
+      const cache = await caches.open("chaps-v17-character-platform");
       return (await cache.keys()).map(request => new URL(request.url).pathname);
     });
-    for (const asset of ["/js/profile-store.js", "/js/account-auth.js", "/js/features.js", "/css/features.css", "/js/combat-tools.js", "/css/combat-visuals.css", "/js/combat-help.js", "/css/combat-layout.css", "/js/combat-rolls.js"]) {
+    for (const asset of ["/js/character-rules.js", "/js/character-equipment.js", "/js/character-builder.js", "/js/character-magic.js", "/css/characters.css", "/assets/adventurer.svg", "/js/profile-store.js", "/js/account-auth.js", "/js/features.js", "/css/features.css", "/js/combat-tools.js", "/css/combat-visuals.css", "/js/combat-help.js", "/css/combat-layout.css", "/js/combat-rolls.js"]) {
       assert.ok(assets.includes(asset), "precaché incluye " + asset);
     }
     const icons = await page.evaluate(async () => {
@@ -95,6 +96,19 @@ test("PWA instalada conserva ficha, Mesa y notas al recargar offline", {
     await page.locator("#combat-help-close").click();
     assert.equal(await page.evaluate(() => combat.p.action), false);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.evaluate(() => {
+      combat.on=false;
+      state=CHARACTER_RULES.create(DEFAULT_STATE,{name:'Bruja offline',classId:'warlock',speciesId:'orc',backgroundId:'soldier',level:1,subclass:'',method:'standard',abilities:{str:15,dex:14,con:13,int:12,wis:10,cha:8},boosts:{dex:2,con:1},skills:['arcana','deception'],languages:['Común','Élfico','Enano']});
+      state.spellSlotsSpent={pact:1};state.resources={r:{name:'Uso de prueba',max:2,spent:1,recharge:'short'}};
+      state.spellbook=[{id:'s',name:'Descarga sobrenatural',rulesSpellId:'eldritchBlast',level:0,details:'Guardado sin red',prepared:true}];saveState();renderAll();
+    });
+    await page.reload();
+    assert.equal(await page.evaluate(()=>state.identity.charClass),'Brujo');
+    assert.equal(await page.evaluate(()=>state.spellbook[0].details),'Guardado sin red');
+    assert.equal(await page.evaluate(()=>state.spellSlotsSpent.pact),1);
+    await page.locator('.tab-btn[data-tab="table"]').click();await page.locator('#table-short-rest').click();await page.locator('#short-rest-close').click();
+    assert.equal(await page.evaluate(()=>Object.keys(state.spellSlotsSpent).length),0);
+    assert.equal(await page.evaluate(()=>state.resources.r.spent),0);
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

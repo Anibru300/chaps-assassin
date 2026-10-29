@@ -54,7 +54,7 @@ test("sincronización entre computadora/celular y panel sin superposición", {
     const seed = JSON.parse(vm.runInContext("JSON.stringify(DEFAULT_STATE)", sandbox));
     const sdk = {
       "firebase-app.js": "export const initializeApp = config => config;",
-      "firebase-auth.js": `const user={uid:'same-user',email:'ing.carlosurbina300@example.com',providerData:[{providerId:'google.com'}]};
+      "firebase-auth.js": `const user={uid:globalThis.testUID||'same-user',email:'player@example.com',providerData:[{providerId:'google.com'}]};
         const auth={currentUser:user}; let listener;
         export const getAuth=()=>auth; export class GoogleAuthProvider {}
         export function onAuthStateChanged(auth, cb) { listener=cb; queueMicrotask(()=>cb(user)); }
@@ -101,18 +101,22 @@ test("sincronización entre computadora/celular y panel sin superposición", {
           return ()=>{closed=true;clearInterval(timer)};
         }`
     };
-    async function device(viewport, name) {
+    async function device(viewport, name, uid='same-user') {
       const context = await browser.newContext({ viewport, serviceWorkers: "block" });
       await context.addInitScript((data) => {
-        if (!localStorage.getItem("chaps-state-v1")) localStorage.setItem("chaps-state-v1", JSON.stringify(data));
-      }, { ...seed, name });
+        globalThis.testUID=data.testUID;
+        if (data.name && !localStorage.getItem("chaps-state-v1")) {
+          localStorage.setItem("chaps-state-v1", JSON.stringify(data));
+          localStorage.setItem("chaps-working-character-v1",JSON.stringify({uid:data.testUID,id:'chaps'}));
+        }
+      }, { ...seed, name, testUID:uid });
       const page = await context.newPage();
       page.on("pageerror", (error) => errors.push(error.message));
       await page.route("https://www.gstatic.com/firebasejs/**", (route) => route.fulfill({
         contentType: "application/javascript", body: sdk[route.request().url().split("/").at(-1)]
       }));
       await page.goto(url);
-      await page.waitForFunction(() => CHAPS_CLOUD.core.status.mode === "synced");
+      await page.waitForFunction(() => ['synced','empty'].includes(CHAPS_CLOUD.core.status.mode));
       return page;
     }
     const pc = await device({ width: 1440, height: 1000 }, "CHAPS PC");
@@ -211,8 +215,16 @@ test("sincronización entre computadora/celular y panel sin superposición", {
     });
     let secondId;
     await t.test("crear personaje independiente y alternar conserva CHAPS", async () => {
-      await pc.locator("#character-name").fill("Segundo pícaro");
       await pc.locator("#character-create").click();
+      await pc.locator('#builder-name').fill('Segundo pícaro');
+      await pc.locator('#builder-class').selectOption('wizard');
+      await pc.locator('#builder-species').selectOption('orc');
+      await pc.locator('#builder-background').selectOption('soldier');
+      await pc.locator('#builder-next').click();
+      await pc.locator('input[name="builder-skill"][value="arcana"]').check();
+      await pc.locator('input[name="builder-skill"][value="history"]').check();
+      await pc.locator('#builder-next').click();
+      await pc.locator('#builder-submit').click();
       await pc.waitForFunction(() => state.name === "Segundo pícaro" && CHAPS_CLOUD.core.status.mode === "synced");
       secondId = await pc.evaluate(() => CHAPS_FEATURES.profiles.current.id);
       assert.equal(await pc.evaluate(() => state.level), 1);
@@ -257,6 +269,35 @@ test("sincronización entre computadora/celular y panel sin superposición", {
           assert.ok(rect.x >= bounds.x && rect.x + rect.width <= bounds.x + bounds.width + 1);
         }
       }
+    });
+    await t.test('cuenta nueva crea personaje guiado; otro dispositivo lo recupera; otra cuenta queda vacía', async () => {
+      const fresh=await device({width:390,height:844},null,'new-player');
+      assert.equal(await fresh.evaluate(()=>state.name),'Nuevo personaje');
+      assert.equal(await fresh.evaluate(()=>state.backstory),'');
+      assert.equal(await fresh.locator('#character-welcome').isVisible(),true);
+      await fresh.locator('#welcome-create').click();
+      await fresh.locator('#builder-name').fill('Ada');
+      await fresh.locator('#builder-class').selectOption('fighter');
+      await fresh.locator('#builder-species').selectOption('orc');
+      await fresh.locator('#builder-background').selectOption('criminal');
+      await fresh.locator('#builder-next').click();
+      await fresh.locator('input[name="builder-skill"][value="athletics"]').check();
+      await fresh.locator('input[name="builder-skill"][value="perception"]').check();
+      await fresh.locator('#builder-next').click();
+      assert.equal(await fresh.locator('#builder-submit').isEnabled(),true);
+      await fresh.locator('#builder-submit').click();
+      await fresh.waitForFunction(()=>state.name==='Ada'&&CHAPS_CLOUD.core.status.mode==='synced');
+      const id=await fresh.evaluate(()=>CHAPS_FEATURES.profiles.current.id);
+      assert.equal(await fresh.evaluate(()=>state.identity.charClass),'Guerrero');
+      assert.equal(await fresh.evaluate(()=>state.currency.gp),205);
+      const returned=await device({width:1440,height:900},null,'new-player');
+      await returned.waitForFunction(()=>state.name==='Ada'&&CHAPS_CLOUD.core.status.mode==='synced');
+      assert.equal(await returned.evaluate(()=>CHAPS_FEATURES.profiles.current.id),id);
+      const unrelated=await device({width:390,height:844},null,'unrelated-player');
+      assert.equal(await unrelated.evaluate(()=>state.identity.charClass),'');
+      assert.equal(await unrelated.evaluate(()=>CHAPS_FEATURES.profiles.catalog('unrelated-player').length),0);
+      assert.equal(documents.has('users/unrelated-player/characters/'+id),false);
+      assert.equal(JSON.parse(documents.get('users/new-player/characters/'+id).payload).name,'Ada');
     });
     await t.test("Cerrar sesión aparece en cabecera y devuelve acceso", async () => {
       const button = pc.locator(".app-header #cloud-disconnect");

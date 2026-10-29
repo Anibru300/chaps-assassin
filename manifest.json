@@ -1,7 +1,7 @@
 {
-  "name": "CHAPS — Asesino D&D 2024",
+  "name": "CHAPS — Personajes D&D 2024",
   "short_name": "CHAPS",
-  "description": "Ficha y asistente de combate para CHAPS, pícaro asesino D&D 2024.",
+  "description": "Crea personajes, guarda fichas privadas y prepara combates de D&D 2024.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0d0e12",

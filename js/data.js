@@ -110,6 +110,7 @@ const LEVEL_PROGRESSION = [
 /* ---------- Estado por defecto de la ficha ---------- */
 const STATE_VERSION = 4; // v4: dotes/armas del catálogo referenciadas por id (traducción automática)
 const DEFAULT_STATE = {
+  creation: null, spellbook: [], spellSlotsSpent: {}, resources: {}, portrait: "",
   v: STATE_VERSION,
   name: "CHAPS",
   level: 12,
@@ -498,7 +499,7 @@ const FEAT_CATALOG = [
 /* ---------- Diccionario i18n ---------- */
 const I18N = {
   es: {
-    appTitle: "CHAPS — Asesino D&D 2024",
+    appTitle: "CHAPS — Personajes D&D 2024",
     appSubtitle: "Plataforma de entrenamiento y gestión de personaje",
     tabSheet: "Ficha",
     tabCombos: "Combos",
@@ -651,7 +652,7 @@ const I18N = {
     footer: "Herramienta de fans sin afiliación con Wizards of the Coast. D&D 2024."
   },
   en: {
-    appTitle: "CHAPS — Assassin D&D 2024",
+    appTitle: "CHAPS — D&D 2024 Characters",
     appSubtitle: "Training & character management platform",
     tabSheet: "Character Sheet", tabCombos: "Combo Guide",
     tabCombat: "Combat",

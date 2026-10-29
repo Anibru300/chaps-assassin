@@ -26,7 +26,8 @@ globalThis.CHAPS_PROFILE_STORE = function ({ storage, store }) {
       if (!uid || !/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error("Personaje no válido.");
       remember();
       const same = working.uid === uid && working.id === id;
-      const adoptLegacy = !working.uid && id === "chaps";
+      const adoptLegacy = !working.uid && legacy.uid === uid && id === "chaps";
+      if (!working.uid && !adoptLegacy && !seed && store.hasLocal()) storage.setItem('chaps-unassigned-backup-v1', JSON.stringify(store.snapshot()));
       const data = seed || (same || adoptLegacy ? (store.hasLocal() ? store.snapshot() : null) : parse(sheetKey(uid, id), null));
       if (data) store.validate(data);
       working = { uid, id };

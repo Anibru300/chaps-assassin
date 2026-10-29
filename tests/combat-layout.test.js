@@ -20,6 +20,7 @@ test("mapa y tirada visibles juntos; ayuda explica recursos sin gastarlos", {
     for (const [width, height] of [[1440, 900], [1280, 720], [1024, 768], [390, 844], [360, 740]]) await t.test(`${width} × ${height}`, async () => {
       const context = await browser.newContext({ viewport: { width, height }, serviceWorkers: "block", reducedMotion: "reduce" });
       await context.addInitScript(() => sessionStorage.setItem("chaps-auth-v1", "1"));
+      await require("./legacy-fixture").seed(context);
       const page = await context.newPage(), errors = [];
       page.on("pageerror", error => errors.push(error.message));
       await page.route("https://www.gstatic.com/firebasejs/**", route => route.abort());

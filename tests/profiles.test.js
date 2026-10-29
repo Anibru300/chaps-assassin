@@ -22,7 +22,7 @@ test("migra CHAPS original y metadatos pendientes sin duplicar cuenta", () => {
   assert.equal(JSON.parse(s.memory.get(s.profiles.metadataKey("carlos", "chaps"))).dirty, true);
 });
 test("cambiar personajes conserva datos pendientes y vuelve a ficha correcta", () => {
-  const s = setup();
+  const s = setup("carlos");
   s.profiles.activate("carlos", "chaps");
   s.edit("CHAPS EDITADO");
   s.profiles.activate("carlos", "segundo", { name: "SEGUNDO", level: 1 });
@@ -40,6 +40,11 @@ test("otra cuenta no hereda personaje privado de cuenta anterior", () => {
   assert.equal(s.data, null);
   s.profiles.activate("carlos", "chaps");
   assert.equal(s.data.name, "CHAPS");
+});
+
+test("cuenta nueva no adopta ficha sin dueño; conserva respaldo local", () => {
+  const s=setup();s.profiles.activate('nuevo','chaps');assert.equal(s.data,null);
+  assert.equal(JSON.parse(s.memory.get('chaps-unassigned-backup-v1')).name,'CHAPS');
 });
 test("personajes utilizan claves de sincronización independientes", () => {
   const s = setup("carlos");
