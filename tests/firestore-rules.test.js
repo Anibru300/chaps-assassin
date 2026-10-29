@@ -9,7 +9,8 @@ test("reglas Firestore: acceso privado, formato y revisiones", {
   const dependency = (name) => require(process.env.CHAPS_TEST_MODULES
     ? path.join(process.env.CHAPS_TEST_MODULES, name) : name);
   const { initializeTestEnvironment, assertSucceeds, assertFails } = dependency("@firebase/rules-unit-testing");
-  const { doc, setDoc, getDoc, deleteDoc, serverTimestamp } = dependency("firebase/firestore");
+  const { doc, setDoc, getDoc, getDocs, collection, deleteDoc, serverTimestamp, writeBatch, setLogLevel } = dependency("firebase/firestore");
+  setLogLevel("silent");
   const env = await initializeTestEnvironment({
     projectId: "demo-chaps",
     firestore: { rules: fs.readFileSync(path.resolve(__dirname, "../firestore.rules"), "utf8") }
@@ -42,10 +43,23 @@ test("reglas Firestore: acceso privado, formato y revisiones", {
       await assertFails(setDoc(target(owner), { ...value(3), extra: true }));
       await assertFails(setDoc(target(owner), { ...value(3), payload: "x".repeat(700000) }));
     });
-    await t.test("no admite otras rutas ni borrar ficha", async () => {
-      await assertFails(setDoc(doc(owner, "users/carlos/characters/otro"), value()));
+    await t.test("varios personajes privados; no admite rutas públicas ni borrar ficha", async () => {
+      await assertSucceeds(setDoc(doc(owner, "users/carlos/characters/otro"), value()));
+      await assertSucceeds(getDocs(collection(owner, "users/carlos/characters")));
+      await assertFails(getDocs(collection(other, "users/carlos/characters")));
       await assertFails(setDoc(doc(owner, "public/chaps"), value()));
       await assertFails(deleteDoc(target(owner)));
+    });
+    await t.test("historial guarda versión previa en mismo cambio atómico", async () => {
+      const batch = writeBatch(owner);
+      const previous = doc(owner, "users/carlos/characters/chaps/versions/r2");
+      batch.set(previous, { schema: 1, revision: 2, payload: value().payload, createdAt: serverTimestamp() });
+      batch.set(target(owner), value(3));
+      await assertSucceeds(batch.commit());
+      await assertSucceeds(getDoc(previous));
+      await assertFails(getDoc(doc(other, "users/carlos/characters/chaps/versions/r2")));
+      await assertFails(setDoc(previous, { schema: 1, revision: 2, payload: "alterado", createdAt: serverTimestamp() }));
+      await assertFails(setDoc(doc(owner, "users/carlos/characters/chaps/versions/r3"), { schema: 1, revision: 3, payload: value().payload, createdAt: serverTimestamp() }));
     });
   } finally {
     await env.cleanup();

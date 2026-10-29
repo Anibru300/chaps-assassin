@@ -120,6 +120,9 @@ const DEFAULT_STATE = {
   },
   feats: [],               // [{name, desc}]
   journal: [],             // [{date, title, text}] — más reciente primero
+  session: { lastPlayed: "", location: "", recap: "", nextGoal: "" },
+  sessionNotes: {},        // notas por id, permite combinar ediciones independientes
+  tableConditions: {},    // condiciones anotadas manualmente en modo mesa
   progressionOverrides: {},// {nivel: true/false} — toggle manual sobre el auto-check
   asiNotes: {},            // {nivel: "texto"} — elección en niveles de mejora
   hpCurrent: 89,          // valor actual de la ficha del jugador (nivel 12)

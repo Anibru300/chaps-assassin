@@ -1,0 +1,46 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const path = require("node:path");
+const fs = require("node:fs");
+const vm = require("node:vm");
+test("Firebase emulado: Google + contraseña conservan UID y ficha; alta y recuperación", { skip: !process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIRESTORE_EMULATOR_HOST }, async () => {
+  const load = (name) => require(path.join(process.env.CHAPS_TEST_MODULES, name));
+  const appSDK = load("firebase/app"), sdk = load("firebase/auth");
+  const app = appSDK.initializeApp({ apiKey: "demo-key", projectId: "demo-chaps" }, "auth-test-" + Date.now());
+  const auth = sdk.getAuth(app);
+  sdk.connectAuthEmulator(auth, "http://" + process.env.FIREBASE_AUTH_EMULATOR_HOST, { disableWarnings: true });
+  const firestore = load("firebase/firestore");
+  const db = firestore.getFirestore(app);
+  const [host, port] = process.env.FIRESTORE_EMULATOR_HOST.split(":");
+  firestore.connectFirestoreEmulator(db, host, Number(port));
+  try {
+    const token = JSON.stringify({ sub: "google-person-123", email: "google-person@example.com", email_verified: true });
+    const first = await sdk.signInWithCredential(auth, sdk.GoogleAuthProvider.credential(token));
+    const uid = first.user.uid;
+    const ref = firestore.doc(db, "users", uid, "characters", "chaps");
+    await firestore.setDoc(ref, { schema: 1, revision: 1, payload: '{"name":"CHAPS original"}', updatedAt: firestore.serverTimestamp() });
+    const context = vm.createContext({});
+    vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../js/account-auth.js"), "utf8"), context);
+    const account = context.CHAPS_ACCOUNT_AUTH({ sdk, auth });
+    await account.setPassword("chaps-test-123", "chaps-test-123");
+    await sdk.signOut(auth);
+    const next = await account.login("google-person@example.com", "chaps-test-123");
+    assert.equal(next.user.uid, uid);
+    assert.equal((await firestore.getDocFromServer(ref)).data().payload, '{"name":"CHAPS original"}');
+    assert.ok(next.user.providerData.some((provider) => provider.providerId === "google.com"));
+    assert.ok(next.user.providerData.some((provider) => provider.providerId === "password"));
+    await account.setPassword("changed-test-123", "changed-test-123", "chaps-test-123");
+    await sdk.signOut(auth);
+    assert.equal((await account.login("google-person@example.com", "changed-test-123")).user.uid, uid);
+    await sdk.signOut(auth);
+    assert.equal((await sdk.signInWithCredential(auth, sdk.GoogleAuthProvider.credential(token))).user.uid, uid);
+    assert.equal((await firestore.getDocFromServer(ref)).data().payload, '{"name":"CHAPS original"}');
+    await sdk.signOut(auth);
+    const created = await account.register("new-person@example.com", "register-123", "register-123", "Nuevo jugador");
+    assert.notEqual(created.user.uid, uid);
+    assert.equal(created.user.displayName, "Nuevo jugador");
+    await sdk.signOut(auth);
+    assert.equal((await account.login("new-person@example.com", "register-123")).user.uid, created.user.uid);
+    await account.reset("new-person@example.com");
+  } finally { await appSDK.deleteApp(app); }
+});

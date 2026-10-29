@@ -2,7 +2,46 @@
 
 > Este archivo evita re-leer todo el código. Léelo primero y continúa desde aquí.
 
-## Última actualización: 2026-08-16
+## Última actualización: 2026-10-29 — implementación terminada; publicación pendiente
+
+**Estado vigente:** [BITACORA-2026-10-29.md](../BITACORA-2026-10-29.md).
+
+- Usuario autorizó terminar y avisar para probar. Cuenta, personajes, historial,
+  Mesa y notas implementados y verificados; caché `chaps-v10-characters-table`.
+- Vinculación Google/contraseña conserva UID. Ante `auth/email-already-in-use`,
+  actualiza contraseña del usuario actual, recarga y verifica proveedor password.
+  No crea cuenta alternativa. Prueba real contra emuladores incluye conservar ficha.
+- Pruebas: 30 unitarias/funcionales, 20 navegador (incluye grupos), reglas/Auth en
+  emuladores y 59 comprobaciones de combate. Ver bitácora para resultado final.
+- CLI producción bloqueado por `EPERM` al leer configuración privada de Firebase.
+  Emuladores usan configuración temporal independiente, sin credenciales reales.
+- Se pidió usuario publicar reglas desde terminal normal con comando de FIREBASE.md.
+  No actualizar GitHub Pages hasta confirmar éxito. Versión online continúa `1a3c5b8`.
+- Logs excluidos mediante `.gitignore`. Documentación y versiones de assets actualizadas.
+
+### Registro anterior — 2026-10-28 (histórico; sustituido por estado vigente)
+
+**Leer bitácora de continuación:** [BITACORA-2026-10-28.md](../BITACORA-2026-10-28.md).
+
+### Estado actual que reemplaza notas antiguas de abajo
+
+- Última versión publicada: commit `1a3c5b8`, rama `main`, GitHub Pages `https://anibru300.github.io/chaps-assassin/`.
+- Usuario confirmó sincronización Google funcionando entre celular y computadora.
+- Ya publicados: tres errores funcionales corregidos, sincronización/reconexión/conflictos, retirada de botones JSON y navegación móvil/tablet/escritorio con búsqueda y accesibilidad.
+- Firebase: proyecto `chaps-58e61`; dominio autorizado `anibru300.github.io`; personaje original `users/{uid}/characters/chaps`.
+- **Hay cambios sin commit y sin publicar:** cuenta con correo/contraseña vinculada, varios personajes, historial, Mesa y notas de partida.
+- Nuevos módulos: `js/profile-store.js`, `js/account-auth.js`, `js/features.js`; estilos `css/features.css`.
+- Nuevas pruebas: `tests/profiles.test.js`, `tests/auth-link.test.js`; reglas y prueba de reglas ampliadas.
+- Último unitario: **28 pruebas pasan**. Reglas: seis escenarios pasan en emulador.
+- **Bloqueo de prueba:** `tests/auth-link.test.js` falla con `auth/email-already-in-use` al vincular contraseña a cuenta Google simulada. Diagnóstico pendiente.
+- Pruebas Playwright antiguas aún necesitan fixtures multicaracter/historial/Auth; nuevas funciones no verificadas en navegador.
+- CLI Firebase sin sesión; se pidió al usuario `firebase login`, todavía sin confirmación al pausar.
+- Reglas nuevas solo locales. **No publicar frontend hasta validar y publicar reglas compatibles**, o historial bloqueará transacciones de guardado.
+- Falta actualizar caché `sw.js` (sigue v9) y versiones de JS modificados; añadir scripts/CSS nuevos al precaché.
+- `firebase-debug.log` generado por CLI aparece sin seguimiento: no añadir a Git ni publicar.
+- Usuario pidió pausa/documentación; no continuar implementación hasta que retome.
+
+### Notas históricas previas (2026-08-16; pueden estar desactualizadas)
 
 ## Qué es
 Ficha web de CHAPS (Pícaro Asesino N12, D&D 2024, Dragonlance). Sitio estático: `index.html` + JS plano (sin módulos). Estado en localStorage (`chaps-state-v1`), export/import JSON.

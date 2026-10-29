@@ -1,43 +1,58 @@
 /* ============================================================
-   auth.js — Puerta de acceso (protección casual, sitio estático)
-   La contraseña NUNCA se guarda en texto plano: solo hash SHA-256.
+   auth.js — Interfaz de acceso; credenciales verificadas por Firebase.
    ============================================================ */
 (function () {
-  const EXPECTED = "ef71a1e3edf1b769265645bebdad57862fd314a7896e5507212bbdfd8b67393d"; // SHA-256 de "usuario:contraseña"
   const KEY = "chaps-auth-v1";
-
-  function sha256(str) {
-    const data = new TextEncoder().encode(str);
-    return crypto.subtle.digest("SHA-256", data).then((buf) =>
-      Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join(""));
-  }
 
   function open() {
     sessionStorage.setItem(KEY, "1");
     const gate = document.getElementById("login-gate");
-    if (gate) gate.remove();
+    if (gate) gate.hidden = true;
     document.body.classList.remove("locked");
   }
 
-  window.CHAPS_AUTH = { open };
+  function lock() {
+    sessionStorage.removeItem(KEY);
+    const gate = document.getElementById("login-gate");
+    if (gate) gate.hidden = false;
+    document.body.classList.add("locked");
+  }
+  window.CHAPS_AUTH = { open, lock };
 
   document.addEventListener("DOMContentLoaded", () => {
-    if (sessionStorage.getItem(KEY) === "1") { open(); return; }
-    document.body.classList.add("locked");
+    if (sessionStorage.getItem(KEY) === "1") open(); else document.body.classList.add("locked");
     const form = document.getElementById("login-form");
     const err = document.getElementById("login-error");
-    form.addEventListener("submit", (e) => {
+    let register = false;
+    document.getElementById("auth-switch").addEventListener("click", () => {
+      register = !register;
+      document.getElementById("auth-register-fields").hidden = !register;
+      document.getElementById("auth-confirm").required = register;
+      document.getElementById("auth-submit").textContent = register ? "Crear cuenta" : "Entrar";
+      document.getElementById("auth-switch").textContent = register ? "Ya tengo cuenta" : "Crear cuenta con correo";
+      document.getElementById("login-pass").autocomplete = register ? "new-password" : "current-password";
+      err.textContent = "";
+    });
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const u = document.getElementById("login-user").value.trim();
-      const p = document.getElementById("login-pass").value;
-      sha256(u + ":" + p).then((h) => {
-        if (h === EXPECTED) open();
-        else {
-          err.textContent = "Usuario o contraseña incorrectos";
-          form.reset();
-          document.getElementById("login-user").focus();
-        }
-      });
+      const button = document.getElementById("auth-submit");
+      button.disabled = true;
+      try {
+        const service = window.CHAPS_CLOUD;
+        if (!service) throw new Error("Espera a que cargue conexión de cuenta.");
+        const email = document.getElementById("login-user").value.trim();
+        const secret = document.getElementById("login-pass").value;
+        if (register) await service.register(email, secret, document.getElementById("auth-confirm").value, document.getElementById("auth-alias").value);
+        else await service.login(email, secret);
+        form.reset();
+      } catch (error) { err.textContent = window.CHAPS_CLOUD?.errorText(error) || error.message; }
+      finally { button.disabled = false; }
+    });
+    document.getElementById("auth-forgot").addEventListener("click", async () => {
+      try {
+        await window.CHAPS_CLOUD.resetPassword(document.getElementById("login-user").value);
+        err.textContent = "Si correo tiene cuenta, recibirás instrucciones de recuperación.";
+      } catch (error) { err.textContent = window.CHAPS_CLOUD?.errorText(error) || error.message; }
     });
   });
 })();

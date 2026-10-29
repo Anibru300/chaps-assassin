@@ -243,6 +243,13 @@ test("puente valida ficha real, guarda respaldo y notifica guardado local", () =
   store.replace({ ...data, name: "OTRA ACTUALIZACION" });
   assert.equal(JSON.parse(memory.get("chaps-state-before-cloud-v1")).name, "CHAPS");
   assert.equal(notifications, 1); // Descargar no vuelve a subir.
+  const original = structuredClone(data);
+  delete original.session; delete original.sessionNotes; delete original.tableConditions;
+  store.validate(original); // Fichas publicadas antes de añadir Mesa y notas.
+  for (const field of ["sessionNotes", "tableConditions"]) {
+    assert.throws(() => store.validate({ ...original, [field]: [] }));
+    assert.throws(() => store.validate({ ...original, [field]: null }));
+  }
   data.weapons = [null];
   assert.throws(() => store.replace(data));
   assert.equal(store.snapshot().name, "OTRA ACTUALIZACION");

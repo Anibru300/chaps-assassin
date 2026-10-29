@@ -1,8 +1,8 @@
 /* Sincronización independiente del SDK: copia local, revisiones y conflictos. */
 "use strict";
 
-globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus }) {
-  const KEY = "chaps-cloud-meta-v1";
+globalThis.CHAPS_CLOUD_CORE = function ({ store, storage, remote, onStatus, metadataKey = "chaps-cloud-meta-v1" }) {
+  const KEY = metadataKey;
   let uid = null, generation = 0, edits = 0, known = null, ready = false;
   let queue = Promise.resolve();
   let status = { mode: "local" };

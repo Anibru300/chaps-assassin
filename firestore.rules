@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/characters/{characterId} {
       function owner() {
-        return request.auth != null && request.auth.uid == userId && characterId == 'chaps';
+        return request.auth != null && request.auth.uid == userId;
       }
       function valid() {
         let data = request.resource.data;
@@ -14,9 +14,23 @@ service cloud.firestore {
           && data.updatedAt == request.time;
       }
       allow read: if owner();
-      allow create: if owner() && valid() && request.resource.data.revision == 1;
-      allow update: if owner() && valid()
+      allow create: if owner() && characterId.matches('[a-zA-Z0-9_-]{1,80}') && valid() && request.resource.data.revision == 1;
+      allow update: if owner() && characterId.matches('[a-zA-Z0-9_-]{1,80}') && valid()
         && request.resource.data.revision == resource.data.revision + 1;
+      match /versions/{versionId} {
+        allow read, delete: if owner();
+        allow create: if owner()
+          && request.resource.data.keys().hasAll(['schema', 'revision', 'payload', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['schema', 'revision', 'payload', 'createdAt'])
+          && request.resource.data.schema == 1
+          && request.resource.data.revision is int
+          && request.resource.data.revision > 0
+          && versionId == 'r' + string(request.resource.data.revision)
+          && request.resource.data.payload == get(/databases/$(database)/documents/users/$(userId)/characters/$(characterId)).data.payload
+          && request.resource.data.revision == get(/databases/$(database)/documents/users/$(userId)/characters/$(characterId)).data.revision
+          && getAfter(/databases/$(database)/documents/users/$(userId)/characters/$(characterId)).data.revision == request.resource.data.revision + 1
+          && request.resource.data.createdAt == request.time;
+      }
     }
   }
 }

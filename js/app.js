@@ -92,6 +92,7 @@ function loadState() {
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   flashSaved();
+  if (window.CHAPS_FEATURES) window.CHAPS_FEATURES.saved();
   if (window.CHAPS_CLOUD) window.CHAPS_CLOUD.changed();
 }
 
@@ -99,6 +100,13 @@ function saveState() {
 window.CHAPS_STORE = {
   snapshot: () => structuredClone(state),
   hasLocal: () => localStorage.getItem(STORAGE_KEY) !== null,
+  defaults: () => structuredClone(DEFAULT_STATE),
+  activate(data) {
+    if (data) { this.validate(data); localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    else localStorage.removeItem(STORAGE_KEY);
+    state = loadState();
+    renderAll();
+  },
   validate(data) {
     if (!data || typeof data !== "object" || Array.isArray(data) ||
         typeof data.name !== "string" || !Number.isInteger(data.level) ||
@@ -113,7 +121,12 @@ window.CHAPS_STORE = {
         !Array.isArray(value) && Object.keys(model).every((key) => check(value[key], model[key]));
       return typeof value === typeof model && (typeof value !== "number" || Number.isFinite(value));
     };
-    if (!check(data, DEFAULT_STATE)) throw new Error("Ficha de nube incompleta; conserva copia local.");
+    const compatible = { session: DEFAULT_STATE.session, sessionNotes: {}, tableConditions: {}, ...data };
+    if (!check(compatible, DEFAULT_STATE)) throw new Error("Ficha de nube incompleta; conserva copia local.");
+    const session = compatible.session;
+    if (!session || ["lastPlayed", "location", "recap", "nextGoal"].some((key) => typeof session[key] !== "string")) throw new Error("Notas de sesión no válidas.");
+    if (Object.values(compatible.sessionNotes).some((note) => !note || typeof note.title !== "string" || typeof note.text !== "string" || typeof note.date !== "string" || !Number.isFinite(note.createdAt) || typeof note.archived !== "boolean")) throw new Error("Nota de partida no válida.");
+    if (Object.values(compatible.tableConditions).some((value) => typeof value !== "boolean")) throw new Error("Condiciones no válidas.");
     const lists = {
       weapons: { name: "", dice: 1, sides: 6, bonus: 0, props: "", mastery: "" },
       inventory: DEFAULT_STATE.inventory[0],
@@ -127,12 +140,15 @@ window.CHAPS_STORE = {
   replace(data) {
     this.validate(data);
     const previous = localStorage.getItem(STORAGE_KEY);
-    if (previous && !localStorage.getItem("chaps-state-before-cloud-v1")) {
-      localStorage.setItem("chaps-state-before-cloud-v1", previous);
+    const owner = localStorage.getItem("chaps-working-character-v1") || "legacy";
+    const backupKey = owner === "legacy" ? "chaps-state-before-cloud-v1" : "chaps-backup:" + owner;
+    if (previous && !localStorage.getItem(backupKey)) {
+      localStorage.setItem(backupKey, previous);
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     state = structuredClone(data); // Ya validada: conservar exactamente payload y campos opcionales.
     renderAll();
+    if (window.CHAPS_FEATURES) window.CHAPS_FEATURES.saved(false);
   }
 };
 
@@ -1383,6 +1399,7 @@ function renderAll() {
  
   renderCombos();
   renderFeatures();
+  if (window.CHAPS_FEATURES) window.CHAPS_FEATURES.render();
 }
 
 /* ---------- Sidebar de secciones ---------- */

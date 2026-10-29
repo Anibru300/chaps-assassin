@@ -95,6 +95,14 @@ test("navegación de ficha en móvil, tablet y escritorio", {
         assert.equal(await toggle.isVisible(), false);
         assert.equal(await sidebar.isVisible(), false);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.setViewportSize({ width, height: 900 });
+        await page.locator('.tab-btn[data-tab="table"]').click();
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+        assert.equal(await page.locator("#table-name").isVisible(), true);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        if (process.env.CHAPS_SCREENSHOTS && [390, 1440].includes(width)) {
+          await page.screenshot({ path: path.join(process.env.CHAPS_SCREENSHOTS, `mesa-${width}.png`), fullPage: true, animations: "disabled" });
+        }
         assert.deepEqual(errors, []);
         await context.close();
       });

@@ -3,33 +3,52 @@
 Proyecto: `chaps-58e61`. App sin compilación: SDK modular por CDN, cargado desde
 `js/firebase-sync.js`. No hace falta ejecutar `npm install firebase` en CHAPS.
 
-## Consola: pasos pendientes
+## Configuración y publicación
 
-1. Firebase → Authentication → Método de acceso → Google → Habilitar.
+1. Firebase → Authentication → Método de acceso → Google y Correo/contraseña → Habilitar.
    Seleccionar correo de asistencia y guardar.
 2. Firestore Database → Reglas: copiar contenido completo de `firestore.rules`
    y pulsar **Publicar**. Solo cada usuario autenticado puede leer/escribir
-   `users/SU_UID/characters/chaps`. No usar reglas abiertas de modo prueba.
+   `users/SU_UID/characters/ID` y su historial `versions`. No usar reglas abiertas de modo prueba.
 3. Authentication → Configuración → Dominios autorizados: añadir dominio donde
    se publique CHAPS. Para pruebas locales añadir `localhost` si no aparece.
 4. Abrir aplicación mediante HTTPS o servidor local; `file://` conserva ficha
    local, pero no permite conectar Firebase.
 
-## Publicar con Firebase Hosting
+## Publicar reglas antes de actualizar GitHub Pages
 
-Si ya se publica en GitHub Pages, puede conservarse ese alojamiento y autorizar
-su dominio en Authentication. Firebase Hosting es opcional.
+App publicada en GitHub Pages: https://anibru300.github.io/chaps-assassin/.
+Reglas nuevas deben estar publicadas antes de actualizar frontend: guardado
+archiva versión previa en misma transacción y requiere permisos de historial.
 
 Desde `chaps-assassin/`, con Firebase CLI instalado:
 
 ```powershell
 firebase login
-firebase deploy --only firestore:rules,firestore:indexes,hosting --project chaps-58e61
+firebase deploy --only firestore:rules,firestore:indexes --project chaps-58e61
 ```
 
-`firebase.json` y `.firebaserc` están preparados. El despliegue publicará app
-estática en `https://chaps-58e61.web.app` si se conserva sitio Hosting por defecto.
-No se ha desplegado ni modificado configuración remota desde esta sesión.
+Este comando publica solo reglas e índices; alojamiento continúa en GitHub Pages.
+Después de completar despliegue, publicar commit probado en `main`.
+
+## Cuenta, personajes e historial
+
+- Para conservar CHAPS: entrar primero con Google, abrir **Ficha → Cuenta** y
+  guardar contraseña. Después usar mismo correo con contraseña en otro dispositivo.
+- No registrar cuenta nueva para personaje existente. Vinculación usa usuario
+  Firebase actual; si servidor rechaza correo propio, actualiza contraseña de ese
+  mismo usuario y verifica proveedor, conservando UID.
+- Cuenta existente con contraseña: campo contraseña actual permite verificar
+  sesión antes de cambiarla; Google puede verificarse desde mismo panel.
+- Personaje original mantiene ID `chaps`. Crear personaje genera ficha de pícaro
+  nivel 1; duplicar copia ficha completa. Máximo 20 personajes en interfaz.
+- Cada cuenta/personaje tiene ficha local, respaldo y metadatos independientes.
+  Cambios offline permanecen pendientes al alternar. Combate activo bloquea cambio.
+- Historial conserva hasta 50 versiones previas. Restaurar genera revisión nueva;
+  versión reemplazada queda recuperable. Resolver conflictos antes de restaurar.
+- Mesa comparte PG, inspiración y descansos con ficha. Condiciones manuales no
+  modifican simulador de combate. Notas y resumen se sincronizan por personaje.
+- Motor sigue especializado en Pícaro Asesino; no construye otras clases.
 
 ## Migrar personaje sin perder datos
 
@@ -64,7 +83,7 @@ No se ha desplegado ni modificado configuración remota desde esta sesión.
 - Desconectar Google detiene sincronización, pero conserva copia local: en
   computadora compartida esa copia sigue accesible mediante acceso local.
 - Reemplazo explícito por ficha local conserva copia visible; primera descarga
-  de nube conserva respaldo original descargable.
+  de nube conserva respaldo original interno por cuenta/personaje.
 - Reglas limitan documento a payload de menos de 700,000 caracteres; personajes
   con diarios muy extensos podrían requerir dividir datos en futura versión.
 
@@ -72,7 +91,7 @@ No se ha desplegado ni modificado configuración remota desde esta sesión.
 
 ```powershell
 node tests/combat.test.js
-node --test tests/functional.test.js tests/cloud.test.js
+node --test tests/functional.test.js tests/cloud.test.js tests/profiles.test.js
 ```
 
 Pruebas de sincronización utilizan almacenamiento remoto simulado. No requieren
@@ -84,7 +103,7 @@ de escritorio/móvil (Playwright instalado aparte):
 
 ```powershell
 $env:CHAPS_PLAYWRIGHT = "RUTA/AL/PAQUETE/playwright"
-node --test tests/browser-sync.test.js tests/navigation.test.js
+node --test tests/browser-sync.test.js tests/navigation.test.js tests/pwa.test.js
 ```
 
 `tests/firestore-rules.test.js` comprueba reglas con emulador (sin producción).
@@ -93,7 +112,7 @@ Necesita Firebase CLI, Java 21+ y paquetes de desarrollo `firebase` y
 ruta de su `node_modules` mediante variable `CHAPS_TEST_MODULES`.
 
 ```powershell
-firebase emulators:exec --only firestore --project demo-chaps "node --test tests/firestore-rules.test.js"
+firebase emulators:exec --only auth,firestore --project demo-chaps "node --test tests/firestore-rules.test.js tests/auth-link.test.js"
 ```
 
 Sin `FIRESTORE_EMULATOR_HOST`, esa prueba se omite intencionalmente. Durante esta
